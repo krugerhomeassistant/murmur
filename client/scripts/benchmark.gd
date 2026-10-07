@@ -18,6 +18,8 @@ var sim := 0.0
 var draw := 0.0
 var n := 0
 var day0 := 0
+@export var status := ""  # readable through the editor's remote inspector while running
+@export var result_json := ""
 var beat := -1
 var phase := 0  # 0 warm-up, 1 sampling, 2 done
 
@@ -43,9 +45,7 @@ func _process(_d: float) -> void:
 	m.overlay = "all"
 	if int(Time.get_ticks_msec() / 5000) != beat:  # progress heartbeat so a stalled run is visible
 		beat = int(Time.get_ticks_msec() / 5000)
-		var hb := FileAccess.open("res://benchmark_progress.txt", FileAccess.WRITE)
-		if hb != null:
-			hb.store_string("phase %d t %.1f samples %d day %d fps %d" % [phase, t, n, m.towns[0].day, Engine.get_frames_per_second()])
+		status = "phase %d t %.1f samples %d day %d fps %d" % [phase, t, n, m.towns[0].day, Engine.get_frames_per_second()]
 	if phase == 0 and t >= WARM:
 		phase = 1
 		t = 0.0
@@ -92,7 +92,8 @@ func _report() -> void:
 		"texture_mb": Performance.get_monitor(Performance.RENDER_TEXTURE_MEM_USED) / 1048576.0,
 		"days_advanced": m.towns[0].day - day0, "total_pop": pop,
 	}
-	print("BENCHMARK_JSON " + JSON.stringify(r))
+	result_json = JSON.stringify(r)
+	print("BENCHMARK_JSON " + result_json)
 	for path in ["user://benchmark.json", "res://benchmark_result.json"]:  # res:// is writable only when run from the editor
 		var f := FileAccess.open(path, FileAccess.WRITE)
 		if f != null:
