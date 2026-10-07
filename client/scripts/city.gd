@@ -136,6 +136,7 @@ var saving_for := 0.0  # treasury target for a needed service; pauses other spen
 var burning := 0
 var burned := 0  # buildings lost to fire, lifetime
 var plaza := -1
+var clash := {}  # enemy town name -> [time of last battle, winner name], for the war visuals
 var road_comp := PackedByteArray()  # 1 on every road tile of the town's biggest connected road network
 # territory + diplomacy
 var terr := Rect2i(OX, OY, START_W, START_H)
