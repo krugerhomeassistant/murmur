@@ -2,7 +2,7 @@ class_name Benchmark
 extends Node
 ## Standard windowed benchmark: 8 towns, 8x speed, "all" overlay, vsync off.
 ## Run: `godot --path client -- --benchmark` (or press F9 in game). Warm-up 90 s, sample 30 s,
-## prints a markdown table and writes user://benchmark.json, then quits when started with --benchmark.
+## prints a markdown table and writes user://benchmark.json (and res://benchmark_result.json from the editor), then quits when started with --benchmark.
 const WARM := 90.0
 const SAMPLE := 30.0
 var m
@@ -87,8 +87,9 @@ func _report() -> void:
 		"days_advanced": m.towns[0].day - day0, "total_pop": pop,
 	}
 	print("BENCHMARK_JSON " + JSON.stringify(r))
-	var f := FileAccess.open("user://benchmark.json", FileAccess.WRITE)
-	if f != null:
-		f.store_string(JSON.stringify(r, "  "))
+	for path in ["user://benchmark.json", "res://benchmark_result.json"]:  # res:// is writable only when run from the editor
+		var f := FileAccess.open(path, FileAccess.WRITE)
+		if f != null:
+			f.store_string(JSON.stringify(r, "  "))
 	if quit_after:
 		get_tree().quit()
