@@ -11,6 +11,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 - HUD updates skip no-op theme overrides and throttle the Build menu button refresh.
 
 ### Added
+- Shared rivers: new setup option (default) runs one river through the row or column of towns containing yours; neighbours agree where it crosses each border (`tests/rivers.gd`).
 - Click a tile with the Inspect tool to pin its info card (live updating, click again to close).
 - F3 overlay: fps, sim ms, draw ms, towns. `tests/bench*.gd`, `tests/region.gd` (8 towns), `tests/netcache.gd`, `tests/place.gd` for headless profiling.
 

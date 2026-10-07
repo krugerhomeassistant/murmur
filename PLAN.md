@@ -87,7 +87,7 @@ Goal: Murmur, a cozy interactive city-builder (Godot) with an optional Live Data
 - [ ] World editor: paint rivers/lakes on a preview before starting (setup screen)
 - [ ] Boats: Port building on a water-edge tile; cargo ships boost export income; ferries; patrol boats/navy in war battles (Diplo._battle)
 - [ ] Economy hooks: fishing dock (food), waterfront land value, river pollution
-- [ ] Rivers continue across neighbouring towns (shared seed per region)
+- [x] Rivers continue across neighbouring towns (setup option 'One river through neighbouring towns', default)
 - [x] Sewage network (plant, sewers, planner, HUD)
 - [x] Always-visible demand + utility strip; map hover card
 - [x] World editor (custom river painting), Port + Naval yard + ships
