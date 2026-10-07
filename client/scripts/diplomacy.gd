@@ -264,6 +264,9 @@ static func _battle(a: City, b: City, rng: RandomNumberGenerator) -> void:
 	a.war_n[b.town_name] = int(a.war_n.get(b.town_name, 0)) + 1
 	b.war_n[a.town_name] = int(b.war_n.get(a.town_name, 0)) + 1
 	w.war_sc[l.town_name] = int(w.war_sc.get(l.town_name, 0)) + 1
+	var now := Time.get_ticks_msec() / 1000.0
+	a.clash[b.town_name] = [now, w.town_name]
+	b.clash[a.town_name] = [now, w.town_name]
 	_raid(w, l)
 	var loot := minf(l.coins * 0.1, 120.0) if l.coins > 0.0 else 0.0
 	l.coins -= loot

@@ -59,6 +59,10 @@ func _ready() -> void:
 	cam.position = _center(city)
 	city_view = city
 	add_child(cam)
+	fxn = WorldFx.new()
+	fxn.m = self
+	fxn.z_index = 5
+	add_child(fxn)
 	mod = CanvasModulate.new()
 	add_child(mod)
 	var layer := CanvasLayer.new()
@@ -447,6 +451,7 @@ var city_view: City  # the town the camera is over
 var glide := Vector2.INF  # camera target while gliding to a town
 var vis := {}  # City -> on screen last frame
 var town_rr := 0
+var fxn: WorldFx
 var fit_prev := 0.0  # zoom before 'fit world'
 var chunk_kick := true  # set when the map changes: re-record visible chunks now
 var bake_debt := 0.0
@@ -629,6 +634,7 @@ func _process(delta: float) -> void:
 	var b := 0.78 + 0.22 * cos((city.clock - 13.0) / 24.0 * TAU)
 	mod.color = Color(b, b, minf(1.0, b + 0.1))
 	city.flush()
+	fxn.queue_redraw()
 	last_draw = draw_acc  # overlay cost of last frame, summed over the towns drawn
 	draw_acc = 0.0
 	draw_ms = lerpf(draw_ms, last_draw, 0.1)
@@ -697,6 +703,70 @@ func _draw() -> void:  # world level: weather and the links between towns; every
 				ci.draw_rect(view, Color(0.8, 0.82, 0.85, 0.3))
 			"cold_snap":
 				ci.draw_rect(view, Color(0.6, 0.75, 1.0, 0.12))
+
+
+## Armies on the front between two towns at war: infantry, tanks and aircraft sized by each side's barracks, bases and radar.
+func draw_fx(node: CanvasItem) -> void:
+	for a in towns:
+		for d in a.partners:
+			var k := Diplo.side(a, d)
+			if (k != 1 and k != 2) or Diplo.treaty(a, d) != "war" or not (vis.get(a, false) or vis.get(d, false)):
+				continue
+			var ca := Vector2(a.terr.get_center())
+			var cd := Vector2(d.terr.get_center())
+			var p0 := origin(a) + (Vector2(a.terr.end.x, ca.y) if k == 1 else Vector2(ca.x, a.terr.end.y)) * TILE
+			var p1 := origin(d) + (Vector2(d.terr.position.x, cd.y) if k == 1 else Vector2(cd.x, d.terr.position.y)) * TILE
+			_front(node, a, d, p0, p1)
+
+
+func _front(node: CanvasItem, a: City, b: City, p0: Vector2, p1: Vector2) -> void:
+	var tm := Time.get_ticks_msec() / 1000.0
+	var ln := p0.distance_to(p1)
+	var u := (p1 - p0) / maxf(ln, 1.0)
+	var nv := Vector2(-u.y, u.x)
+	var sz := clampf(0.4 / cam.zoom.x, 1.0, 6.0)  # keep units readable when zoomed out
+	var f := 0.5 + 0.1 * sin(tm * 0.5)
+	var cl: Array = a.clash.get(b.town_name, [])
+	var fresh := 0.0
+	if cl.size() == 2:
+		fresh = clampf(1.0 - (tm - float(cl[0])) / 20.0, 0.0, 1.0)
+		f += (0.2 if cl[1] == a.town_name else -0.2) * fresh  # the winner pushes the front forward
+	f = clampf(f, 0.2, 0.8)
+	var front := p0 + u * ln * f
+	for side in 2:
+		var c: City = a if side == 0 else b
+		var dir := 1.0 if side == 0 else -1.0
+		var base := p0 if side == 0 else p1
+		var span := ln * (f if side == 0 else 1.0 - f)
+		var col := Color("5b8de0") if side == 0 else Color("d9382a")
+		var bases := (c.bt.get(T.BASE, []) as Array).size()
+		var inf := mini(4 + 3 * (c.bt.get(T.BARRACKS, []) as Array).size() + 2 * bases, 24)
+		var tanks := mini(bases + (1 if Diplo.mil(c) > 0.8 else 0), 8)
+		var jets := mini((c.bt.get(T.RADAR, []) as Array).size() + (1 if bases > 0 else 0), 6)
+		for i in inf:
+			var pos := base + u * dir * span * (0.2 + 0.78 * (0.5 + 0.5 * sin(tm * 0.6 + i * 0.9))) + nv * ((i % 6) - 2.5) * 14.0 * sz
+			node.draw_circle(pos, 3.2 * sz, col)
+			node.draw_line(pos, pos + u * dir * 7.0 * sz, Color.WHITE, 1.2 * sz)
+		for i in tanks:
+			var pos := base + u * dir * span * (0.35 + 0.5 * (0.5 + 0.5 * sin(tm * 0.4 + i * 1.7))) + nv * (i - tanks * 0.5) * 24.0 * sz
+			node.draw_set_transform(pos, u.angle() + (0.0 if side == 0 else PI))
+			node.draw_rect(Rect2(-8 * sz, -5 * sz, 16 * sz, 10 * sz), col.darkened(0.35))
+			node.draw_rect(Rect2(-4 * sz, -3 * sz, 8 * sz, 6 * sz), col)
+			node.draw_rect(Rect2(2 * sz, -1 * sz, 12 * sz, 2 * sz), Color("2a2a2a"))
+			node.draw_set_transform(Vector2.ZERO)
+		for i in jets:
+			var fr := fmod(tm * 0.08 + float(i) / maxi(jets, 1), 1.0)
+			var pos := base + u * dir * span * (0.1 + 1.1 * fr) + nv * (-60.0 - i * 26.0) * sz
+			node.draw_set_transform(pos, u.angle() + (0.0 if side == 0 else PI))
+			node.draw_circle(Vector2(0, 14 * sz), 5.0 * sz, Color(0, 0, 0, 0.25))
+			node.draw_colored_polygon(PackedVector2Array([Vector2(12, 0) * sz, Vector2(-8, -8) * sz, Vector2(-4, 0), Vector2(-8, 8) * sz]), col.lightened(0.2))
+			node.draw_set_transform(Vector2.ZERO)
+	if fresh > 0.0:  # a battle just happened: blasts along the front
+		for i in 7:
+			var ph := fmod(tm * 3.0 + i * 0.37, 1.0)
+			var bp := front + nv * (sin(i * 2.3) * 70.0 * sz) + u * (cos(i * 1.9) * 40.0 * sz)
+			node.draw_circle(bp, (6.0 + 22.0 * ph) * sz, Color(1.0, 0.55 - 0.3 * ph, 0.1, (1.0 - ph) * 0.8 * fresh))
+			node.draw_circle(bp + Vector2(0, -16.0 * ph * sz), (4.0 + 12.0 * ph) * sz, Color(0.25, 0.25, 0.25, (1.0 - ph) * 0.5 * fresh))
 
 
 ## Line from this town to its east and south neighbours: green = a road reaches the shared border, grey = not yet, red = war.
