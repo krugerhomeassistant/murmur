@@ -51,7 +51,7 @@ var over_panel: PanelContainer
 var over_l: Label
 var hover_text := ""
 var tick_n := 0
-const WIN_KEYS := ["build", "info", "detail", "mayor"]
+const WIN_KEYS := ["build", "info", "detail", "mayor", "army"]
 const UI_FILE := "user://ui.cfg"
 var wins := {}
 var win_open := {}
@@ -84,6 +84,7 @@ func _ready() -> void:
     _right()
     _bottom()
     _mayor()
+    _army()
     maptip = PanelContainer.new()
     maptip.mouse_filter = Control.MOUSE_FILTER_IGNORE
     maptip.z_index = 100
@@ -265,6 +266,7 @@ func _top() -> void:
     wm.add_check_item("City panel", 1)
     wm.add_check_item("Hover details", 2)
     wm.add_check_item("Mayor's office", 3)
+    wm.add_check_item("Army", 4)
     wm.add_separator()
     wm.add_item("Reset window layout", 9)
     wm.about_to_popup.connect(func() -> void:
@@ -880,7 +882,7 @@ func _process(_d: float) -> void:
     var rt := ""
     for t in m.towns:
         rt += "[b]%s[/b]%s  pop %d  $%d  mood %d%%\n[color=#9aa88f]Imports power %.0f water %.0f   commuters in %d   trade %+.2f/s%s[/color]\n\n" % [t.town_name, "  (viewing)" if t == c else "", t.pop, int(t.coins), int(t.mood * 100.0), t.imports["power"], t.imports["water"], t.commuters_in, t.trade_net, "   GAME OVER" if t.over != "" else ""]
-    rt += "[b]Army[/b] (T: auto-train %s)\n[color=#9aa88f]%s[/color]\n" % ["on" if c.train_on else "off", Military.summary(c)]
+    _army_refresh(c)
     region_l.text = rt
     terr_l.text = "Territory %dx%d of %dx%d. Next strip costs $%d (annexed %d times)." % [c.terr.size.x, c.terr.size.y, City.W, City.H, int(c.expand_cost()), c.expansions]
     for d in 4:
@@ -904,6 +906,67 @@ func _process(_d: float) -> void:
     gauge.queue_redraw()
     tgauge.queue_redraw()
     graph.queue_redraw()
+
+
+# ---------- army window: roster, veterans and training priorities ----------
+
+var army_l: RichTextLabel
+var army_chk: CheckButton
+var army_rows := {}
+
+
+func _army() -> void:
+    var body := _win("army", "Army", Vector2(220, 80), Vector2(380, 330))
+    army_chk = CheckButton.new()
+    army_chk.text = "Auto-train troops (T)"
+    army_chk.focus_mode = Control.FOCUS_NONE
+    army_chk.tooltip_text = "Barracks and bases train units while you can afford them. Units cost upkeep; unpaid troops desert."
+    army_chk.toggled.connect(func(on: bool) -> void: m.city.train_on = on)
+    body.add_child(army_chk)
+    army_l = _rich(body, 0)
+    _hdr(body, "TRAINING PRIORITY (0 off, 1 slow, 2 normal, 3 fast)")
+    var sc := ScrollContainer.new()
+    sc.size_flags_vertical = Control.SIZE_EXPAND_FILL
+    sc.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+    body.add_child(sc)
+    var box := VBoxContainer.new()
+    box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    sc.add_child(box)
+    for k in Military.KIND:
+        var kk: String = k
+        var kd: Dictionary = Military.KIND[k]
+        var row := HBoxContainer.new()
+        row.tooltip_text = "%s: hp %d, damage %.1f, range %d, cost $%d, upkeep %.2f/s. Counts as %s; strong vs %s." % [kd["n"], kd["hp"], kd["dmg"], kd["rng"], kd["cost"], kd["upk"], kd["t"], ", ".join((kd["vs"] as Dictionary).keys().filter(func(t: String) -> bool: return float(kd["vs"][t]) >= 1.3)) if kd.get("heal", 0.0) == 0.0 else "nothing (heals allies)"]
+        box.add_child(row)
+        _lbl(row, 100).text = String(kd["n"])
+        var cl := _lbl(row, 70)
+        _btn(row, "-", func() -> void: _set_prio(kk, -1))
+        var pl := _lbl(row, 20)
+        _btn(row, "+", func() -> void: _set_prio(kk, 1))
+        army_rows[k] = {"cnt": cl, "pr": pl}
+    win_open["army"] = false
+    (wins["army"] as PanelContainer).visible = false
+
+
+func _set_prio(k: String, d: int) -> void:
+    var w := Military.weights(m.city)
+    m.city.train_w[k] = clampi(int(w[k]) + d, 0, 3)
+
+
+func _army_refresh(c: City) -> void:
+    if not (wins["army"] as PanelContainer).visible:
+        return
+    army_chk.set_pressed_no_signal(c.train_on)
+    var n := Military.counts(c)
+    var cap := Military.caps(c)
+    var w := Military.weights(c)
+    var vets := [0, 0, 0, 0]
+    for u in c.army:
+        vets[Military.rank(u)] += 1
+    army_l.text = "%s\n[color=#9aa88f]Ranks: %d recruits, %d veterans, %d elite, %d legends. Units gain rank by dealing damage.\nBuild barracks (infantry), bases (armour, air) and radar posts (jets, fighters, bombers).[/color]" % [Military.summary(c), vets[0], vets[1], vets[2], vets[3]]
+    for k in Military.KIND:
+        (army_rows[k]["cnt"] as Label).text = "%d / %d" % [n[k], cap[k]]
+        (army_rows[k]["pr"] as Label).text = str(w[k])
 
 
 # ---------- mayor's office ----------
@@ -1203,13 +1266,14 @@ func _reset_wins() -> void:
     var vs := get_viewport_rect().size
     for k in wins:
         var p: PanelContainer = wins[k]
-        p.visible = k != "detail"
-        win_open[k] = true
+        p.visible = k != "detail" and k != "army"
+        win_open[k] = k != "army"
         p.set_deferred("size", Vector2.ZERO)
     (wins["build"] as PanelContainer).position = Vector2(8, 44)
     (wins["info"] as PanelContainer).position = Vector2(maxf(vs.x - 396.0, 200.0), 44)
     (wins["detail"] as PanelContainer).position = Vector2(200, clampf(vs.y - 300.0, 60.0, 400.0))
     (wins["mayor"] as PanelContainer).position = Vector2(200, 44)
+    (wins["army"] as PanelContainer).position = Vector2(220, 80)
     _clamp_all.call_deferred()
     _save_ui()
 
@@ -1233,7 +1297,7 @@ func _load_ui() -> void:
             continue
         var p: PanelContainer = wins[k]
         p.position = cf.get_value(k, "pos", p.position)
-        win_open[k] = bool(cf.get_value(k, "open", true))
+        win_open[k] = bool(cf.get_value(k, "open", k != "army"))
         if k != "detail":
             p.visible = bool(win_open[k])
     _clamp_all.call_deferred()

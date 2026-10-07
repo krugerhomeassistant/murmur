@@ -718,28 +718,54 @@ func draw_fx(node: CanvasItem) -> void:
 					var ang := u.angle() + (0.0 if side == 0 else PI)
 					var fresh: bool = now - int(un.get("ft", -9999)) < 700
 					match String(un["k"]):
-						"inf":
-							node.draw_circle(pos, 3.2 * sz, col)
-							node.draw_line(pos, pos + Vector2.from_angle(ang) * 8.0 * sz, Color.WHITE, 1.2 * sz)
-						"tank":
+						"inf", "gren", "snip", "medic":
+							var k := String(un["k"])
+							node.draw_circle(pos, (3.8 if k == "gren" else 3.2) * sz, Color.WHITE if k == "medic" else col)
+							if k == "medic":
+								node.draw_rect(Rect2(pos + Vector2(-1, -2.4) * sz, Vector2(2, 4.8) * sz), Color("d9382a"))
+								node.draw_rect(Rect2(pos + Vector2(-2.4, -1) * sz, Vector2(4.8, 2) * sz), Color("d9382a"))
+							else:
+								node.draw_line(pos, pos + Vector2.from_angle(ang) * (14.0 if k == "snip" else 8.0) * sz, Color.WHITE, (0.8 if k == "snip" else 1.2) * sz)
+								if k == "gren":
+									node.draw_rect(Rect2(pos + Vector2(-1.5, -6) * sz, Vector2(3, 3) * sz), Color("e0a030"))
+						"ltank", "tank", "htank", "art", "aa":
+							var k := String(un["k"])
+							var f := 0.75 if k == "ltank" else (1.25 if k == "htank" else 1.0)
 							node.draw_set_transform(pos, ang)
-							node.draw_rect(Rect2(-8 * sz, -5 * sz, 16 * sz, 10 * sz), col.darkened(0.35))
-							node.draw_rect(Rect2(-4 * sz, -3 * sz, 8 * sz, 6 * sz), col)
-							node.draw_rect(Rect2(2 * sz, -1 * sz, 12 * sz, 2 * sz), Color("2a2a2a"))
+							node.draw_rect(Rect2(-8 * sz * f, -5 * sz * f, 16 * sz * f, 10 * sz * f), col.darkened(0.35))
+							node.draw_rect(Rect2(-4 * sz * f, -3 * sz * f, 8 * sz * f, 6 * sz * f), col)
+							if k == "aa":
+								node.draw_line(Vector2(0, -2) * sz, Vector2(7, -9) * sz, Color("2a2a2a"), 1.6 * sz)
+								node.draw_line(Vector2(0, 2) * sz, Vector2(7, 9) * sz, Color("2a2a2a"), 1.6 * sz)
+							elif k == "art":
+								node.draw_line(Vector2.ZERO, Vector2(22, 0) * sz, Color("2a2a2a"), 2.4 * sz)
+							else:
+								node.draw_rect(Rect2(2 * sz * f, -1 * sz, 12 * sz * f, 2 * sz), Color("2a2a2a"))
+								if k == "htank":
+									node.draw_rect(Rect2(2 * sz * f, -3.5 * sz, 12 * sz * f, 1.6 * sz), Color("2a2a2a"))
 							node.draw_set_transform(Vector2.ZERO)
-						"jet":
+						"jet", "fighter", "bomber", "heli":
+							var k := String(un["k"])
 							node.draw_circle(pos + Vector2(0, 16 * sz), 5.0 * sz, Color(0, 0, 0, 0.25))
-							node.draw_set_transform(pos, ang)
-							node.draw_colored_polygon(PackedVector2Array([Vector2(12, 0) * sz, Vector2(-8, -8) * sz, Vector2(-4, 0), Vector2(-8, 8) * sz]), col.lightened(0.2))
-							node.draw_set_transform(Vector2.ZERO)
-					var mx: float = float(Military.KIND[un["k"]]["hp"])
+							if k == "heli":
+								var rot := now / 60.0
+								node.draw_circle(pos, 4.0 * sz, col.lightened(0.2))
+								node.draw_line(pos + Vector2.from_angle(rot) * 10.0 * sz, pos - Vector2.from_angle(rot) * 10.0 * sz, Color(1, 1, 1, 0.7), 1.2 * sz)
+							else:
+								var f := 1.4 if k == "bomber" else (0.8 if k == "fighter" else 1.0)
+								node.draw_set_transform(pos, ang)
+								node.draw_colored_polygon(PackedVector2Array([Vector2(12, 0) * sz * f, Vector2(-8, -8 if k != "fighter" else -5) * sz * f, Vector2(-4, 0) * sz * f, Vector2(-8, 8 if k != "fighter" else 5) * sz * f]), col.lightened(0.2))
+								node.draw_set_transform(Vector2.ZERO)
+					var mx: float = Military.max_hp(un)
+					for rk in Military.rank(un):  # veteran chevrons
+						node.draw_rect(Rect2(pos + Vector2(-8 + rk * 4, 8) * sz, Vector2(3, 1.6) * sz), Color("f2cf4a"))
 					if float(un["hp"]) < mx * 0.99:
 						node.draw_rect(Rect2(pos + Vector2(-8, -10) * sz, Vector2(16 * sz, 2.0 * sz)), Color(0, 0, 0, 0.6))
 						node.draw_rect(Rect2(pos + Vector2(-8, -10) * sz, Vector2(16 * sz * float(un["hp"]) / mx, 2.0 * sz)), Color("6fd06f") if float(un["hp"]) / mx > 0.4 else Color("e0a030"))
 					if fresh:  # tracer to the unit it fired at
 						var tgp := float(un["fg"])
 						var tpos: Vector2 = l[0] + u * tgp + nv * float(un["fl"]) * 70.0 * sz
-						node.draw_line(pos, tpos, Color(1.0, 0.9, 0.4, 0.9), 1.5 * sz)
+						node.draw_line(pos, tpos, Color(1.0, 0.45, 0.2, 0.9) if un["k"] == "art" else (Color(1, 1, 1, 0.9) if un["k"] == "snip" else Color(1.0, 0.9, 0.4, 0.9)), (3.0 if un["k"] == "art" else 1.5) * sz)
 						node.draw_circle(pos + Vector2.from_angle(ang) * 10.0 * sz, 3.0 * sz, Color(1.0, 0.8, 0.3, 0.9))
 			for e in Military.booms:
 				if e["a"] != a.town_name or e["b"] != b.town_name:

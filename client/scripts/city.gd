@@ -141,6 +141,7 @@ var occ := {}  # enemy town name -> seconds it has held our border
 var raid := {}  # runtime: raid progress against a foe
 var train_on := true  # auto-train troops from barracks and bases
 var train_t := {}
+var train_w := {}  # per-kind training priority 0-3, missing = Military.DEF_W
 var road_comp := PackedByteArray()  # 1 on every road tile of the town's biggest connected road network
 # territory + diplomacy
 var terr := Rect2i(OX, OY, START_W, START_H)
@@ -2998,9 +2999,9 @@ func to_dict() -> Dictionary:
 	for k in ["town_name", "grid", "lvl", "build", "wire", "pipe", "sewer", "lamp", "water", "ore", "coins", "mood", "tax_r", "tax_c", "tax_i", "clock", "day",
 			"policies", "auto_mode", "auto_policy", "peak", "announced", "next_id", "recent", "active", "approval", "rep", "favor",
 			"petitions", "promises", "pet_recent", "kept", "broken", "next_election", "elections_won", "rally_used", "last_vote",
-			"season", "stock", "exported", "loans", "done_ms", "disasters_survived", "burned", "hist_coins", "hist_pop", "ruins", "offline", "lamp", "terr", "expansions", "auto_expand", "human", "temper", "rel", "treaty", "ev_scale", "gpos", "war_n", "war_sc", "occ", "train_on", "train_t"]:
+			"season", "stock", "exported", "loans", "done_ms", "disasters_survived", "burned", "hist_coins", "hist_pop", "ruins", "offline", "lamp", "terr", "expansions", "auto_expand", "human", "temper", "rel", "treaty", "ev_scale", "gpos", "war_n", "war_sc", "occ", "train_on", "train_t", "train_w"]:
 		d[k] = get(k)
-	d["army"] = army.map(func(u: Dictionary) -> Dictionary: return {"k": u["k"], "hp": u["hp"], "tgt": u["tgt"], "s": u["s"], "l": u["l"]})
+	d["army"] = army.map(func(u: Dictionary) -> Dictionary: return {"k": u["k"], "hp": u["hp"], "tgt": u["tgt"], "s": u["s"], "l": u["l"], "mx": u.get("mx", u["hp"]), "xp": u.get("xp", 0.0), "rk": u.get("rk", 0)})
 	return d
 
 
