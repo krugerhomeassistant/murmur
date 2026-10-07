@@ -11,6 +11,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 - HUD updates skip no-op theme overrides and throttle the Build menu button refresh.
 
 ### Added
+- Godot Claude Skills (MIT, alexmeckes/godot-claude-skills) installed under `.claude/skills/` for GDScript, scene, shader and live-edit guidance.
 - README rewrite with feature table, run instructions, performance notes and repo map; issue templates.
 - Shared rivers: new setup option (default) runs one river through the row or column of towns containing yours; neighbours agree where it crosses each border (`tests/rivers.gd`).
 - Click a tile with the Inspect tool to pin its info card (live updating, click again to close).
