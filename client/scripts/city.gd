@@ -204,6 +204,8 @@ var off_jobs := 0
 var farm_jobs := 0
 var orch_jobs := 0
 var ranch_jobs := 0
+var green_jobs := 0
+var fish_jobs := 0
 var mine_jobs := 0
 var mine_yield := 0.0  # sum of level x deposit richness over mines
 var scan_sig := 0
@@ -721,6 +723,8 @@ func _scan() -> void:
 		farm_jobs = 0
 		orch_jobs = 0
 		ranch_jobs = 0
+		green_jobs = 0
+		fish_jobs = 0
 		mine_jobs = 0
 		mine_yield = 0.0
 		svc_jobs = 0
@@ -786,6 +790,10 @@ func _scan() -> void:
 								orch_jobs += jp * L
 							"ranch":
 								ranch_jobs += jp * L
+							"green":
+								green_jobs += jp * L
+							"fishfarm":
+								fish_jobs += jp * L
 							"mine":
 								mine_jobs += jp * L
 								mine_yield += L * maxi(int(ore[i]), 1)
@@ -819,7 +827,7 @@ func _scan() -> void:
 				_add_prov("light", cell(i), 0.7, 4)
 				up_svc += 0.1
 		_road_net()
-		jobs = shop_jobs + fac_jobs + off_jobs + farm_jobs + orch_jobs + ranch_jobs + mine_jobs + svc_jobs
+		jobs = shop_jobs + fac_jobs + off_jobs + farm_jobs + orch_jobs + ranch_jobs + green_jobs + fish_jobs + mine_jobs + svc_jobs
 		res_mult = tier_sum / maxf(housing, 1)
 		scan_sig = sg
 		up_svc_base = up_svc
@@ -1567,7 +1575,7 @@ func _money(market: float) -> void:
 	var r_tax := employed * tax_r * 12.0 * econ * prodm * wise * fin * f * res_mult * (0.75 + 0.5 * land_avg)
 	var sales := minf(pop * 0.6, shop_jobs * 2.0) * (1.0 + 0.25 * float(cov["commerce"])) * mod("sales_mult") * (1.0 - 0.3 * clampf((avg_shop - 8.0) / 20.0, 0.0, 1.0))
 	var r_com := sales * 0.8 * econ * prodm * laf_c * fin * f
-	var goods := (fac_jobs * 0.6 * emp + (farm_jobs + orch_jobs + ranch_jobs) * 0.3 + mine_jobs * 0.4 * emp) * mod("goods_mult")
+	var goods := (fac_jobs * 0.6 * emp + (farm_jobs + orch_jobs + ranch_jobs + green_jobs + fish_jobs) * 0.3 + mine_jobs * 0.4 * emp) * mod("goods_mult")
 	var r_ind := goods * 1.2 * econ * prodm * wise * laf_i * fin * f
 	var r_off := off_jobs * emp * 1.6 * econ * prodm * (0.5 + 0.5 * float(cov["edu"])) * mod("office_mult") * laf_c * fin * f
 	var r_tour := tour_sum * 3.0 * econ * mood * mod("tour_mult") * f
@@ -1627,7 +1635,7 @@ func dem_for(t: int) -> float:
 			return ind_dem
 		"office":
 			return off_dem
-		"orchard", "ranch":
+		"orchard", "ranch", "green", "fishfarm":
 			return ind_dem * 0.4 + 0.05
 		"mine":
 			return ind_dem * 0.3
@@ -1811,10 +1819,17 @@ func _planner() -> void:
 		if r <= 0.0:
 			t = kinds[k]
 			break
+	if t == T.FARM:
+		t = _farm_variant()
 	var cand: Array[int] = []
 	for i in cells:
-		if grid[i] == T.EMPTY and water[i] == 0 and _road_next_to(i) >= 0:
+		if grid[i] == T.EMPTY and water[i] == 0 and _road_next_to(i) >= 0 and (t != T.FISHFARM or wet_next(i % W, i / W)):
 			cand.append(i)
+	if t == T.FISHFARM and cand.is_empty():
+		t = T.FARM
+		for i in cells:
+			if grid[i] == T.EMPTY and water[i] == 0 and _road_next_to(i) >= 0:
+				cand.append(i)
 	if auto_mode == 2 and (cand.size() < 6 or (roads + avenues < 14 + pop * 0.6 and rng.randf() < 0.25)):
 		if _extend_road():
 			return
@@ -1835,6 +1850,29 @@ func _planner() -> void:
 	grid[bi] = t
 	msg = "Planners zoned a new %s plot." % String(Catalog.DEFS[t]["n"]).to_lower().replace(" zone", "")
 	_scan()
+
+
+## Which farm type a planner zones: fields mostly, with orchards, ranches (when food is short and there is no mill), greenhouses (in lean seasons) and fish farms (needs a river).
+func _farm_variant() -> int:
+	var opts := {T.FARM: 3.0}
+	var short := float(flow.get("food_local", 1.0)) < 0.7
+	if unlocked(T.ORCHARD):
+		opts[T.ORCHARD] = 1.0
+	if unlocked(T.RANCH):
+		opts[T.RANCH] = 1.0 + (2.0 if short and not bt.has(T.MILL) else 0.0)
+	if unlocked(T.GREENHOUSE):
+		opts[T.GREENHOUSE] = 0.5 + (2.0 if float(Civics.SEASONS[season]["harvest"]) < 0.6 else 0.0)
+	if unlocked(T.FISHFARM) and river_health > 0.4:
+		opts[T.FISHFARM] = 1.0
+	var tot := 0.0
+	for k in opts:
+		tot += float(opts[k])
+	var r := rng.randf() * tot
+	for k in opts:
+		r -= float(opts[k])
+		if r <= 0.0:
+			return k
+	return T.FARM
 
 
 ## Picks the service building that best fixes an uncovered need (or adds a bonus), and sites it.
@@ -3012,7 +3050,7 @@ func _trade(market: float) -> Array:
 	for k in ["ore", "metal"]:  # saves from before mining
 		if not stock.has(k):
 			stock[k] = 0.0
-	var crops := (farm_jobs + 1.5 * orch_jobs) * emp * 0.12 * float(Civics.SEASONS[season]["harvest"])
+	var crops := (farm_jobs + 1.5 * orch_jobs) * emp * 0.12 * float(Civics.SEASONS[season]["harvest"]) + green_jobs * emp * 0.12 * 0.85  # greenhouses ignore the season
 	var mined := mine_yield * emp * 0.05
 	var foundries := (bt.get(T.FOUNDRY, []) as Array).size()
 	var smelt := minf(float(stock["ore"]) + mined, foundries * 2.0)
@@ -3024,7 +3062,7 @@ func _trade(market: float) -> Array:
 	var goods := (fac_jobs * emp * 0.06 + mused * 3.0) * mod("goods_mult")
 	var fish := (bt.get(T.FISHDOCK, []) as Array).size() * 6.0 * emp * 0.15 * river_health
 	stock["crops"] = float(stock["crops"]) + crops - milled
-	stock["food"] = float(stock["food"]) + milled + fish + ranch_jobs * emp * 0.1
+	stock["food"] = float(stock["food"]) + milled + fish + ranch_jobs * emp * 0.1 + fish_jobs * emp * 0.12 * river_health
 	stock["goods"] = float(stock["goods"]) + goods
 	var fneed := pop * 0.05
 	var gneed := pop * 0.03 + shop_jobs * 0.02
@@ -3046,7 +3084,7 @@ func _trade(market: float) -> Array:
 			sold += sell
 		stock[k] = minf(float(stock[k]), cap)
 	exported += sold
-	flow = {"crops": crops, "food": milled + fish + ranch_jobs * emp * 0.1, "goods": goods, "ore": mined, "metal": smelt * 0.5, "food_need": fneed, "goods_need": gneed,
+	flow = {"crops": crops, "food": milled + fish + ranch_jobs * emp * 0.1 + fish_jobs * emp * 0.12 * river_health, "goods": goods, "ore": mined, "metal": smelt * 0.5, "food_need": fneed, "goods_need": gneed,
 		"food_local": fl / fneed if fneed > 0.0 else 1.0, "goods_local": gl / gneed if gneed > 0.0 else 1.0,
 		"export": sold, "price": price, "imp": imp, "ex": ex}
 	return [ex, imp]

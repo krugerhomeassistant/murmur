@@ -103,7 +103,7 @@ Goal: Murmur, a cozy interactive city-builder (Godot) with an optional Live Data
 ## Backlog added 2026-10-07 (user ideas, do not lose)
 - [x] Spectator / no-mayor mode
 - [x] Mining and materials: mines (ore/stone/coal by terrain), metals and materials (iron, copper, stone, timber), smelter and workshop/factory chain feeding construction cost, goods and exports; mine pollution and safety events; trade value with neighbours.
-- [ ] Farm variants: grain, orchard, livestock, greenhouse (winter), fish farm; each with different yield, season, water need and art.
+- [x] Farm variants: grain, orchard, ranch, greenhouse, fish farm (planner uses them). Still open: distinct art per variant.
 - [ ] README performance table with measured numbers (fps, CPU/GPU ms, memory) for old vs new builds, method and hardware stated.
 - [ ] README screenshots; tag v0.2.0 with portable zip release.
 - [ ] Ferries; split animated tiles from static baked chunks; hand-play tuning at 500+ pop.
