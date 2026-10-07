@@ -110,6 +110,14 @@ Goal: Murmur, a cozy interactive city-builder (Godot) with an optional Live Data
 - [ ] Install notes: godot-claude-skills live in .claude/skills (done).
 - [ ] Threading (perf): no threads today. Tick off-screen towns on WorkerThreadPool with a start-of-tick snapshot of partner net_own/net_dem/treaty state (the only cross-town reads); join before Diplo.second. Keep only if the 6-8 town benchmark improves.
 
+## World view (user, 2026-10-07) - IN PROGRESS (branch feat/world-view)
+- [ ] One continuous world: every town drawn at its grid offset; pan/scroll between towns, no toggling. The "map" is just this view zoomed out (live), replacing RegionMap overlay.
+- [ ] Viewed town = town under camera centre (HUD follows); clicking another town glides the camera to it
+- [ ] Far-zoom LOD 3: per-town live thumbnail textures + town name labels (cheap at 8 towns)
+- [ ] Visible off-screen towns tick faster (0.25 s batches) so they look alive
+- [ ] M = fit-the-whole-world toggle; update README controls, WIKI, benchmark second scenario (world view)
+- Do NOT drop the other backlog above (mining planner, v0.2.0, screenshots, lint in CI, spike work, threading, ferries, farm variants); this sits alongside it.
+
 ## Priority notes (user, 2026-10-07)
 - [x] BENCHMARK STANDARD: real windowed run (not headless), 8 towns, 8x speed, ALL overlays on; report fps/p99/CPU/GPU/RAM/VRAM for that. README table must use it. Headless sim numbers are secondary only.
 - [ ] REPO PROFESSIONALISM pass: screenshots/GIF in README, consistent docs structure, docs/ folder, CONTRIBUTING/CODE_OF_CONDUCT/SECURITY, release notes, badges accurate, remove dev clutter, LICENSE check, tidy PLAN/WIKI/LESSONS layout.
