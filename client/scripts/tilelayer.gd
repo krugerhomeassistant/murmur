@@ -24,7 +24,7 @@ class Bake:
 		t.m.draw_chunk(self, t.x0, t.y0, t.x1, t.y1)
 
 
-func setup() -> void:
+func _bake_setup() -> void:
 	var o := Vector2(x0, y0) * 32.0
 	vp = SubViewport.new()
 	vp.size = Vector2i((x1 - x0 + 1) * 32 * SC, (y1 - y0 + 1) * 32 * SC)
@@ -48,7 +48,10 @@ func setup() -> void:
 
 ## lod 0 = bake to texture; otherwise draw directly.
 func refresh(lod: int) -> void:
-	spr.visible = lod == 0
+	if lod == 0 and vp == null:  # allocate the texture only when this chunk is first seen zoomed in
+		_bake_setup()
+	if spr != null:
+		spr.visible = lod == 0
 	if lod == 0:
 		vp.render_target_update_mode = SubViewport.UPDATE_ONCE
 		cv.queue_redraw()
