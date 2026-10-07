@@ -1769,6 +1769,70 @@ func _plan_gate() -> bool:
 	return false
 
 
+## Planner towns lay a road toward the nearest ore deposit when none is reachable yet, so a mine can be zoned beside it.
+## Breadth-first search from the main road network through empty dry land to any tile touching an empty ore tile.
+func _plan_ore_road() -> bool:
+	if not unlocked(T.MINE) or pop < 60 or coins < 200.0 or mine_jobs > 0 or rng.randf() > 0.3:
+		return false  # (the dice keep the search cheap when no road can reach the ore)
+	var wants := PackedByteArray()  # tiles whose road would give an ore tile a road neighbour
+	wants.resize(W * H)
+	var any := false
+	for i in cells:
+		if ore[i] > 0 and grid[i] == T.EMPTY and water[i] == 0:
+			if _road_next_to(i) >= 0:
+				return false  # a roadside deposit already exists
+			var x := i % W
+			var y := i / W
+			for d in DIRS:
+				if inside(x + d.x, y + d.y):
+					wants[(y + d.y) * W + x + d.x] = 1
+					any = true
+	if not any:
+		return false
+	var prev := PackedInt32Array()
+	prev.resize(W * H)
+	prev.fill(-2)
+	var q: Array[int] = []
+	for i in cells:
+		if grid[i] != T.EMPTY and is_road(grid[i]) and road_comp[i] == 1:
+			prev[i] = -1
+			q.append(i)
+	var goal := -1
+	var h := 0
+	while h < q.size() and goal < 0:
+		var cur: int = q[h]
+		h += 1
+		for d in DIRS:
+			var nx: int = cur % W + d.x
+			var ny: int = cur / W + d.y
+			if not inside(nx, ny) or not owns(nx, ny):
+				continue
+			var ni := ny * W + nx
+			if prev[ni] != -2 or grid[ni] != T.EMPTY or water[ni] != 0:
+				continue
+			prev[ni] = cur
+			if wants[ni] == 1:
+				goal = ni
+				break
+			q.append(ni)
+	if goal < 0:
+		return false
+	var path: Array[int] = []
+	var p := goal
+	while p >= 0 and prev[p] != -1:
+		path.push_front(p)
+		p = prev[p]
+	var laid := 0
+	for i in path:
+		if laid >= 12 or not place(i % W, i / W, T.ROAD):
+			break
+		laid += 1
+	if laid > 0:
+		msg = "Planners laid a road toward an ore deposit."
+		return true
+	return false
+
+
 ## City planners: when needs arise the city lays plots, and new streets, by itself.
 func _planner() -> void:
 	if auto_policy:
@@ -1776,6 +1840,8 @@ func _planner() -> void:
 	if auto_mode == 0 or coins < 60.0:
 		return
 	if not human and _plan_gate():
+		return
+	if _plan_ore_road():
 		return
 	if _plan_net():
 		return
@@ -1796,13 +1862,16 @@ func _planner() -> void:
 	var kinds: Array[int] = []
 	var ws: Array[float] = []
 	var total := 0.0
-	for t in [T.RES, T.APT, T.COM, T.IND, T.OFFICE, T.FARM]:
+	var foundries := (bt.get(T.FOUNDRY, []) as Array).size()
+	for t in [T.RES, T.APT, T.COM, T.IND, T.OFFICE, T.FARM, T.MINE]:
 		if not unlocked(t):
 			continue
+		if t == T.MINE and (mine_jobs >= 8 + 12 * foundries or pop < 60):
+			continue  # mines wait for a foundry to smelt what they dig
 		var dd := dem_for(t)
 		if t == T.APT and (res_dem < 0.3 or pop < housing * 0.9):
 			continue
-		if dd < -0.2:
+		if dd < -0.2 and t != T.MINE:  # mines serve exports and metal, not local industrial demand
 			continue
 		var wgt := maxf(dd, 0.0) * 3.0 + 0.5
 		if t == T.FARM and bt.has(T.MILL):
@@ -1823,14 +1892,16 @@ func _planner() -> void:
 		t = _farm_variant()
 	var cand: Array[int] = []
 	for i in cells:
-		if grid[i] == T.EMPTY and water[i] == 0 and _road_next_to(i) >= 0 and (t != T.FISHFARM or wet_next(i % W, i / W)):
+		if grid[i] == T.EMPTY and water[i] == 0 and _road_next_to(i) >= 0 and (t != T.FISHFARM or wet_next(i % W, i / W)) and (t != T.MINE or ore[i] > 0):
 			cand.append(i)
+	if t == T.MINE and cand.is_empty():
+		return  # no ore beside a road yet
 	if t == T.FISHFARM and cand.is_empty():
 		t = T.FARM
 		for i in cells:
 			if grid[i] == T.EMPTY and water[i] == 0 and _road_next_to(i) >= 0:
 				cand.append(i)
-	if auto_mode == 2 and (cand.size() < 6 or (roads + avenues < 14 + pop * 0.6 and rng.randf() < 0.25)):
+	if t != T.MINE and auto_mode == 2 and (cand.size() < 6 or (roads + avenues < 14 + pop * 0.6 and rng.randf() < 0.25)):
 		if _extend_road():
 			return
 		if cand.size() < 6 and auto_expand and _expand_auto():
@@ -1914,6 +1985,10 @@ func _plan_service() -> bool:
 		var lim: int = 4 + pop / 25 if d.has("out") else 1 + pop / (60 if not prov.is_empty() else 150)
 		if ch == "mill":
 			lim = 1 + farm_jobs / 30
+		if ch == "foundry":
+			if mine_jobs == 0:
+				continue
+			lim = 1 + mine_jobs / 12
 		if id in [T.BARRACKS, T.BASE, T.RADAR]:
 			lim = maxi(lim, 1 + int(thr * 2.0 * (1.0 + pop / 250.0)))  # a threatened planner town raises its garrison, within reason (upkeep and fight cost)
 		if id == T.NAVYARD and nav:
@@ -1924,6 +1999,8 @@ func _plan_service() -> bool:
 			continue  # ports are placed by the player; planner towns only build naval yards when a river enemy threatens
 		var sc := 0.0
 		if ch == "mill" and farm_jobs > 0 and float(flow.get("food_local", 1.0)) < 0.7:
+			sc += 0.9
+		if ch == "foundry" and (float(stock.get("ore", 0.0)) > 4.0 or have == 0):
 			sc += 0.9
 		if ch == "store":
 			for sk in stock:
