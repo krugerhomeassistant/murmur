@@ -2,7 +2,7 @@ class_name City
 extends RefCounted
 ## Pure city rules + citizen agents. No drawing, no I/O. Reads Signals, never feeds.
 ## Data (buildings, stats, policies, events) lives in catalog.gd / events.gd.
-## Numbers are first guesses; tune from playtest (GAME_DESIGN.md section 4).
+## Numbers are first guesses; tune from playtest (docs/GAME_DESIGN.md section 4).
 
 const T = Catalog.Id
 

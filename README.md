@@ -7,7 +7,7 @@
 
 **A cozy, endless city-builder.** Zone, wire, pipe and plumb a town, keep its people happy, then look up: you share a river with neighbours who have opinions about your sewage.
 
-Everything is drawn with code (no art assets), the whole game is data-driven, and the sim runs eight towns at 8x speed at several hundred fps.
+Everything is drawn with code (no art assets), the whole game is data-driven.
 
 ## What you get
 
@@ -25,7 +25,7 @@ Everything is drawn with code (no art assets), the whole game is data-driven, an
 ## Run it
 
 1. Install [Godot 4.7](https://godotengine.org/download) (the standard build, no .NET).
-2. Open the `client/` folder as a project, or double-click `Open Murmur in Godot.bat` on Windows.
+2. In the Godot project manager, import the `client/` folder. On Windows you can instead double-click `Open Murmur in Godot.bat` in the repo root: it uses the `GODOT` environment variable (full path to the Godot exe) if set, otherwise `godot` from your PATH.
 3. Press Play.
 
 Controls: WASD or arrows pan, wheel zooms, right/middle-drag pans, Space pauses, **F3** shows the performance overlay.
@@ -63,14 +63,16 @@ Reproduce the sim numbers: `godot --headless --path client --script res://tests/
 |---|---|
 | `client/scripts/` | The game: `catalog` (data), `city` (sim), `diplomacy`, `civics`, `events`, `art` (all drawing), `main`, `hud`, `setup` |
 | `client/tests/` | Smoke test and profilers (run headless in CI) |
-| `WIKI.md` | Design and rules, the source of truth |
-| `PLAN.md` | Roadmap with checkboxes |
-| `ARCHITECTURE.md`, `LESSONS_LEARNED.md` | How it fits together, what bit us |
+| `.github/` | CI workflow, issue and PR templates |
+| `docs/` | Design, plan, lessons, architecture ([index](docs/README.md)) |
+| `docs/WIKI.md` | Design and rules, the source of truth |
+| `docs/PLAN.md` | Roadmap with checkboxes |
+| `docs/ARCHITECTURE.md`, `docs/LESSONS_LEARNED.md` | How it fits together, what bit us |
 | `CHANGELOG.md`, `CONTRIBUTING.md`, `docs/RELEASING.md` | Process (Keep a Changelog, SemVer, `scripts/bump.py`) |
 
 ## Roadmap
 
-Ferries, animated-tile splitting for even cheaper redraws, balance passes on diplomacy and the mayor's office, more art polish. See [`PLAN.md`](PLAN.md).
+Ferries, animated-tile splitting for even cheaper redraws, balance passes on diplomacy and the mayor's office, more art polish. See [`docs/PLAN.md`](docs/PLAN.md).
 
 ## Contributing
 

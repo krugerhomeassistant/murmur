@@ -6,6 +6,12 @@ on:
 env:
   GODOT_VERSION: "4.7.2"
 jobs:
+  hygiene:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Docs, links, version and community files
+        run: python3 scripts/check_repo.py
   smoke:
     runs-on: ubuntu-latest
     steps:
