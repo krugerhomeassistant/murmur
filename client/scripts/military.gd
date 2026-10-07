@@ -32,7 +32,10 @@ const RANKS := ["Recruit", "Veteran", "Elite", "Legend"]
 const RANK_XP := [250.0, 800.0, 2000.0]  # damage dealt (or healed) to reach rank 1, 2, 3
 const RANK_DMG := 0.15  # per rank
 const RANK_HP := 0.10
+const ARMY_MAX := 150  # per town: training stops here (upkeep, and fights cost O(n^2))
 const LANE := 35.0  # px of sideways offset per unit of lane, counted in range checks (must stay below the shortest weapon range / 2)
+const TCLS := {"soft": 0, "armor": 1, "air": 2, "ship": 3}
+static var _vsv := {}  # kind -> damage multipliers as a flat array indexed by target class, for the fight inner loop
 static var booms: Array = []  # runtime only: explosions for the war visuals
 static var blasts: Array = []  # runtime only: buildings hit by raids and bombers {t: town, p: town-space pixel, ts: ms}
 
@@ -128,6 +131,25 @@ static func summary(c: City) -> String:
 	return "%d units%s (room for %d)" % [c.army.size(), (": " + ", ".join(parts)) if not parts.is_empty() else "", room]
 
 
+## Planner towns train what counters the enemy: sums the target classes of every unit a hostile neighbour has and bumps the weights of types that beat the big ones.
+static func adapt(c: City) -> void:
+	var tot := {"soft": 0, "armor": 0, "air": 0, "ship": 0}
+	var n := 0
+	for p in c.partners:
+		if Diplo.treaty(c, p) == "war" or (Diplo.treaty(c, p) == "" and Diplo.rel(c, p) < -0.2):
+			for u in p.army:
+				tot[KIND[u["k"]]["t"]] += 1
+				n += 1
+	var w := DEF_W.duplicate()
+	if n >= 3:
+		var up := {"air": ["aa", "fighter"], "armor": ["gren", "art", "heli", "bomber", "htank"], "soft": ["tank", "snip", "art", "ltank", "bomber"], "ship": ["destroyer", "patrol", "bomber", "art"]}
+		for cl in up:
+			if float(tot[cl]) / n >= 0.25:
+				for k in up[cl]:
+					w[k] = mini(int(w[k]) + (2 if float(tot[cl]) / n >= 0.5 else 1), 3)
+	c.train_w = w
+
+
 static func rank(u: Dictionary) -> int:
 	return int(u.get("rk", 0))
 
@@ -164,7 +186,12 @@ static func econ(c: City) -> void:
 	c.coins -= up
 	if c.coins < -50.0 and not c.army.is_empty():
 		c.army.pop_back()  # unpaid troops desert
-	if c.train_on:
+	if not c.human:
+		c.train_t["_a"] = float(c.train_t.get("_a", 0.0)) + 1.0
+		if float(c.train_t["_a"]) >= 10.0:
+			c.train_t["_a"] = 0.0
+			adapt(c)
+	if c.train_on and c.army.size() < ARMY_MAX:
 		var cap := caps(c)
 		var cnt := counts(c)
 		var w := weights(c)
@@ -191,6 +218,13 @@ static func econ(c: City) -> void:
 			u["s"] = maxf(float(u["s"]) - float(KIND[u["k"]]["spd"]), 0.0)  # march home
 
 
+static func _row(k: String) -> PackedFloat32Array:
+	if not _vsv.has(k):
+		var v: Dictionary = KIND[k]["vs"]
+		_vsv[k] = PackedFloat32Array([float(v.get("soft", 0.0)), float(v.get("armor", 0.0)), float(v.get("air", 0.0)), float(v.get("ship", 0.0))])
+	return _vsv[k]
+
+
 static func _of(c: City, foe: String) -> Array:
 	var r: Array = []
 	for u in c.army:
@@ -215,11 +249,17 @@ static func fight(a: City, b: City) -> void:
 		all.append(u)
 		side.append(1)
 	var n := all.size()
-	var gpos: Array = []  # position in a's frame
+	var gpos := PackedFloat32Array()  # position in a's frame
+	var lane := PackedFloat32Array()
+	var tc := PackedInt32Array()  # target class of each unit
+	var foes := [PackedInt32Array(), PackedInt32Array()]  # foes[s]: indices of the units opposing side s
 	var ms := [0.0, 0.0]  # mean march distance of each side's fighters, where medics stay behind
 	var mc := [0, 0]
 	for i in n:
 		gpos.append(float(all[i]["s"]) if side[i] == 0 else ln - float(all[i]["s"]))
+		lane.append(float(all[i]["l"]))
+		tc.append(int(TCLS[KIND[all[i]["k"]]["t"]]))
+		foes[1 - side[i]].append(i)
 		if not KIND[all[i]["k"]].has("heal") and not KIND[all[i]["k"]].has("lands"):
 			ms[side[i]] += float(all[i]["s"])
 			mc[side[i]] += 1
@@ -234,8 +274,8 @@ static func fight(a: City, b: City) -> void:
 		var spd := float(kd["spd"]) * (1.0 + 0.12 * float(u["l"]))  # lane-based jitter so a column does not arrive as one clump
 		if kd.has("lands"):  # transports hold back until the enemy fleet is gone, then run for the shore
 			var ships := false
-			for j in n:
-				if side[j] != side[i] and KIND[all[j]["k"]]["t"] == "ship":
+			for j in foes[side[i]]:
+				if tc[j] == 3:
 					ships = true
 			var tg: float = (ms[side[i]] / maxf(mc[side[i]], 1) - 70.0) if ships else ln - 20.0
 			u["s"] = clampf(own_s + clampf(tg - own_s, -spd, spd), 0.0, ln)
@@ -257,21 +297,23 @@ static func fight(a: City, b: City) -> void:
 		var bs := 1e9
 		var near := -1
 		var nd := 1e9
-		for j in n:
-			if side[j] == side[i]:
-				continue
-			var vs := float(kd["vs"].get(KIND[all[j]["k"]]["t"], 0.0))
+		var row := _row(u["k"])
+		var rng_ := float(kd["rng"])
+		var gi := gpos[i]
+		var li := lane[i]
+		for j in foes[side[i]]:
+			var vs := row[tc[j]]
 			if vs <= 0.0:
 				continue
-			var d := absf(float(gpos[j]) - float(gpos[i])) + absf(float(all[j]["l"]) - float(u["l"])) * LANE
+			var d := absf(gpos[j] - gi) + absf(lane[j] - li) * LANE
 			if d < nd:
 				nd = d
 				near = j
-			if d <= float(kd["rng"]) and d / vs < bs:
+			if d <= rng_ and d / vs < bs:
 				bs = d / vs
 				best = j
 		if best >= 0:
-			var dm := float(kd["dmg"]) * (1.0 + RANK_DMG * rank(u)) * float(kd["vs"][KIND[all[best]["k"]]["t"]])
+			var dm := float(kd["dmg"]) * (1.0 + RANK_DMG * rank(u)) * row[tc[best]]
 			hits[best] += dm
 			_gain(u, dm)
 			u["ft"] = now

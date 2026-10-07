@@ -117,7 +117,9 @@ Goal: Murmur, a cozy interactive city-builder (Godot) with an optional Live Data
 - [ ] Visible off-screen towns tick faster (0.25 s batches) so they look alive
 - [ ] M = fit-the-whole-world toggle; update README controls, WIKI, benchmark second scenario (world view)
 - [ ] Links must be real: a border link needs a road in the town's biggest connected road network reaching the border; planner towns lay that road themselves (`_plan_gate`); no more "linked" without roads (user screenshot, spectator mode).
-- [x] REAL ARMIES done (feat/armies): trained units (infantry/tanks/jets) with hp, range, damage; fight on the front, occupation forces surrender; T toggles auto-training. Still to do: planner AI using armies (it only trains by default priorities).
+- [x] REAL ARMIES done (feat/armies): trained units (infantry/tanks/jets) with hp, range, damage; fight on the front, occupation forces surrender; T toggles auto-training. 
+- [x] AI ARMIES done (feat/ai-armies): threat-driven military building, counter-training, naval yards for river enemies.
+- [ ] Perf: Military.fight is O(n^2) per pair (6 ms at 110 units a side, army cap 150); spatial bucketing by gpos when the spike pass starts.
 - [x] WARSHIPS + RAID DAMAGE done (feat/navy): patrol boat/destroyer/transport on shared rivers, bombers and raids destroy border buildings with visible blasts and smoke.
 - [x] UNIT VARIETY done (feat/unit-variants): 13 types, vet ranks, Army window with training priorities.
 - [x] WAR VISUALS v1 done (infantry/tanks/jets/blasts on the front); still to do: warships on shared rivers, buildings visibly damaged by raids (user asked "no armies, tanks, planes, boats fighting?"): war is currently abstract (Diplo._battle every 20-35 s, soldier dots only at your border). Add visible armies marching across the shared border in the world view, tanks/planes by military tier, naval units on shared rivers (navy yards exist), battle effects and damage to buildings, so a declared war is something you see.

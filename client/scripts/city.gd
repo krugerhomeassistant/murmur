@@ -1838,9 +1838,31 @@ func _planner() -> void:
 
 
 ## Picks the service building that best fixes an uncovered need (or adds a bonus), and sites it.
+## 0-1: how hostile the neighbours are (war counts fully, strained relations partly); drives planner towns to build military.
+func threat() -> float:
+	var t := 0.0
+	for p in partners:
+		var tr := Diplo.treaty(self, p)
+		if tr == "war":
+			return 1.0
+		if tr == "" and Diplo.rel(self, p) < -0.2:
+			t = maxf(t, clampf(-Diplo.rel(self, p) * 0.8, 0.0, 0.8) * (1.0 if Military.power(p) + 0.3 > Military.power(self) else 0.5))
+	return t
+
+
+## A hostile neighbour reachable by river (so a naval yard is worth having).
+func naval_threat() -> bool:
+	for p in partners:
+		if Military.river(self, p) and (Diplo.treaty(self, p) == "war" or Diplo.rel(self, p) < -0.2):
+			return true
+	return false
+
+
 func _plan_service() -> bool:
 	if homes.is_empty():
 		return false
+	var thr := 0.0 if human else threat()
+	var nav := thr > 0.0 and naval_threat()
 	var best := -1
 	var bsc := 0.2
 	for id in Catalog.DEFS:
@@ -1854,10 +1876,14 @@ func _plan_service() -> bool:
 		var lim: int = 4 + pop / 25 if d.has("out") else 1 + pop / (60 if not prov.is_empty() else 150)
 		if ch == "mill":
 			lim = 1 + farm_jobs / 30
+		if id in [T.BARRACKS, T.BASE, T.RADAR]:
+			lim = maxi(lim, 1 + int(thr * 2.0 * (1.0 + pop / 250.0)))  # a threatened planner town raises its garrison, within reason (upkeep and fight cost)
+		if id == T.NAVYARD and nav:
+			lim = 1 + int(thr * 2.0)
 		if have >= lim:
 			continue
-		if d.get("water", false):
-			continue  # ports and naval yards are placed by the player
+		if d.get("water", false) and not (id == T.NAVYARD and nav):
+			continue  # ports are placed by the player; planner towns only build naval yards when a river enemy threatens
 		var sc := 0.0
 		if ch == "mill" and farm_jobs > 0 and float(flow.get("food_local", 1.0)) < 0.7:
 			sc += 0.9
@@ -1883,6 +1909,15 @@ func _plan_service() -> bool:
 				sc += gap * float(prov[mk])
 		if id == T.FIRE and (burned > 0 or burning > 0) and float(cov["fire"]) < 0.6:
 			sc += 0.8
+		if thr > 0.0:
+			if id == T.BARRACKS:
+				sc += thr * (3.0 if have <= (bt.get(T.BASE, []) as Array).size() * 2 else 1.0)  # roughly two barracks per base
+			elif id == T.BASE:
+				sc += thr * 5.0  # scores are divided by cost, so military needs a big bonus to compete with services
+			elif id == T.RADAR:
+				sc += thr * (3.0 if have < 2 * (bt.get(T.BASE, []) as Array).size() else 0.5)
+			elif id == T.NAVYARD:
+				sc += thr * 6.0
 		if coins > 800.0:
 			sc += 0.15
 		if d.has("grant") and coins > 1000.0 and income > 3.0 and pop >= 150:
@@ -1914,7 +1949,7 @@ func _plan_service() -> bool:
 		if best == T.LIGHT:
 			if is_road(grid[i]) and lamp[i] == 0 and not _lamp_near(i, 3):
 				cand.append(i)
-		elif grid[i] == T.EMPTY and water[i] == 0 and _road_next_to(i) >= 0:
+		elif grid[i] == T.EMPTY and water[i] == 0 and _road_next_to(i) >= 0 and (best != T.NAVYARD or wet_next(i % W, i / W)):
 			cand.append(i)
 	if cand.is_empty():
 		return false
@@ -1936,7 +1971,7 @@ func _plan_service() -> bool:
 		if sc > bs:
 			bs = sc
 			bi = cand[k]
-	if bi < 0 or (bs < 0.5 and not prov.is_empty()):
+	if bi < 0 or (bs < 0.5 and not prov.is_empty() and not (thr > 0.0 and best in [T.BARRACKS, T.BASE, T.RADAR])):
 		return false
 	if best == T.LIGHT:
 		lamp[bi] = 1
