@@ -18,3 +18,7 @@ jobs:
         run: godot --headless --path client --import || true
       - name: Smoke test
         run: godot --headless --path client -s tests/smoke.gd | tee out.txt && grep -q SMOKE_OK out.txt
+      - name: Net cache and shared river tests
+        run: |
+          godot --headless --path client -s tests/netcache.gd | tee n.txt && grep -q NETCACHE_OK n.txt
+          godot --headless --path client -s tests/rivers.gd | tee r.txt && grep -q RIVERS_OK r.txt

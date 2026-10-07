@@ -97,6 +97,7 @@ var pipe := PackedByteArray()
 var lamp := PackedByteArray()  # street lamps sit on road tiles
 var water := PackedByteArray()  # 1 = river; only roads (bridges) and wires/pipes can cross it
 var scan_dirty := false
+var river_plan := {}  # set by Main for a region-wide river: {horiz, a, b}; see gen_river
 var lod := 1  # >1 = off-screen town: slow-changing analyses (crime, land value) run every lod-th second
 var lod_n := 0
 var pend := 0.0  # sim time owed to an off-screen town (it ticks in 0.5s batches)
@@ -546,19 +547,22 @@ static func sidx(x: int, y: int) -> int:
 
 func set_start(w: int, h: int) -> void:
 	terr = Rect2i(W / 2 - w / 2, H / 2 - h / 2, w, h)
-	gen_river(rng.randi())
+	gen_river(rng.randi(), 1, river_plan)
 	dry_built()
 	_rebuild_cells()
 	_scan()
 
 
 ## Random river across the whole map, beside the starting plan. mode 0 = none. Water cells are 1 in `water`.
-func gen_river(sd: int, mode := 1) -> void:
+func gen_river(sd: int, mode := 1, plan := {}) -> void:
 	water.fill(0)
 	if mode == 0:
 		return
 	var r := RandomNumberGenerator.new()
 	r.seed = sd
+	if not plan.is_empty():
+		_gen_shared_river(r, plan)
+		return
 	var vert := r.randf() < 0.5
 	var sgn := 1.0 if r.randf() < 0.5 else -1.0
 	var mid := (terr.position.x + terr.size.x * 0.5) if vert else (terr.position.y + terr.size.y * 0.5)
@@ -571,6 +575,27 @@ func gen_river(sd: int, mode := 1) -> void:
 		for k in wd:
 			var x := int(c) + k if vert else a
 			var y := a if vert else int(c) + k
+			if inside(x, y):
+				water[y * W + x] = 1
+
+
+## River that enters this territory at cross-fraction plan.a and leaves at plan.b, so neighbouring towns (which agree on
+## the fractions at their shared edge) get one continuous river. Wobble and width taper to fixed values at the edges.
+func _gen_shared_river(r: RandomNumberGenerator, plan: Dictionary) -> void:
+	var horiz: bool = plan["horiz"]
+	var ap: int = terr.position.x if horiz else terr.position.y
+	var asz: int = terr.size.x if horiz else terr.size.y
+	var cp: int = terr.position.y if horiz else terr.position.x
+	var csz: int = terr.size.y if horiz else terr.size.x
+	var wob := 0.0
+	for a in (W if horiz else H):
+		var t := float(a - ap) / asz
+		var tc := clampf(t, 0.0, 1.0)
+		wob = clampf(wob + r.randf_range(-0.5, 0.5), -3.0, 3.0)
+		var c := cp + csz * lerpf(float(plan["a"]), float(plan["b"]), t) + wob * sin(tc * PI)
+		for k in 3:
+			var x := a if horiz else int(c) + k
+			var y := int(c) + k if horiz else a
 			if inside(x, y):
 				water[y * W + x] = 1
 

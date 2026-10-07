@@ -119,10 +119,19 @@ func _fresh(o: Dictionary) -> void:
 		nb.human = false
 		nb.coins = 400.0
 		nb.temper = [0.2, TEMPERS[k % TEMPERS.size()], -0.25, randf_range(-0.3, 0.3)][mood]
+	var rmode: int = o.get("river", 0)
+	var rsd := randi()
+	var rhoriz := randf() < 0.5
 	for k in towns.size():
 		towns[k].acc = 0.3 * k
+		if rmode == 3:  # one river through the whole row/column of towns that contains the player's town
+			var g := towns[k].gpos
+			var same_line: bool = (g.y == towns[0].gpos.y) if rhoriz else (g.x == towns[0].gpos.x)
+			if same_line:
+				var idx := g.x if rhoriz else g.y
+				towns[k].river_plan = {"horiz": rhoriz, "a": _edge_frac(rsd, idx), "b": _edge_frac(rsd, idx + 1)}
 		towns[k].set_start(lw, lh)
-		if o.get("river", 0) >= 1:
+		if rmode == 1 or rmode == 2 or (rmode == 3 and towns[k].river_plan.is_empty()):
 			towns[k].water.fill(0)
 		towns[k].ev_scale = [1.5, 1.0, 0.7][diff]
 	city.coins = [600.0, 300.0, 150.0][diff]
@@ -130,6 +139,11 @@ func _fresh(o: Dictionary) -> void:
 	city.auto_policy = o.get("policy", true)
 	city.auto_expand = o.get("expand", true)
 	headline = "Welcome to %s. %s Lay roads and zone beside them; the city grows as needs arise." % [city.town_name, ("Your neighbour %s runs itself (Region tab)." % towns[1].town_name) if n > 1 else "You are on your own."]
+
+
+## Where the shared river crosses the border with index k, as a fraction of the territory's cross span (same for both towns).
+static func _edge_frac(sd: int, k: int) -> float:
+	return 0.3 + 0.4 * float(hash([sd, k]) % 1000) / 1000.0
 
 
 func open_setup() -> void:

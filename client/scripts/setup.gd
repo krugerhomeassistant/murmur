@@ -63,7 +63,7 @@ func _ready() -> void:
 	o_mood = _opt(v, "Neighbours are", ["Friendly", "Mixed (each has its own temper)", "Prickly", "Random"], 1, "How the neighbours feel about you at the start. Friendly towns offer pacts; prickly ones smuggle, raid and demand tribute.")
 	o_diff = _opt(v, "Difficulty", ["Relaxed ($600, calmer world)", "Normal ($300)", "Hard ($150, more disasters)"], 1, "Starting money and how often world events strike.")
 	o_land = _opt(v, "Starting land", ["Small (40x24)", "Medium (48x32)", "Large (64x40)"], 1, "How much of the map you own at the start. You can annex more at any time.")
-	o_river = _opt(v, "Rivers", ["Random river in every town", "None (flat land)", "Custom: I paint it (world editor)"], 0, "A river splits the land. Zones can't go on water; roads over it become bridges (4x cost). Custom starts paused with the paint-water tool so you can draw your own rivers and lakes first.")
+	o_river = _opt(v, "Rivers", ["Random river in every town", "None (flat land)", "Custom: I paint it (world editor)", "One river through neighbouring towns"], 3, "A river splits the land. Zones can't go on water; roads over it become bridges (4x cost). Custom starts paused with the paint-water tool so you can draw your own rivers and lakes first.")
 	o_auto = _opt(v, "Auto-growth", ["Off - I build everything", "Zones only", "Zones + roads"], 2, "Whether the planner zones plots and lays roads for you when demand rises.")
 	o_pol = CheckButton.new()
 	o_pol.text = "Auto-policies (the council decides)"
