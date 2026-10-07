@@ -724,7 +724,7 @@ func _front(node: CanvasItem, a: City, b: City, p0: Vector2, p1: Vector2) -> voi
 	var ln := p0.distance_to(p1)
 	var u := (p1 - p0) / maxf(ln, 1.0)
 	var nv := Vector2(-u.y, u.x)
-	var sz := clampf(0.4 / cam.zoom.x, 1.0, 6.0)  # keep units readable when zoomed out
+	var sz := clampf(1.1 / cam.zoom.x, 1.6, 10.0)  # keep units readable when zoomed out
 	var f := 0.5 + 0.1 * sin(tm * 0.5)
 	var cl: Array = a.clash.get(b.town_name, [])
 	var fresh := 0.0
