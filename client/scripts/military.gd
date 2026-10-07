@@ -4,19 +4,31 @@ extends RefCounted
 ## with hit points, range and damage. A war ends when one side's army is gone and the other holds its border.
 ## Geometry: the front is the line from town a's edge to town b's edge (see line()); a unit's `s` is how many pixels
 ## it has marched from its own edge.
+## Every unit type lives in KIND: `t` is what it counts as when shot at (soft/armor/air), `vs` its damage multiplier
+## against each of those, `cap` how many each building houses, `radar` that air capacity is also limited by radar posts.
 
 const T = Catalog.Id
 const TILE := 32.0
 const KIND := {
-	"inf": {"n": "infantry", "hp": 75.0, "dmg": 2.4, "rng": 110.0, "spd": 9.0, "cost": 25.0, "upk": 0.02, "train": 8.0},
-	"tank": {"n": "tanks", "hp": 350.0, "dmg": 6.5, "rng": 240.0, "spd": 14.0, "cost": 140.0, "upk": 0.08, "train": 35.0},
-	"jet": {"n": "jets", "hp": 150.0, "dmg": 9.0, "rng": 200.0, "spd": 45.0, "cost": 220.0, "upk": 0.12, "train": 50.0},
+	"inf": {"n": "Rifleman", "t": "soft", "hp": 75.0, "dmg": 2.4, "rng": 110.0, "spd": 9.0, "cost": 25.0, "upk": 0.02, "train": 8.0, "cap": {T.BARRACKS: 6, T.BASE: 4}, "vs": {"soft": 1.0, "armor": 0.25, "air": 0.15}},
+	"gren": {"n": "Grenadier", "t": "soft", "hp": 80.0, "dmg": 3.2, "rng": 90.0, "spd": 8.0, "cost": 40.0, "upk": 0.03, "train": 12.0, "cap": {T.BARRACKS: 2, T.BASE: 2}, "vs": {"soft": 0.8, "armor": 1.8, "air": 0.0}},
+	"snip": {"n": "Sniper", "t": "soft", "hp": 45.0, "dmg": 5.5, "rng": 330.0, "spd": 8.0, "cost": 50.0, "upk": 0.03, "train": 16.0, "cap": {T.BARRACKS: 2}, "vs": {"soft": 1.6, "armor": 0.1, "air": 0.2}},
+	"medic": {"n": "Medic", "t": "soft", "hp": 60.0, "dmg": 0.0, "rng": 110.0, "spd": 9.0, "cost": 40.0, "upk": 0.03, "train": 14.0, "cap": {T.BARRACKS: 1, T.BASE: 1}, "vs": {}, "heal": 2.5},
+	"ltank": {"n": "Light tank", "t": "armor", "hp": 220.0, "dmg": 4.5, "rng": 220.0, "spd": 22.0, "cost": 100.0, "upk": 0.05, "train": 22.0, "cap": {T.BASE: 3}, "vs": {"soft": 1.4, "armor": 0.8, "air": 0.0}},
+	"tank": {"n": "Battle tank", "t": "armor", "hp": 350.0, "dmg": 6.5, "rng": 240.0, "spd": 14.0, "cost": 140.0, "upk": 0.08, "train": 35.0, "cap": {T.BASE: 3}, "vs": {"soft": 1.6, "armor": 1.0, "air": 0.0}},
+	"htank": {"n": "Heavy tank", "t": "armor", "hp": 650.0, "dmg": 8.5, "rng": 250.0, "spd": 9.0, "cost": 260.0, "upk": 0.14, "train": 60.0, "cap": {T.BASE: 1}, "vs": {"soft": 1.5, "armor": 1.3, "air": 0.0}},
+	"art": {"n": "Artillery", "t": "armor", "hp": 120.0, "dmg": 12.0, "rng": 600.0, "spd": 8.0, "cost": 200.0, "upk": 0.09, "train": 40.0, "cap": {T.BASE: 2}, "vs": {"soft": 1.5, "armor": 0.9, "air": 0.0}},
+	"aa": {"n": "Anti-air", "t": "armor", "hp": 140.0, "dmg": 5.0, "rng": 380.0, "spd": 10.0, "cost": 150.0, "upk": 0.07, "train": 28.0, "cap": {T.BASE: 1}, "vs": {"soft": 0.3, "armor": 0.2, "air": 3.0}},
+	"jet": {"n": "Strike jet", "t": "air", "hp": 150.0, "dmg": 9.0, "rng": 200.0, "spd": 45.0, "cost": 220.0, "upk": 0.12, "train": 50.0, "cap": {T.BASE: 2}, "radar": true, "vs": {"soft": 1.2, "armor": 1.5, "air": 0.8}},
+	"fighter": {"n": "Fighter", "t": "air", "hp": 120.0, "dmg": 6.0, "rng": 220.0, "spd": 55.0, "cost": 200.0, "upk": 0.1, "train": 45.0, "cap": {T.BASE: 2}, "radar": true, "vs": {"soft": 0.5, "armor": 0.4, "air": 2.2}},
+	"bomber": {"n": "Bomber", "t": "air", "hp": 220.0, "dmg": 10.0, "rng": 140.0, "spd": 38.0, "cost": 300.0, "upk": 0.16, "train": 65.0, "cap": {T.BASE: 1}, "radar": true, "vs": {"soft": 1.3, "armor": 1.8, "air": 0.0}},
+	"heli": {"n": "Helicopter", "t": "air", "hp": 160.0, "dmg": 7.0, "rng": 190.0, "spd": 30.0, "cost": 240.0, "upk": 0.13, "train": 50.0, "cap": {T.BASE: 1}, "vs": {"soft": 1.4, "armor": 1.6, "air": 0.3}},
 }
-const VS := {  # damage multiplier, attacker kind -> target kind
-	"inf": {"inf": 1.0, "tank": 0.25, "jet": 0.15},
-	"tank": {"inf": 1.6, "tank": 1.0, "jet": 0.0},
-	"jet": {"inf": 1.2, "tank": 1.5, "jet": 0.8},
-}
+const DEF_W := {"inf": 2, "gren": 1, "snip": 1, "medic": 1, "ltank": 1, "tank": 2, "htank": 1, "art": 1, "aa": 1, "jet": 1, "fighter": 1, "bomber": 1, "heli": 1}
+const RANKS := ["Recruit", "Veteran", "Elite", "Legend"]
+const RANK_XP := [150.0, 450.0, 1000.0]  # damage dealt (or healed) to reach rank 1, 2, 3
+const RANK_DMG := 0.15  # per rank
+const RANK_HP := 0.10
 static var booms: Array = []  # runtime only: explosions for the war visuals
 
 
@@ -47,33 +59,73 @@ static func line(a: City, b: City) -> PackedVector2Array:
 
 
 static func caps(c: City) -> Dictionary:
-	var bk := (c.bt.get(T.BARRACKS, []) as Array).size()
-	var ba := (c.bt.get(T.BASE, []) as Array).size()
 	var rd := (c.bt.get(T.RADAR, []) as Array).size()
-	return {"inf": 6 * bk + 4 * ba, "tank": 3 * ba, "jet": mini(2 * ba, 2 * rd)}
+	var r := {}
+	for k in KIND:
+		var n := 0
+		for id in KIND[k]["cap"]:
+			n += int(KIND[k]["cap"][id]) * (c.bt.get(id, []) as Array).size()
+		r[k] = mini(n, 2 * rd) if KIND[k].get("radar", false) else n
+	return r
 
 
 static func counts(c: City) -> Dictionary:
-	var n := {"inf": 0, "tank": 0, "jet": 0}
+	var n := {}
+	for k in KIND:
+		n[k] = 0
 	for u in c.army:
 		n[u["k"]] += 1
 	return n
 
 
+static func weights(c: City) -> Dictionary:
+	var w := DEF_W.duplicate()
+	for k in c.train_w:
+		if w.has(k):
+			w[k] = int(c.train_w[k])
+	return w
+
+
 ## Military strength used by the AI and by tribute demands.
 static func power(c: City) -> float:
-	var n := counts(c)
-	return 0.04 * int(n["inf"]) + 0.15 * int(n["tank"]) + 0.2 * int(n["jet"])
+	var p := 0.0
+	for u in c.army:
+		p += float(KIND[u["k"]]["cost"]) * 0.0012 * (1.0 + 0.1 * int(u.get("rk", 0)))
+	return p
 
 
 static func summary(c: City) -> String:
 	var n := counts(c)
 	var k := caps(c)
-	return "%d infantry, %d tanks, %d jets (room for %d/%d/%d)" % [n["inf"], n["tank"], n["jet"], k["inf"], k["tank"], k["jet"]]
+	var parts: PackedStringArray = []
+	var room := 0
+	for id in KIND:
+		room += int(k[id])
+		if int(n[id]) > 0:
+			parts.append("%d %s" % [n[id], String(KIND[id]["n"]).to_lower()])
+	return "%d units%s (room for %d)" % [c.army.size(), (": " + ", ".join(parts)) if not parts.is_empty() else "", room]
+
+
+static func rank(u: Dictionary) -> int:
+	return int(u.get("rk", 0))
+
+
+static func max_hp(u: Dictionary) -> float:
+	return float(u.get("mx", KIND[u["k"]]["hp"]))
 
 
 static func _unit(k: String, hp_scale := 1.0) -> Dictionary:
-	return {"k": k, "hp": float(KIND[k]["hp"]) * hp_scale, "tgt": "", "s": 0.0, "l": randf_range(-1.0, 1.0)}
+	var h := float(KIND[k]["hp"]) * hp_scale
+	return {"k": k, "hp": h, "mx": h, "xp": 0.0, "rk": 0, "tgt": "", "s": 0.0, "l": randf_range(-1.0, 1.0)}
+
+
+static func _gain(u: Dictionary, xp: float) -> void:
+	u["xp"] = float(u.get("xp", 0.0)) + xp
+	while rank(u) < 3 and float(u["xp"]) >= float(RANK_XP[rank(u)]):
+		var m0 := max_hp(u)
+		u["rk"] = rank(u) + 1
+		u["mx"] = m0 * (1.0 + RANK_HP * 1.0 / (1.0 + RANK_HP * (rank(u) - 1)))
+		u["hp"] = float(u["hp"]) + float(u["mx"]) - m0
 
 
 ## A declaration of war calls up a militia so even a town with no barracks fields something.
@@ -93,9 +145,10 @@ static func econ(c: City) -> void:
 	if c.train_on:
 		var cap := caps(c)
 		var cnt := counts(c)
+		var w := weights(c)
 		for k in KIND:
-			if int(cnt[k]) < int(cap[k]) and c.coins >= float(KIND[k]["cost"]) * 3.0:
-				c.train_t[k] = float(c.train_t.get(k, 0.0)) + 1.0
+			if int(w[k]) > 0 and int(cnt[k]) < int(cap[k]) and c.coins >= float(KIND[k]["cost"]) * 3.0:
+				c.train_t[k] = float(c.train_t.get(k, 0.0)) + 0.5 * int(w[k])  # priority 1 = half speed, 3 = 1.5x
 				if float(c.train_t[k]) >= float(KIND[k]["train"]):
 					c.train_t[k] = 0.0
 					c.coins -= float(KIND[k]["cost"])
@@ -138,40 +191,70 @@ static func fight(a: City, b: City) -> void:
 		u["s"] = minf(float(u["s"]), ln)
 		all.append(u)
 		side.append(1)
+	var n := all.size()
 	var gpos: Array = []  # position in a's frame
-	for i in all.size():
+	var ms := [0.0, 0.0]  # mean march distance of each side's fighters, where medics stay behind
+	var mc := [0, 0]
+	for i in n:
 		gpos.append(float(all[i]["s"]) if side[i] == 0 else ln - float(all[i]["s"]))
+		if not KIND[all[i]["k"]].has("heal"):
+			ms[side[i]] += float(all[i]["s"])
+			mc[side[i]] += 1
 	var hits: Array = []
-	hits.resize(all.size())
+	hits.resize(n)
 	hits.fill(0.0)
-	for i in all.size():
+	var heals := hits.duplicate()
+	for i in n:
 		var u: Dictionary = all[i]
 		var kd: Dictionary = KIND[u["k"]]
-		var best := -1
-		var bd := 1e9
-		for j in all.size():
-			if side[j] == side[i] or float(VS[u["k"]][all[j]["k"]]) <= 0.0:
+		var own_s := float(u["s"])
+		var spd := float(kd["spd"]) * (1.0 + 0.12 * float(u["l"]))  # lane-based jitter so a column does not arrive as one clump
+		if kd.has("heal"):
+			var cand: Array = []
+			for j in n:
+				if j != i and side[j] == side[i] and float(all[j]["hp"]) < max_hp(all[j]) and absf(float(gpos[j]) - float(gpos[i])) <= float(kd["rng"]):
+					cand.append(j)
+			cand.sort_custom(func(p: int, q: int) -> bool: return float(all[p]["hp"]) / max_hp(all[p]) < float(all[q]["hp"]) / max_hp(all[q]))
+			for j in cand.slice(0, 3):
+				var h := minf(float(kd["heal"]), max_hp(all[j]) - float(all[j]["hp"]))
+				heals[j] += h
+				_gain(u, h * 0.5)
+			var home: float = (float(ms[side[i]]) / float(mc[side[i]]) - 70.0) if mc[side[i]] > 0 else 0.0
+			u["s"] = clampf(own_s + clampf(home - own_s, -spd, spd), 0.0, ln)
+			continue
+		var best := -1  # best target in range (damage-weighted, so AA picks planes), and the nearest one otherwise
+		var bs := 1e9
+		var near := -1
+		var nd := 1e9
+		for j in n:
+			if side[j] == side[i]:
+				continue
+			var vs := float(kd["vs"].get(KIND[all[j]["k"]]["t"], 0.0))
+			if vs <= 0.0:
 				continue
 			var d := absf(float(gpos[j]) - float(gpos[i])) + absf(float(all[j]["l"]) - float(u["l"])) * 60.0
-			if d < bd:
-				bd = d
+			if d < nd:
+				nd = d
+				near = j
+			if d <= float(kd["rng"]) and d / vs < bs:
+				bs = d / vs
 				best = j
-		var own_s := float(u["s"])
-		if best >= 0 and bd <= float(kd["rng"]):
-			hits[best] += float(kd["dmg"]) * float(VS[u["k"]][all[best]["k"]])
+		if best >= 0:
+			var dm := float(kd["dmg"]) * (1.0 + RANK_DMG * rank(u)) * float(kd["vs"][KIND[all[best]["k"]]["t"]])
+			hits[best] += dm
+			_gain(u, dm)
 			u["ft"] = now
 			u["fg"] = gpos[best]
 			u["fl"] = all[best]["l"]
 			continue
 		var target_s := ln - 20.0
-		if best >= 0:
-			target_s = float(gpos[best]) if side[i] == 0 else ln - float(gpos[best])
+		if near >= 0:
+			target_s = float(gpos[near]) if side[i] == 0 else ln - float(gpos[near])
 			target_s -= signf(target_s - own_s) * float(kd["rng"]) * 0.8  # stop at firing range
-		var spd := float(kd["spd"]) * (1.0 + 0.12 * float(u["l"]))  # lane-based jitter so a column does not arrive as one clump
 		u["s"] = clampf(own_s + clampf(target_s - own_s, -spd, spd), 0.0, ln)
-	for i in all.size():
-		all[i]["hp"] = float(all[i]["hp"]) - float(hits[i])
-	for i in all.size():
+	for i in n:
+		all[i]["hp"] = minf(float(all[i]["hp"]) - float(hits[i]) + float(heals[i]), max_hp(all[i]))
+	for i in n:
 		if float(all[i]["hp"]) <= 0.0:
 			var owner: City = a if side[i] == 0 else b
 			var killer: City = b if side[i] == 0 else a

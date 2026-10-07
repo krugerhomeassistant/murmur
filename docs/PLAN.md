@@ -118,8 +118,14 @@ Goal: Murmur, a cozy interactive city-builder (Godot) with an optional Live Data
 - [ ] M = fit-the-whole-world toggle; update README controls, WIKI, benchmark second scenario (world view)
 - [ ] Links must be real: a border link needs a road in the town's biggest connected road network reaching the border; planner towns lay that road themselves (`_plan_gate`); no more "linked" without roads (user screenshot, spectator mode).
 - [x] REAL ARMIES done (feat/armies): trained units (infantry/tanks/jets) with hp, range, damage; fight on the front, occupation forces surrender; T toggles auto-training. Still to do: warships on shared rivers, visible raid damage on buildings, planner AI using armies.
+- [x] UNIT VARIETY done (feat/unit-variants): 13 types, vet ranks, Army window with training priorities.
 - [x] WAR VISUALS v1 done (infantry/tanks/jets/blasts on the front); still to do: warships on shared rivers, buildings visibly damaged by raids (user asked "no armies, tanks, planes, boats fighting?"): war is currently abstract (Diplo._battle every 20-35 s, soldier dots only at your border). Add visible armies marching across the shared border in the world view, tanks/planes by military tier, naval units on shared rivers (navy yards exist), battle effects and damage to buildings, so a declared war is something you see.
 - Do NOT drop the other backlog above (mining planner, v0.2.0, screenshots, lint in CI, spike work, threading, ferries, farm variants); this sits alongside it.
+
+## Multiplayer (user, 2026-10-07: "potentially add some kind of multiplayer somehow, soon") - NOT STARTED, design first
+- [ ] Research + decide model before any code: (a) co-op shared world (one host sim, clients send build/diplomacy commands, host streams state) vs (b) each player runs own town(s) in the one world with diplomacy/war between players vs (c) async/visit. Godot 4 high-level multiplayer (ENet/WebSocket, RPC) is the likely base.
+- [ ] Prereqs to check: sim uses randf()/global RNG and wall-clock (Time.get_ticks_msec) in places, so it is not deterministic: host-authoritative state sync is the realistic route, not lockstep. Saves already serialise towns (`to_dict`), a snapshot format exists. World view already has one human-owned town flag (`human`), so multi-owner needs per-town owner id and per-player HUD.
+- [ ] Ask user: player count, co-op vs competitive, LAN/direct-IP vs hosted server (Phase 7 host choice).
 
 ## Priority notes (user, 2026-10-07)
 - [x] BENCHMARK STANDARD: real windowed run (not headless), 8 towns, 8x speed, ALL overlays on; report fps/p99/CPU/GPU/RAM/VRAM for that. README table must use it. Headless sim numbers are secondary only.

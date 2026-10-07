@@ -30,4 +30,4 @@ jobs:
           godot --headless --path client -s tests/rivers.gd | tee r.txt && grep -q RIVERS_OK r.txt
           godot --headless --path client -s tests/spectate.gd | tee s.txt && grep -q SPECTATE_OK s.txt
           godot --headless --path client -s tests/mining.gd | tee m.txt && grep -q MINING_OK m.txt
-          godot --headless --path client -s tests/war.gd | tee w.txt && grep -q WAR_OK w.txt
+          godot --headless --path client -s tests/war.gd | tee w.txt && grep -q WAR_OK w.txt && grep -q MIX_OK w.txt
