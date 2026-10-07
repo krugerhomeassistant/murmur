@@ -64,6 +64,15 @@ func _ready() -> void:
 	hud.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	layer.add_child(hud)
 	open_setup()
+	if "--benchmark" in OS.get_cmdline_user_args():
+		run_benchmark(true)
+
+
+func run_benchmark(quit_after := false) -> void:
+	var b := Benchmark.new()
+	b.m = self
+	b.quit_after = quit_after
+	add_child(b)
 
 
 ## Square spiral from the first town: every town sits next to the previous one.
@@ -305,6 +314,8 @@ func _unhandled_input(e: InputEvent) -> void:
 			KEY_F:
 				follow = not follow
 				headline = "Auto-follow %s." % ("on" if follow else "off")
+			KEY_F9:
+				run_benchmark()
 			KEY_F3:
 				perf_on = not perf_on
 			KEY_SPACE:
