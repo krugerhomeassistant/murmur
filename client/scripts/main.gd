@@ -697,25 +697,23 @@ func _draw() -> void:  # world level: weather and the links between towns; every
 				ci.draw_rect(view, Color(0.8, 0.82, 0.85, 0.3))
 			"cold_snap":
 				ci.draw_rect(view, Color(0.6, 0.75, 1.0, 0.12))
-	_links()
 
 
-## Line between each pair of neighbouring towns: green = a road reaches the shared border, grey = not yet, red = war.
-func _links() -> void:
+## Line from this town to its east and south neighbours: green = a road reaches the shared border, grey = not yet, red = war.
+func _links(t: City) -> void:
 	var font := ThemeDB.fallback_font
 	var z := cam.zoom.x
-	for c in towns:
-		for d in c.partners:
-			var k: int = Diplo.side(c, d)
-			if k != 1 and k != 2:
-				continue  # each pair once, from its west/north member
-			var ok := Diplo.linked(c, d)
-			var war := Diplo.treaty(c, d) == "war"
-			var lc := Color("d9382a") if war else (Color("9fd3a0") if ok else Color("6a6a60"))
-			var p0 := origin(c) + Vector2(c.terr.get_center()) * TILE
-			var p1 := origin(d) + Vector2(d.terr.get_center()) * TILE
-			ci.draw_line(p0, p1, lc, (4.0 if ok else 2.0) / z)
-			ci.draw_string(font, (p0 + p1) * 0.5 + Vector2(-30, -6) / z, "WAR" if war else ("road" if ok else "no road"), HORIZONTAL_ALIGNMENT_CENTER, 60.0 / z, int(12.0 / z), lc)
+	for d in t.partners:
+		var k: int = Diplo.side(t, d)
+		if k != 1 and k != 2:
+			continue  # each pair once, from its west/north member
+		var ok := Diplo.linked(t, d)
+		var war := Diplo.treaty(t, d) == "war"
+		var lc := Color("d9382a") if war else (Color("9fd3a0") if ok else Color("8a8a7a"))
+		var p0 := Vector2(t.terr.get_center()) * TILE
+		var p1 := origin(d) - origin(t) + Vector2(d.terr.get_center()) * TILE
+		ci.draw_line(p0, p1, lc, (4.0 if ok else 2.0) / z)
+		ci.draw_string(font, (p0 + p1) * 0.5 + Vector2(-30, -6) / z, "WAR" if war else ("road" if ok else "no road"), HORIZONTAL_ALIGNMENT_CENTER, 60.0 / z, int(12.0 / z), lc)
 
 
 func _town_col(c: City) -> Color:
@@ -765,10 +763,13 @@ func draw_overlay(node: CanvasItem, t: City) -> void:
 		var lp := Vector2(rim.get_center().x - font0.get_string_size(lab, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x * 0.5, rim.position.y - fs * 0.4)
 		ci.draw_string(font0, lp + Vector2(2, 2) / cam.zoom.x, lab, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Color(0, 0, 0, 0.8))
 		ci.draw_string(font0, lp, lab, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, tcol)
+		_links(t)
 		city = keep
 		ci = self
 		draw_acc += (Time.get_ticks_usec() - d0) / 1000.0
 		return
+	if lod == 2:
+		_links(t)
 	if t == city_view:
 		_draw_borders(tr)
 	_boats()

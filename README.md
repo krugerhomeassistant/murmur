@@ -28,7 +28,7 @@ Everything is drawn with code (no art assets), the whole game is data-driven.
 2. In the Godot project manager, import the `client/` folder. On Windows you can instead double-click `Open Murmur in Godot.bat` in the repo root: it uses the `GODOT` environment variable (full path to the Godot exe) if set, otherwise `godot` from your PATH.
 3. Press Play.
 
-Controls: WASD or arrows pan, wheel zooms, right/middle-drag pans, Space pauses, **F3** shows the performance overlay.
+Controls: WASD or arrows pan, wheel zooms, right/middle-drag pans, Space pauses, **M** zooms out to the whole region and back, **F3** shows the performance overlay. All towns sit in one continuous map: pan or scroll to the next town, or click it.
 
 ## Built to stay fast
 
