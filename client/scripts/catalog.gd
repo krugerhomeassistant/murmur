@@ -9,7 +9,7 @@ enum Id {
     PARK, PLAYGROUND, PLAZA, CINEMA, MUSEUM, STADIUM, THEME,
     BUS, TRAIN, WIND, SOLAR, COAL, WATER, LANDFILL, RECYCLE,
     MARKET, BANK, MALL, HOTEL, TOWNHALL, WIRE, PIPE, LIGHT, COURT, PRISON, COTTAGE, TOWNHOUSE, TENEMENT, CONDO, CHURCH, BAR, UNION_HALL, CHAMBER, BASE, BARRACKS, RADAR, MILL, WAREHOUSE, DEPOT, SEWAGE, SEWER, PORT, NAVYARD, FISHDOCK,
-    ORCHARD, RANCH, MINE, FOUNDRY,
+    ORCHARD, RANCH, MINE, FOUNDRY, GREENHOUSE, FISHFARM,
 }
 
 const CATS := [
@@ -163,6 +163,14 @@ const DEFS := {
         "sector": "ranch", "home": 0, "jobs": 3, "max": 2, "shape": "farm", "poll": [2, 0.1],
         "desc": "Pasture and dairy: 3 jobs per level and food made on the spot, no mill needed. A little smell reaches nearby homes.",
         "tip": "A ranch feeds a growing town without the mill chain, but keep it a couple of blocks from housing."},
+    Id.GREENHOUSE: {"n": "Greenhouse zone", "cat": "zone", "kind": "zone", "cost": 40, "up": 0.35, "unlock": 80, "col": Color("7ac89a"), "g": "Gh",
+        "sector": "green", "home": 0, "jobs": 3, "max": 2, "shape": "farm",
+        "desc": "Glass houses: 3 jobs per level and steady crops all year, so winter does not starve you. Pricier to run than a field and a little below an orchard in summer. Crops still need a food mill.",
+        "tip": "Add a few before your first winter."},
+    Id.FISHFARM: {"n": "Fish farm zone", "cat": "zone", "kind": "zone", "cost": 30, "up": 0.25, "unlock": 70, "col": Color("5a9ab0"), "g": "Ff",
+        "sector": "fishfarm", "home": 0, "jobs": 3, "max": 2, "shape": "farm", "water": true,
+        "desc": "Ponds beside the river: 3 jobs per level and food made on the spot, no mill needed. Output falls when the river is polluted.",
+        "tip": "Must touch the water. Keep sewage out of the river."},
     Id.MINE: {"n": "Mine", "cat": "zone", "kind": "zone", "cost": 30, "up": 0.5, "unlock": 100, "col": Color("6a6a72"), "g": "Mn",
         "sector": "mine", "home": 0, "jobs": 4, "max": 3, "shape": "factory", "poll": [4, 0.4],
         "desc": "Digs ore, 4 jobs per level. Can only be placed on ore deposits (dark flecks on the map); richer deposits yield more. Ore sells raw, or feeds a foundry.",

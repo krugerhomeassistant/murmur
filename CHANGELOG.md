@@ -22,6 +22,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 - Unit variety: 13 unit types (rifleman, grenadier, sniper, medic; light, battle and heavy tank, artillery, anti-air; strike jet, fighter, bomber, helicopter) with counters, veteran ranks (recruit to legend) and an Army window (Windows menu) with the roster and per-kind training priorities. Replaces the 3 fixed unit types.
 - Warships: patrol boats, destroyers and transports from Naval yards fight where a river crosses the border between two towns at war. Bombers and raids now destroy the buildings nearest the attacker's border with visible blasts and smoke.
 - AI armies: planner towns build barracks, bases, radar posts and (against river enemies) naval yards when a neighbour is hostile, and train the unit types that counter what the enemy fields.
+- Farm variants: greenhouses (steady winter crops) and fish farms (waterside, food on the spot) join fields, orchards and ranches; planner towns now zone orchards, ranches, greenhouses and fish farms too (`tests/farms.gd`).
 - War visuals: towns at war show infantry, tanks (military bases) and aircraft (radar) on the front between them, a front line that the last battle's winner pushes forward, and blasts after each battle.
 - Mining: ore deposits (dark flecks), Mine zone (deposits only), Foundry (ore to metal; metal boosts factory goods), ore/metal stock and exports; Orchard (+50% crops) and Ranch (food without a mill) farm variants (`tests/mining.gd`).
 - Farm variants: Orchard (50% more crops) and Ranch (food without a mill).

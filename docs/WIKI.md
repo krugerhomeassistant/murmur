@@ -105,3 +105,6 @@ art.gd (class Art): hand-drawn 32x32 sprites from primitives for all 39 service 
 
 ## Shared rivers
 Setup Rivers = 'One river through neighbouring towns' (default). Main._fresh picks horizontal/vertical, takes the row/column of the player's town, and gives each town `river_plan {horiz,a,b}` (cross-span fractions at its entry/exit borders from `_edge_frac(seed, k)`); `City._gen_shared_river` draws it with wobble/width tapering to fixed values at the territory edges so neighbours match. Towns founded later still get their own random river.
+
+## Farm variants
+Farm-sector zones (sector -> effect): `farm` grain, seasonal crops; `orchard` 1.5x crops; `ranch` food on the spot, a little smell; `green` (greenhouse, unlock 80) crops 0.85x of a field-summer rate in every season; `fishfarm` (unlock 70, must touch water) food on the spot scaled by river_health. Crops need a mill; ranch and fish farm food does not. Planner towns pick a variant via City._farm_variant (fields 3, orchard 1, ranch 1 or 3 when food is short without a mill, greenhouse 0.5 or 2.5 in lean seasons, fish farm 1 while the river is healthy).
