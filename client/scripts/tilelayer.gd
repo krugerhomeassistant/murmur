@@ -6,6 +6,7 @@ extends Node2D
 const SC := 2  # bake resolution: texels per world pixel, so zooming in stays sharp
 
 var m: Node
+var town: City
 var x0 := 0
 var y0 := 0
 var x1 := 0
@@ -21,7 +22,7 @@ class Bake:
 	var t: TileLayer
 
 	func _draw() -> void:
-		t.m.draw_chunk(self, t.x0, t.y0, t.x1, t.y1)
+		t.m.draw_chunk(self, t.town, t.x0, t.y0, t.x1, t.y1)
 
 
 func _bake_setup() -> void:
@@ -60,4 +61,4 @@ func refresh(lod: int) -> void:
 
 func _draw() -> void:
 	if m.far_mode != 0:
-		m.draw_chunk(self, x0, y0, x1, y1)
+		m.draw_chunk(self, town, x0, y0, x1, y1)
