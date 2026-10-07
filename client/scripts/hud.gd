@@ -6,6 +6,8 @@ const T = Catalog.Id
 var m: Node2D
 var lbl_time: Label
 var perf_l: Label
+var pintip: PanelContainer
+var pintip_lbl: RichTextLabel
 var lbl_coins: Label
 var lbl_pop: Label
 var lbl_jobs: Label
@@ -95,6 +97,18 @@ func _ready() -> void:
     maptip_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
     maptip.add_child(maptip_lbl)
     add_child(maptip)
+    pintip = PanelContainer.new()
+    pintip.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    pintip.z_index = 99
+    pintip.visible = false
+    pintip_lbl = RichTextLabel.new()
+    pintip_lbl.bbcode_enabled = true
+    pintip_lbl.fit_content = true
+    pintip_lbl.scroll_active = false
+    pintip_lbl.custom_minimum_size = Vector2(230, 0)
+    pintip_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    pintip.add_child(pintip_lbl)
+    add_child(pintip)
     perf_l = Label.new()
     perf_l.position = Vector2(8, 62)
     perf_l.visible = false
@@ -732,12 +746,33 @@ func _insp_text() -> String:
 
 
 ## Floating info card for the map cell under the mouse (hidden over UI panels).
+## Card pinned by clicking a tile (Inspect tool); stays put and updates live until you click elsewhere.
+func _update_pin() -> void:
+    var txt := ""
+    if m.pin_cell >= 0 and m.started and not rmap.visible:
+        txt = _maptip_text(m.pin_cell % City.W, m.pin_cell / City.W)
+    pintip.visible = txt != ""
+    if txt == "":
+        return
+    txt += "\n[color=#9aa88f]click again to close[/color]"
+    if pintip_lbl.text != txt:
+        pintip_lbl.text = txt
+        pintip.reset_size()
+    var wp: Vector2 = Vector2(m.pin_cell % City.W + 1, m.pin_cell / City.W) * float(m.TILE)
+    var p: Vector2 = m.get_canvas_transform() * wp + Vector2(6, 0)
+    p.x = clampf(p.x, 4.0, size.x - pintip.size.x - 4.0)
+    p.y = clampf(p.y, 40.0, size.y - pintip.size.y - 40.0)
+    pintip.position = p
+
+
 func _update_maptip() -> void:
+    _update_pin()
     var h := get_viewport().gui_get_hovered_control()
     var txt := ""
     if (h == null or h == self) and m.started and not rmap.visible:
         var mp: Vector2 = m.get_global_mouse_position() / m.TILE
-        txt = _maptip_text(int(floorf(mp.x)), int(floorf(mp.y)))
+        if m.pin_cell != int(floorf(mp.y)) * City.W + int(floorf(mp.x)):
+            txt = _maptip_text(int(floorf(mp.x)), int(floorf(mp.y)))
     maptip.visible = txt != ""
     if txt == "":
         return
