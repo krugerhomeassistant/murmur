@@ -96,3 +96,8 @@ art.gd (class Art): hand-drawn 32x32 sprites from primitives for all 39 service 
 
 ## Fishing and river health
 - Fishing dock (water-adjacent, 6 jobs): ~0.15 food/worker/s into stock, scaled by `City.river_health`. River health falls toward (sewage treated / produced) once pop > 20; polluted water turns green and fish vanish. Hover a river tile to see health.
+
+## Performance
+- Sim: `City._net` caches the flood-fill by `hash([grid,lvl,layer,connected,offline,cells,mods])`; `_net_solve` is the pure solve. Off-screen towns (`lod=3`) tick in 0.5 s batches (`pend`) and run `_crime`/`_land` every 3rd second. `place()` sets `scan_dirty`; `flush()` rescans once per frame. Main caps owed sim time at 20 steps.
+- Render: `TileLayer` chunks (16x16 tiles) are children of Main (`show_behind_parent`). `Main._lod()`: 0 (zoom >= 1.2) full art baked to a 2x SubViewport texture, 1 (0.7-1.2) block buildings, 2 (<0.7) flat tiles. Chunks re-record at `chunk_hz` within a `CHUNK_MS` budget; `chunk_kick` forces a refresh on edits/town switch/LOD change. Dynamic things (citizens, cars, boats, fire, lights, overlays, weather, cursor) are still drawn by `Main._draw` every frame.
+- Tools: F3 overlay; `godot --headless -s tests/bench.gd | bench2.gd | region.gd | place.gd | netcache.gd`.

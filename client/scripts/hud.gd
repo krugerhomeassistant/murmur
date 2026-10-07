@@ -5,6 +5,7 @@ extends Control
 const T = Catalog.Id
 var m: Node2D
 var lbl_time: Label
+var perf_l: Label
 var lbl_coins: Label
 var lbl_pop: Label
 var lbl_jobs: Label
@@ -94,6 +95,11 @@ func _ready() -> void:
     maptip_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
     maptip.add_child(maptip_lbl)
     add_child(maptip)
+    perf_l = Label.new()
+    perf_l.position = Vector2(8, 62)
+    perf_l.visible = false
+    perf_l.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    add_child(perf_l)
     rmap = RegionMap.new()
     rmap.m = m
     add_child(rmap)
@@ -194,11 +200,11 @@ func _top() -> void:
     top.set_anchors_preset(Control.PRESET_TOP_WIDE)
     add_child(top)
     var tb := HBoxContainer.new()
-    tb.add_theme_constant_override("separation", 8)
+    tb.add_theme_constant_override("separation", 5)
     top.add_child(tb)
     for sp in [["Pause", 0.0], ["1x", 1.0], ["3x", 3.0], ["8x", 8.0]]:
         _btn(tb, sp[0], func() -> void: m.speed = sp[1])
-    lbl_time = _lbl(tb, 150, "Game clock and current weather. A day lasts 60 sim seconds. Weather changes mood and fire behaviour.")
+    lbl_time = _lbl(tb, 230, "Game clock and current weather. A day lasts 60 sim seconds. Weather changes mood and fire behaviour.")
     lbl_coins = _lbl(tb, 120, "Treasury and net income per second. Below -150 the city goes bankrupt. Open the Budget tab to see where money goes.")
     lbl_pop = _lbl(tb, 66, "Population / housing capacity. Peak population unlocks new buildings.")
     lbl_jobs = _lbl(tb, 70, "Employed citizens / total jobs. Unemployed citizens pay no income tax.")
@@ -218,7 +224,7 @@ func _top() -> void:
     var st := PanelContainer.new()
     st.set_anchors_preset(Control.PRESET_TOP_RIGHT)
     st.grow_horizontal = Control.GROW_DIRECTION_BEGIN
-    st.offset_top = 36
+    st.offset_top = 58
     st.offset_right = -8
     st.mouse_filter = Control.MOUSE_FILTER_IGNORE
     add_child(st)
@@ -673,7 +679,7 @@ func _net_text(c: City) -> String:
         var d: float = c.net_dem[m2]
         short = short or (d > s + 0.01 and d > 0.0)
         parts.append("%s %d/%d%s" % [{"power": "P", "water": "W", "sewage": "S"}[m2], int(s), int(d), "!" if d > s + 0.01 else ""])
-    lbl_net.add_theme_color_override("font_color", Color("e07a5f") if short else Color("9fd3a0"))
+    _tint(lbl_net, Color("e07a5f") if short else Color("9fd3a0"))
     return "  ".join(parts)
 
 
@@ -779,15 +785,25 @@ func _maptip_text(x: int, y: int) -> String:
     return s
 
 
+## Sets a label colour only when it changes (theme overrides re-layout the control every call).
+func _tint(l: Label, col: Color) -> void:
+    if l.get_meta("tint", Color.TRANSPARENT) != col:
+        l.set_meta("tint", col)
+        l.add_theme_color_override("font_color", col)
+
+
 func _process(_d: float) -> void:
     var c: City = m.city
     tick_n += 1
     _update_maptip()
-    lbl_time.text = "%s  %s  %s" % [c.town_name, c.clock_str(), Civics.SEASONS[c.season]["n"].substr(0, 3)]
+    perf_l.visible = m.perf_on
+    if m.perf_on:
+        perf_l.text = "%d fps   sim %.1f ms   draw %.1f ms   towns %d" % [Engine.get_frames_per_second(), m.sim_ms, m.draw_ms, m.towns.size()]
+    lbl_time.text = "%s  %s  %s" % [c.town_name, c.clock_str(), Civics.SEASONS[c.season]["n"]]
     lbl_appr.text = "Approval %d%%" % int(c.approval * 100.0)
-    lbl_appr.add_theme_color_override("font_color", Color("e07a5f") if c.approval < 0.5 else Color("9fd3a0"))
+    _tint(lbl_appr, Color("e07a5f") if c.approval < 0.5 else Color("9fd3a0"))
     lbl_coins.text = "$ %d  (%+.2f/s)" % [int(c.coins), c.income]
-    lbl_coins.add_theme_color_override("font_color", Color("e07a5f") if c.coins < 0.0 else Color("e8e2d0"))
+    _tint(lbl_coins, Color("e07a5f") if c.coins < 0.0 else Color("e8e2d0"))
     lbl_pop.text = "Pop %d/%d" % [c.pop, c.housing]
     lbl_jobs.text = "Jobs %d/%d" % [c.employed, c.jobs]
     lbl_mood.text = "Mood %d%%" % int(c.mood * 100.0)
@@ -804,14 +820,14 @@ func _process(_d: float) -> void:
     over_panel.visible = c.over != ""
     if c.over != "":
         over_l.text = "GAME OVER\n%s\nPeak population %d.   Press R to restart." % [c.over, int(c.peak)]
+    if tick_n % 6 != 0:
+        return
     for id in tool_btns:
         if Catalog.DEFS.has(id):
             var open: bool = c.unlocked(id)
             var b: Button = tool_btns[id]
             b.disabled = not open
             b.text = String(b.get_meta("base")) + ("" if open else "  (pop %d)" % Catalog.DEFS[id]["unlock"])
-    if tick_n % 6 != 0:
-        return
     insp.text = _insp_text()
     needs_l.text = "\n".join(c.needs().slice(0, 7))
     goal_l.text = "%s  |  %s" % [Civics.rank(c.peak), c.goal_text()]

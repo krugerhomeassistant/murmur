@@ -50,3 +50,11 @@ Format: [Problem] -> [Root Cause] -> [Verified Solution]
 [Problem] game_eval calling start_game twice -> [Cause] _begin frees nodes (null queue_free), game freezes -> [Solution] one start_game per eval/run; stop+rerun if frozen.
 
 [Problem] input_mouse motion does not move the viewport cursor -> [Solution] test hover with get_viewport().warp_mouse(m.get_canvas_transform()*world_pos) in game_eval.
+
+[Problem] 8 towns at 8x lag, zoomed-out dense map 7 fps -> [Cause] (1) _second ran _net (full-grid x3 flood fill) + _scan + _land for every town every sim second; (2) the whole visible map was re-recorded every frame, and retained draw commands cost per frame even if cached (GL Compat) -> [Solution] cache _net by hash of grid/lvl/layers; LOD for off-screen towns; chunk nodes + texture bake zoomed in + flat tiles zoomed out; measure with F3 overlay and tests/bench*.gd.
+
+[Problem] place() 3-10 ms per tile (drag painting stalls) -> [Cause] every place() called a full _scan() -> [Solution] scan_dirty flag, City.flush() at tick start and in Main._process.
+
+[Problem] Godot Linux binary usable in the cloud container for headless benches -> [Solution] download github release 4.7.2-stable zip to scratch; addon parse errors from godot_ai are expected (addon not in repo clone) and harmless.
+
+[Problem] game_eval hangs >10s when building a big town -> [Solution] it is just slow; wait and re-eval, or build in smaller evals.

@@ -93,3 +93,9 @@ Goal: Murmur, a cozy interactive city-builder (Godot) with an optional Live Data
 - [x] World editor (custom river painting), Port + Naval yard + ships
 - [ ] Later: fishing dock (food), river pollution from sewage, rivers shared across neighbouring towns, ferries
 - [x] Fishing dock, river health (sewage pollution)
+
+## Performance (priority 1)
+- [x] Cache _net, LOD off-screen towns, deferred scan, chunked/baked/LOD render, F3 overlay (perf/frame-cost)
+- [ ] Split animated tiles (water, fans) from static ones so baked chunks refresh only when changed
+- [ ] Citizen/car/boat draw culling; overlay passes via chunks; _plan_* candidate scans
+- [ ] Profile real late-game save (pop 500+) with bench2

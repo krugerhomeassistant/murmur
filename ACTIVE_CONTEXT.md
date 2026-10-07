@@ -1,1 +1,1 @@
-World editor + port/naval yard shipped; zip rebuilt. Backlog in PLAN.md.
+Branch perf/frame-cost: sim caching + chunked LOD render + deferred scan done and measured (8 towns x 8x: 55 -> 230 fps avg). PR next. Backlog: click-to-pin popup, shared rivers, ferries, hand-play tuning (PLAN.md).
