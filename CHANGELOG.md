@@ -14,7 +14,6 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ### Added
 - Mining: ore deposits (dark flecks), Mine zone (deposits only), Foundry (ore to metal; metal boosts factory goods), ore/metal stock and exports; Orchard (+50% crops) and Ranch (food without a mill) farm variants (`tests/mining.gd`).
-- Mining and materials: ore deposits (dark flecks), Mine zone (deposits only), Foundry (ore to metal); metal boosts factory goods; ore and metal are tradeable stock.
 - Farm variants: Orchard (50% more crops) and Ranch (food without a mill).
 - Spectator mode (setup checkbox): no mayor, every town runs on the planner, up to 8x speed; Tab switches town, F toggles 30 s auto-follow (`tests/spectate.gd`).
 - Godot Claude Skills (MIT, alexmeckes/godot-claude-skills) installed under `.claude/skills/` for GDScript, scene, shader and live-edit guidance.
