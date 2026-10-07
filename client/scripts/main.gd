@@ -40,6 +40,7 @@ const CAR_COLS := [Color("c0392b"), Color("2e86c1"), Color("f4f1e8"), Color("2c3
 
 
 func _ready() -> void:
+	RenderingServer.set_default_clear_color(Color("5d7552"))
 	has_save = load_game()
 	if not has_save:
 		_fresh({})
@@ -162,6 +163,7 @@ func continue_game() -> void:
 
 
 func _begin() -> void:
+	chunk_kick = true
 	setup.queue_free()
 	setup = null
 	started = true
@@ -232,10 +234,12 @@ func found_town() -> void:
 
 
 func toggle_map() -> void:
+	chunk_kick = true
 	hud.rmap.visible = not hud.rmap.visible
 
 
 func switch_town(i: int) -> void:
+	chunk_kick = true
 	city = towns[i]
 	sel = null
 	sel_cell = -1
@@ -266,6 +270,8 @@ func _unhandled_input(e: InputEvent) -> void:
 			KEY_R:
 				if city.over != "":
 					new_game()
+			KEY_F3:
+				perf_on = not perf_on
 			KEY_SPACE:
 				speed = 1.0 if speed == 0.0 else 0.0
 			KEY_Q, KEY_ESCAPE:
@@ -294,6 +300,7 @@ func cell() -> Vector2i:
 
 
 func _paint(click: bool) -> void:
+	chunk_kick = true
 	var c := cell()
 	if not city.inside(c.x, c.y):
 		return
@@ -338,15 +345,71 @@ func _select(c: Vector2i) -> void:
 
 # ---------- loop ----------
 
+const FAR_ZOOM := 0.7  # below this, tiles are flat colour (level of detail 2)
+const MID_ZOOM := 1.2  # below this, simple block buildings (level of detail 1); above, full art
+const CH := 16  # chunk size in tiles
+var chunk_hz := 8.0  # re-record rate of a visible chunk (animation smoothness)
+const CHUNK_MS := 5.0  # recording budget per frame; under load chunks refresh slower instead of dropping fps
+var chunk_ms := 3.0  # smoothed cost of recording one chunk
+var chunks: Array[TileLayer] = []
+var chunk_kick := true  # set when the map changes: re-record visible chunks now
+var chunk_rr := 0
+var far_mode := 0
+var ci: CanvasItem = self  # target of the tile-drawing helpers (a chunk while one is being recorded)
+var perf_on := false  # F3: fps / sim ms / draw ms overlay
+var sim_ms := 0.0
+var draw_ms := 0.0
+
+
+func _lod() -> int:
+	return 2 if cam.zoom.x < FAR_ZOOM else (1 if cam.zoom.x < MID_ZOOM else 0)
+
+
+func _chunks() -> void:
+	if chunks.is_empty():
+		for cy in ceili(City.H / float(CH)):
+			for cx in ceili(City.W / float(CH)):
+				var l := TileLayer.new()
+				l.m = self
+				l.x0 = cx * CH
+				l.y0 = cy * CH
+				l.x1 = mini(City.W, cx * CH + CH) - 1
+				l.y1 = mini(City.H, cy * CH + CH) - 1
+				l.show_behind_parent = true
+				add_child(l)
+				l.setup()
+				chunks.append(l)
+	var lv := _lod()
+	if lv != far_mode:
+		far_mode = lv
+		chunk_kick = true
+	var vp := get_viewport_rect().size / cam.zoom
+	var view := Rect2(cam.position - vp * 0.5, vp).grow(TILE)
+	var now := Time.get_ticks_msec()
+	var budget := 999 if chunk_kick else maxi(1, int(CHUNK_MS / maxf(chunk_ms, 0.2)))
+	var n := chunks.size()
+	for k in n:
+		var l: TileLayer = chunks[(k + chunk_rr) % n]
+		var seen := view.intersects(Rect2(l.x0 * TILE, l.y0 * TILE, (l.x1 - l.x0 + 1) * TILE, (l.y1 - l.y0 + 1) * TILE))
+		l.visible = seen
+		if seen and budget > 0 and (chunk_kick or now - l.stamp >= 1000.0 / chunk_hz):
+			l.stamp = now
+			l.refresh(far_mode)
+			budget -= 1
+	chunk_rr = (chunk_rr + 3) % n
+	chunk_kick = false
+
+
 func _process(delta: float) -> void:
 	delta = minf(delta, 0.25)
+	var p0 := Time.get_ticks_usec()
 	var v := Vector2(
 		float(Input.is_key_pressed(KEY_D) or Input.is_key_pressed(KEY_RIGHT)) - float(Input.is_key_pressed(KEY_A) or Input.is_key_pressed(KEY_LEFT)),
 		float(Input.is_key_pressed(KEY_S) or Input.is_key_pressed(KEY_DOWN)) - float(Input.is_key_pressed(KEY_W) or Input.is_key_pressed(KEY_UP)))
 	cam.position += v * 700.0 * delta / cam.zoom.x
 	cam.position = cam.position.clamp(Vector2.ZERO, Vector2(City.W, City.H) * TILE)
 	if started:
-		acc += delta * speed
+		acc = minf(acc + delta * speed, STEP * 20.0)  # never owe more than 20 steps: slow down instead of freezing
 		while acc >= STEP:
 			acc -= STEP
 			sig.tick(STEP)
@@ -355,8 +418,15 @@ func _process(delta: float) -> void:
 				dacc -= 1.0
 				Diplo.second(towns, city.rng)
 			for t in towns:
-				t.tick(STEP)
-				if t != city:
+				if t == city:
+					t.lod = 1
+					t.tick(STEP)
+				else:  # off-screen towns tick in 0.5s batches and refresh slow analyses less often
+					t.lod = 3
+					t.pend += STEP
+					if t.pend >= 0.5:
+						t.tick(t.pend)
+						t.pend = 0.0
 					t.msg = ""
 			if city.msg != "":
 				headline = city.msg
@@ -370,8 +440,11 @@ func _process(delta: float) -> void:
 			last_day = city.day
 			if city.over == "":
 				save_game()
+	sim_ms = lerpf(sim_ms, (Time.get_ticks_usec() - p0) / 1000.0, 0.1)
 	var b := 0.78 + 0.22 * cos((city.clock - 13.0) / 24.0 * TAU)
 	mod.color = Color(b, b, minf(1.0, b + 0.1))
+	city.flush()
+	_chunks()
 	queue_redraw()
 
 
@@ -415,16 +488,14 @@ func _draw_borders(tr: Rect2i) -> void:
 			draw_circle(mids[k] * TILE, 6.0, Color("f2cf4a"))
 
 func _draw() -> void:
+	var d0 := Time.get_ticks_usec()
 	var vp := get_viewport_rect().size / cam.zoom
 	var tl := cam.position - vp * 0.5
 	var x0 := maxi(0, floori(tl.x / TILE))
 	var y0 := maxi(0, floori(tl.y / TILE))
 	var x1 := mini(City.W - 1, floori((tl.x + vp.x) / TILE))
 	var y1 := mini(City.H - 1, floori((tl.y + vp.y) / TILE))
-	draw_rect(Rect2(-400, -400, City.W * TILE + 800, City.H * TILE + 800), Color("5d7552"))
-	var grass: Color = Civics.SEASONS[city.season]["grass"]
-	var grass_b := grass.darkened(0.05)
-	draw_rect(Rect2(0, 0, City.W * TILE, City.H * TILE), grass)
+	var night := city.clock >= 19.0 or city.clock < 6.0
 	var tr := city.terr
 	var dim := Color(0.05, 0.08, 0.04, 0.42)
 	draw_rect(Rect2(0, 0, City.W * TILE, tr.position.y * TILE), dim)
@@ -433,51 +504,6 @@ func _draw() -> void:
 	draw_rect(Rect2(tr.end.x * TILE, tr.position.y * TILE, (City.W - tr.end.x) * TILE, tr.size.y * TILE), dim)
 	draw_rect(Rect2(Vector2(tr.position) * TILE, Vector2(tr.size) * TILE), Color(1.0, 0.82, 0.4, 0.5), false, 3.0)
 	_draw_borders(tr)
-	var night := city.clock >= 19.0 or city.clock < 6.0
-	var lane := Color(0.92, 0.85, 0.5, 0.55)
-	for y in range(y0, y1 + 1):
-		for x in range(x0, x1 + 1):
-			var i := y * City.W + x
-			var r := Rect2(x * TILE, y * TILE, TILE, TILE)
-			if (x * 7 + y * 13) % 11 == 0:
-				draw_rect(r, grass_b)
-			var t: int = city.grid[i]
-			var wet: bool = city.water[i] == 1
-			if wet:
-				var wn := 0
-				if y > 0 and city.water[i - City.W] == 0:
-					wn |= 1
-				if x + 1 < City.W and city.water[i + 1] == 0:
-					wn |= 2
-				if y + 1 < City.H and city.water[i + City.W] == 0:
-					wn |= 4
-				if x > 0 and city.water[i - 1] == 0:
-					wn |= 8
-				Art.water(self, x, y, wn, night, city.river_health)
-			if t == T.EMPTY:
-				if not wet:
-					Art.ground(self, x, y, city.owns(x, y), city.season)
-				continue
-			var d: Dictionary = Catalog.DEFS[t]
-			match String(d["kind"]):
-				"road":
-					draw_rect(r, d["col"])
-					var c := r.get_center()
-					draw_circle(c, 1.5, lane)
-					if x + 1 < City.W and city.is_road(city.grid[i + 1]):
-						draw_line(c, c + Vector2(TILE, 0), lane, 1.0 if t == T.ROAD else 2.5)
-					if y + 1 < City.H and city.is_road(city.grid[i + City.W]):
-						draw_line(c, c + Vector2(0, TILE), lane, 1.0 if t == T.ROAD else 2.5)
-					if wet:
-						Art.bridge(self, r, x > 0 and city.is_road(city.grid[i - 1]) or x + 1 < City.W and city.is_road(city.grid[i + 1]))
-				"zone":
-					if city.lvl[i] == 0:
-						_zone(r, t, i)
-					else:
-						_building(r, d, city.lvl[i], city.connected[i] == 1, night)
-				_:
-					_service(r, d, city.connected[i] == 1, night, t)
-	_nets(x0, y0, x1, y1)
 	_boats()
 	if overlay != "":
 		_overlay(x0, y0, x1, y1)
@@ -577,6 +603,80 @@ func _draw() -> void:
 	if sel_cell >= 0 and sel == null:
 		var sc := City.cell(sel_cell)
 		draw_rect(Rect2(sc.x * TILE, sc.y * TILE, TILE, TILE), Color("ffd166"), false, 2.0)
+	draw_ms = lerpf(draw_ms, (Time.get_ticks_usec() - d0) / 1000.0, 0.1)
+
+
+## Static tile layer for one chunk (grass, ground, water, roads, buildings, wires). Re-recorded by _chunks(), not every frame.
+func draw_chunk(c_item: CanvasItem, x0: int, y0: int, x1: int, y1: int) -> void:
+	var c0 := Time.get_ticks_usec()
+	ci = c_item
+	var grass: Color = Civics.SEASONS[city.season]["grass"]
+	var grass_b := grass.darkened(0.05)
+	var lod := _lod()
+	var far := lod >= 1
+	ci.draw_rect(Rect2(x0 * TILE, y0 * TILE, (x1 - x0 + 1) * TILE, (y1 - y0 + 1) * TILE), grass)
+	var night := city.clock >= 19.0 or city.clock < 6.0
+	var lane := Color(0.92, 0.85, 0.5, 0.55)
+	for y in range(y0, y1 + 1):
+		for x in range(x0, x1 + 1):
+			var i := y * City.W + x
+			var r := Rect2(x * TILE, y * TILE, TILE, TILE)
+			if (x * 7 + y * 13) % 11 == 0:
+				ci.draw_rect(r, grass_b)
+			var t: int = city.grid[i]
+			var wet: bool = city.water[i] == 1
+			if wet:
+				var wn := 0
+				if y > 0 and city.water[i - City.W] == 0:
+					wn |= 1
+				if x + 1 < City.W and city.water[i + 1] == 0:
+					wn |= 2
+				if y + 1 < City.H and city.water[i + City.W] == 0:
+					wn |= 4
+				if x > 0 and city.water[i - 1] == 0:
+					wn |= 8
+				if far:
+					ci.draw_rect(r, Color("3f7fb8") if not night else Color("27507a"))
+				else:
+					Art.water(ci, x, y, wn, night, city.river_health)
+			if t == T.EMPTY:
+				if not wet and not far:
+					Art.ground(ci, x, y, city.owns(x, y), city.season)
+				continue
+			var d: Dictionary = Catalog.DEFS[t]
+			if far:  # zoomed out: one flat rect per tile, detail is sub-pixel anyway
+				var fc: Color = d["col"]
+				var kind := String(d["kind"])
+				if kind == "zone":
+					fc = fc.darkened(0.12 * city.lvl[i]) if city.lvl[i] > 0 else fc.lerp(grass, 0.6)
+				ci.draw_rect(r.grow(-1.0) if kind != "road" else r, fc)
+				if lod == 1 and kind != "road":  # block roof so buildings still read as buildings
+					ci.draw_rect(Rect2(r.position + Vector2(3, 3), Vector2(26, 9)), fc.darkened(0.35))
+					if kind != "zone" or city.lvl[i] > 0:
+						ci.draw_rect(Rect2(r.position + Vector2(8, 17), Vector2(5, 6)), Color(1, 0.92, 0.6, 0.8 if night else 0.45))
+				continue
+			match String(d["kind"]):
+				"road":
+					ci.draw_rect(r, d["col"])
+					var c := r.get_center()
+					ci.draw_circle(c, 1.5, lane)
+					if x + 1 < City.W and city.is_road(city.grid[i + 1]):
+						ci.draw_line(c, c + Vector2(TILE, 0), lane, 1.0 if t == T.ROAD else 2.5)
+					if y + 1 < City.H and city.is_road(city.grid[i + City.W]):
+						ci.draw_line(c, c + Vector2(0, TILE), lane, 1.0 if t == T.ROAD else 2.5)
+					if wet:
+						Art.bridge(ci, r, x > 0 and city.is_road(city.grid[i - 1]) or x + 1 < City.W and city.is_road(city.grid[i + 1]))
+				"zone":
+					if city.lvl[i] == 0:
+						_zone(r, t, i)
+					else:
+						_building(r, d, city.lvl[i], city.connected[i] == 1, night)
+				_:
+					_service(r, d, city.connected[i] == 1, night, t)
+	if lod == 0:
+		_nets(x0, y0, x1, y1)
+	ci = self
+	chunk_ms = lerpf(chunk_ms, (Time.get_ticks_usec() - c0) / 1000.0, 0.1)
 
 
 func _overlay(x0: int, y0: int, x1: int, y1: int) -> void:
@@ -620,49 +720,49 @@ func _overlay(x0: int, y0: int, x1: int, y1: int) -> void:
 
 
 func _building(r: Rect2, d: Dictionary, lv: int, ok: bool, night: bool) -> void:
-	if Art.building(self, r, String(d.get("shape", "")), d["col"], lv, ok, night, int(r.position.x / 32.0) * 7 + int(r.position.y / 32.0) * 13):
+	if Art.building(ci, r, String(d.get("shape", "")), d["col"], lv, ok, night, int(r.position.x / 32.0) * 7 + int(r.position.y / 32.0) * 13):
 		if not ok:
-			draw_string(ThemeDB.fallback_font, r.position + Vector2(12, 20), "!", HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color(1, 0.3, 0.2))
+			ci.draw_string(ThemeDB.fallback_font, r.position + Vector2(12, 20), "!", HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color(1, 0.3, 0.2))
 		return
 	var body: Color = d["col"]
 	if not ok:
 		body = body.darkened(0.35)
 	var h := 3.0 * lv
-	draw_rect(r.grow(-1), Color(body, 0.25))
+	ci.draw_rect(r.grow(-1), Color(body, 0.25))
 	var base := Rect2(r.position + Vector2(4, 7), Vector2(TILE - 8, TILE - 10))
-	draw_rect(base, body.darkened(0.3))
+	ci.draw_rect(base, body.darkened(0.3))
 	var up := Rect2(base.position - Vector2(0, h), base.size)
 	if d["shape"] == "tower":
 		up = Rect2(base.position + Vector2(3, -h * 1.8), base.size - Vector2(6, 0) + Vector2(0, h * 1.8))
-	draw_rect(up, body)
-	draw_rect(Rect2(up.position, Vector2(up.size.x, 5)), body.lightened(0.25))
+	ci.draw_rect(up, body)
+	ci.draw_rect(Rect2(up.position, Vector2(up.size.x, 5)), body.lightened(0.25))
 	match String(d["shape"]):
 		"house":
 			var y := up.position.y
-			draw_colored_polygon(PackedVector2Array([Vector2(up.position.x - 1, y), Vector2(up.end.x + 1, y), Vector2(r.position.x + TILE * 0.5, y - 7)]), Color("9a5a4a") if ok else Color("5a3a30"))
+			ci.draw_colored_polygon(PackedVector2Array([Vector2(up.position.x - 1, y), Vector2(up.end.x + 1, y), Vector2(r.position.x + TILE * 0.5, y - 7)]), Color("9a5a4a") if ok else Color("5a3a30"))
 		"terrace":
 			for k in 3:
 				var gx := up.position.x + k * (up.size.x / 3.0)
-				draw_colored_polygon(PackedVector2Array([Vector2(gx, up.position.y), Vector2(gx + up.size.x / 3.0, up.position.y), Vector2(gx + up.size.x / 6.0, up.position.y - 6)]), Color("9a5a4a") if ok else Color("5a3a30"))
+				ci.draw_colored_polygon(PackedVector2Array([Vector2(gx, up.position.y), Vector2(gx + up.size.x / 3.0, up.position.y), Vector2(gx + up.size.x / 6.0, up.position.y - 6)]), Color("9a5a4a") if ok else Color("5a3a30"))
 		"condo":
-			draw_rect(Rect2(up.position.x + 2, up.position.y - 4, up.size.x - 4, 6), Color("7fb2d4"))
-			draw_line(Vector2(up.position.x + 4, up.position.y + 6), Vector2(up.end.x - 4, up.end.y - 2), Color(1, 1, 1, 0.35), 1.0)
+			ci.draw_rect(Rect2(up.position.x + 2, up.position.y - 4, up.size.x - 4, 6), Color("7fb2d4"))
+			ci.draw_line(Vector2(up.position.x + 4, up.position.y + 6), Vector2(up.end.x - 4, up.end.y - 2), Color(1, 1, 1, 0.35), 1.0)
 		"shop":
-			draw_rect(Rect2(up.position.x, up.end.y - 6, up.size.x, 4), Color("e8e2d0") if ok else Color("8a8678"))
+			ci.draw_rect(Rect2(up.position.x, up.end.y - 6, up.size.x, 4), Color("e8e2d0") if ok else Color("8a8678"))
 		"factory":
-			draw_rect(Rect2(up.end.x - 7, up.position.y - 8, 5, 9), body.darkened(0.2))
-			draw_rect(Rect2(up.position.x + 3, up.position.y - 4, 5, 5), body.darkened(0.2))
+			ci.draw_rect(Rect2(up.end.x - 7, up.position.y - 8, 5, 9), body.darkened(0.2))
+			ci.draw_rect(Rect2(up.position.x + 3, up.position.y - 4, 5, 5), body.darkened(0.2))
 		"office":
-			draw_rect(Rect2(up.position.x + 4, up.position.y - 5, up.size.x - 8, 5), body.lightened(0.15))
+			ci.draw_rect(Rect2(up.position.x + 4, up.position.y - 5, up.size.x - 8, 5), body.lightened(0.15))
 		"farm":
-			draw_rect(Rect2(r.position + Vector2(3, 18), Vector2(TILE - 6, 10)), Color("a89850"))
+			ci.draw_rect(Rect2(r.position + Vector2(3, 18), Vector2(TILE - 6, 10)), Color("a89850"))
 			for k in 4:
-				draw_line(r.position + Vector2(5 + k * 7, 19), r.position + Vector2(5 + k * 7, 27), Color("7f7a3a"), 1.0)
+				ci.draw_line(r.position + Vector2(5 + k * 7, 19), r.position + Vector2(5 + k * 7, 27), Color("7f7a3a"), 1.0)
 	var wc := Color("ffd98a") if (night and ok) else body.darkened(0.45)
 	for k in lv:
-		draw_rect(Rect2(up.position.x + 4 + k * 7, up.position.y + 8, 3, 4), wc)
+		ci.draw_rect(Rect2(up.position.x + 4 + k * 7, up.position.y + 8, 3, 4), wc)
 	if not ok:
-		draw_string(ThemeDB.fallback_font, r.position + Vector2(12, 24), "!", HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color("b03a2e"))
+		ci.draw_string(ThemeDB.fallback_font, r.position + Vector2(12, 24), "!", HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color("b03a2e"))
 
 
 func _rain(area: Rect2, n: int) -> void:
@@ -685,67 +785,67 @@ func _zone(r: Rect2, t: int, i: int) -> void:
 	var d: Dictionary = Catalog.DEFS[t]
 	var zc: Color = d["col"]
 	var ok := city.connected[i] == 1
-	Art.zone(self, r, String(d.get("shape", "")), zc, ok)
+	Art.zone(ci, r, String(d.get("shape", "")), zc, ok)
 	if not ok:
-		draw_line(r.position + Vector2(4, 4), r.end - Vector2(4, 4), Color("b03a2e"), 2.0)
-		draw_line(r.position + Vector2(TILE - 4, 4), r.position + Vector2(4, TILE - 4), Color("b03a2e"), 2.0)
+		ci.draw_line(r.position + Vector2(4, 4), r.end - Vector2(4, 4), Color("b03a2e"), 2.0)
+		ci.draw_line(r.position + Vector2(TILE - 4, 4), r.position + Vector2(4, TILE - 4), Color("b03a2e"), 2.0)
 	elif city.build[i] > 0.0:
-		draw_rect(Rect2(r.position + Vector2(3, 3), Vector2(TILE - 6, TILE - 6)), Color(1, 1, 1, 0.3))
-		draw_rect(Rect2(r.position + Vector2(3, TILE - 8), Vector2((TILE - 6) * city.build[i], 4)), Color("ffd166"))
-		draw_line(r.position + Vector2(8, 5), r.position + Vector2(8, 20), Color("5a4a3a"), 2.0)
-		draw_line(r.position + Vector2(8, 5), r.position + Vector2(24, 5), Color("5a4a3a"), 2.0)
+		ci.draw_rect(Rect2(r.position + Vector2(3, 3), Vector2(TILE - 6, TILE - 6)), Color(1, 1, 1, 0.3))
+		ci.draw_rect(Rect2(r.position + Vector2(3, TILE - 8), Vector2((TILE - 6) * city.build[i], 4)), Color("ffd166"))
+		ci.draw_line(r.position + Vector2(8, 5), r.position + Vector2(8, 20), Color("5a4a3a"), 2.0)
+		ci.draw_line(r.position + Vector2(8, 5), r.position + Vector2(24, 5), Color("5a4a3a"), 2.0)
 
 
 func _service(r: Rect2, d: Dictionary, ok: bool, night: bool, id := -1) -> void:
-	if id >= 0 and Art.service(self, r, id, ok, night):
+	if id >= 0 and Art.service(ci, r, id, ok, night):
 		if not ok:
-			draw_line(r.position + Vector2(4, 4), r.end - Vector2(4, 4), Color("b03a2e"), 2.0)
+			ci.draw_line(r.position + Vector2(4, 4), r.end - Vector2(4, 4), Color("b03a2e"), 2.0)
 		return
 	var col: Color = d["col"]
 	var sh: String = d.get("shape", "")
 	var c := r.get_center()
 	if sh == "park":
-		draw_rect(r.grow(-2), col)
-		draw_circle(r.position + Vector2(10, 11), 5.0, Color("3f6b3a"))
-		draw_circle(r.position + Vector2(21, 20), 6.0, Color("4a7a43"))
+		ci.draw_rect(r.grow(-2), col)
+		ci.draw_circle(r.position + Vector2(10, 11), 5.0, Color("3f6b3a"))
+		ci.draw_circle(r.position + Vector2(21, 20), 6.0, Color("4a7a43"))
 		return
-	draw_rect(r.grow(-2), col.darkened(0.25))
-	draw_rect(r.grow(-4), col)
+	ci.draw_rect(r.grow(-2), col.darkened(0.25))
+	ci.draw_rect(r.grow(-4), col)
 	match sh:
 		"cross":
-			draw_rect(Rect2(r.position + Vector2(13, 7), Vector2(6, 18)), Color.WHITE)
-			draw_rect(Rect2(r.position + Vector2(7, 13), Vector2(18, 6)), Color.WHITE)
+			ci.draw_rect(Rect2(r.position + Vector2(13, 7), Vector2(6, 18)), Color.WHITE)
+			ci.draw_rect(Rect2(r.position + Vector2(7, 13), Vector2(18, 6)), Color.WHITE)
 		"dome":
-			draw_circle(c + Vector2(0, 2), 9.0, col.lightened(0.3))
-			draw_rect(Rect2(c + Vector2(-9, 2), Vector2(18, 7)), col.darkened(0.1))
+			ci.draw_circle(c + Vector2(0, 2), 9.0, col.lightened(0.3))
+			ci.draw_rect(Rect2(c + Vector2(-9, 2), Vector2(18, 7)), col.darkened(0.1))
 		"turbine":
 			var a := Time.get_ticks_msec() * 0.004
-			draw_line(c + Vector2(0, 10), c + Vector2(0, -2), Color.WHITE, 2.0)
+			ci.draw_line(c + Vector2(0, 10), c + Vector2(0, -2), Color.WHITE, 2.0)
 			for k in 3:
-				draw_line(c + Vector2(0, -2), c + Vector2(0, -2) + Vector2.from_angle(a + k * TAU / 3.0) * 11.0, Color.WHITE, 1.5)
+				ci.draw_line(c + Vector2(0, -2), c + Vector2(0, -2) + Vector2.from_angle(a + k * TAU / 3.0) * 11.0, Color.WHITE, 1.5)
 		"panels":
 			for k in 2:
-				draw_rect(Rect2(r.position + Vector2(6, 7 + k * 10), Vector2(20, 7)), Color("2c4a7a"))
+				ci.draw_rect(Rect2(r.position + Vector2(6, 7 + k * 10), Vector2(20, 7)), Color("2c4a7a"))
 		"fort":
-			draw_rect(Rect2(r.position + Vector2(6, 10), Vector2(20, 14)), col.darkened(0.2))
+			ci.draw_rect(Rect2(r.position + Vector2(6, 10), Vector2(20, 14)), col.darkened(0.2))
 			for k in 3:
-				draw_rect(Rect2(r.position + Vector2(6 + k * 8, 7), Vector2(4, 4)), col.darkened(0.2))
-			draw_line(r.position + Vector2(16, 10), r.position + Vector2(16, 2), Color.WHITE, 1.0)
-			draw_rect(Rect2(r.position + Vector2(16, 2), Vector2(6, 4)), Color("c04030"))
+				ci.draw_rect(Rect2(r.position + Vector2(6 + k * 8, 7), Vector2(4, 4)), col.darkened(0.2))
+			ci.draw_line(r.position + Vector2(16, 10), r.position + Vector2(16, 2), Color.WHITE, 1.0)
+			ci.draw_rect(Rect2(r.position + Vector2(16, 2), Vector2(6, 4)), Color("c04030"))
 		"radar":
 			var ra := Time.get_ticks_msec() * 0.003
-			draw_line(c + Vector2(0, 10), c, Color.WHITE, 2.0)
-			draw_arc(c, 9.0, ra, ra + 2.2, 10, Color("9fe0a0"), 2.0)
+			ci.draw_line(c + Vector2(0, 10), c, Color.WHITE, 2.0)
+			ci.draw_arc(c, 9.0, ra, ra + 2.2, 10, Color("9fe0a0"), 2.0)
 		"lamp":
-			draw_line(c + Vector2(0, 10), c + Vector2(0, -6), Color("555555"), 2.0)
-			draw_circle(c + Vector2(0, -8), 4.0, Color("ffe9a0"))
+			ci.draw_line(c + Vector2(0, 10), c + Vector2(0, -6), Color("555555"), 2.0)
+			ci.draw_circle(c + Vector2(0, -8), 4.0, Color("ffe9a0"))
 		"chimney":
-			draw_rect(Rect2(r.position + Vector2(18, 4), Vector2(7, 20)), col.darkened(0.4))
-			draw_circle(r.position + Vector2(21, 2 - fmod(Time.get_ticks_msec() * 0.01, 6.0)), 3.0, Color(0.7, 0.7, 0.7, 0.5))
+			ci.draw_rect(Rect2(r.position + Vector2(18, 4), Vector2(7, 20)), col.darkened(0.4))
+			ci.draw_circle(r.position + Vector2(21, 2 - fmod(Time.get_ticks_msec() * 0.01, 6.0)), 3.0, Color(0.7, 0.7, 0.7, 0.5))
 		_:
-			draw_string(ThemeDB.fallback_font, r.position + Vector2(0, 23), d["g"], HORIZONTAL_ALIGNMENT_CENTER, TILE, 18, Color.WHITE if col.get_luminance() < 0.5 else Color("2a2a20"))
+			ci.draw_string(ThemeDB.fallback_font, r.position + Vector2(0, 23), d["g"], HORIZONTAL_ALIGNMENT_CENTER, TILE, 18, Color.WHITE if col.get_luminance() < 0.5 else Color("2a2a20"))
 	if not ok:
-		draw_line(r.position + Vector2(4, 4), r.end - Vector2(4, 4), Color("b03a2e"), 2.0)
+		ci.draw_line(r.position + Vector2(4, 4), r.end - Vector2(4, 4), Color("b03a2e"), 2.0)
 
 
 ## Free water extent (up to 9 cells each way) through `w` along one axis, as (lo, hi) offsets.
@@ -805,8 +905,8 @@ func _nets(x0: int, y0: int, x1: int, y1: int) -> void:
 				if not live:
 					col = col.darkened(0.5)
 				var off: Vector2 = [Vector2(-5, -5), Vector2(5, 5), Vector2(5, -5)][k]
-				draw_circle(c + off, 2.0, col)
+				ci.draw_circle(c + off, 2.0, col)
 				if x + 1 < City.W and layer[i + 1] == 1:
-					draw_line(c + off, c + off + Vector2(TILE, 0), col, 1.5)
+					ci.draw_line(c + off, c + off + Vector2(TILE, 0), col, 1.5)
 				if y + 1 < City.H and layer[i + City.W] == 1:
-					draw_line(c + off, c + off + Vector2(0, TILE), col, 1.5)
+					ci.draw_line(c + off, c + off + Vector2(0, TILE), col, 1.5)

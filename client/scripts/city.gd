@@ -96,6 +96,11 @@ var wire := PackedByteArray()
 var pipe := PackedByteArray()
 var lamp := PackedByteArray()  # street lamps sit on road tiles
 var water := PackedByteArray()  # 1 = river; only roads (bridges) and wires/pipes can cross it
+var scan_dirty := false
+var lod := 1  # >1 = off-screen town: slow-changing analyses (crime, land value) run every lod-th second
+var lod_n := 0
+var pend := 0.0  # sim time owed to an off-screen town (it ticks in 0.5s batches)
+var net_cache := {}  # metric -> {sig, live, sup, dem, sat}: skips the whole-grid pass when nothing changed
 var net_reach := {}  # "power"/"water" -> PackedByteArray of live line cells
 var net_val := {}  # metric -> PackedFloat32Array per cell: satisfaction 0..1 where served
 const NETS := ["power", "water", "sewage"]
@@ -451,6 +456,13 @@ func _lay(m: String, i: int, v: int) -> void:
 		pipe[i] = v
 
 
+## Re-derives coverage/networks after place()/bulldoze() edits; batched so a drag-paint scans once per frame, not once per tile.
+func flush() -> void:
+	if scan_dirty:
+		scan_dirty = false
+		_scan()
+
+
 func place(x: int, y: int, t: int) -> bool:
 	if not inside(x, y) or not owns(x, y) or coins < cost_of(t) or not unlocked(t):
 		return false
@@ -460,7 +472,7 @@ func place(x: int, y: int, t: int) -> bool:
 			return false
 		lamp[li] = 1
 		coins -= cost_of(t)
-		_scan()
+		scan_dirty = true
 		return true
 	if String(Catalog.DEFS[t]["kind"]) == "net":
 		var ni := y * W + x
@@ -469,7 +481,7 @@ func place(x: int, y: int, t: int) -> bool:
 			return false
 		_lay(nm, ni, 1)
 		coins -= cost_of(t)
-		_scan()
+		scan_dirty = true
 		return true
 	if at(x, y) != T.EMPTY:
 		return false
@@ -482,7 +494,7 @@ func place(x: int, y: int, t: int) -> bool:
 	coins -= cost_of(t) * (BRIDGE_X if wet else 1.0)
 	if is_road(t):
 		roads_dirty = true
-	_scan()
+	scan_dirty = true
 	return true
 
 
@@ -501,7 +513,7 @@ func bulldoze(x: int, y: int) -> bool:
 	var i := y * W + x
 	if lamp[i] == 1:
 		lamp[i] = 0
-		_scan()
+		scan_dirty = true
 		return true
 	if grid[i] == T.EMPTY:
 		if wire[i] == 0 and pipe[i] == 0 and sewer[i] == 0:
@@ -509,7 +521,7 @@ func bulldoze(x: int, y: int) -> bool:
 		wire[i] = 0
 		pipe[i] = 0
 		sewer[i] = 0
-		_scan()
+		scan_dirty = true
 		return true
 	if is_road(grid[i]):
 		roads_dirty = true
@@ -517,7 +529,7 @@ func bulldoze(x: int, y: int) -> bool:
 	lvl[i] = 0
 	build[i] = 0.0
 	_clear_burn(i)
-	_scan()
+	scan_dirty = true
 	return true
 
 
@@ -750,47 +762,16 @@ func _net() -> void:
 	for m in NETS:
 		var layer: PackedByteArray = _nl(m)
 		var reach: PackedByteArray = net_reach[m]
-		reach.fill(0)
-		var q: Array[int] = []
-		var sup := 0.0
-		for id in bt:
-			var out: Dictionary = Catalog.DEFS[id].get("out", {})
-			if not out.has(m):
-				continue
-			for i in bt[id]:
-				if offline.has(i):
-					continue
-				var hit := false
-				for j in _near(i):
-					if layer[j] == 1:
-						hit = true
-						if reach[j] == 0:
-							reach[j] = 1
-							q.append(j)
-				if hit:
-					sup += float(out[m]) * (1.0 + mod(m + "_out"))
-		while not q.is_empty():
-			var cur: int = q.pop_back()
-			for d in DIRS:
-				var n: Vector2i = cell(cur) + d
-				if inside(n.x, n.y):
-					var ni := n.y * W + n.x
-					if layer[ni] == 1 and reach[ni] == 0:
-						reach[ni] = 1
-						q.append(ni)
-		var dem := 0.0
-		for i in cells:
-			nets += layer[i]
-			var t: int = grid[i]
-			if t == T.EMPTY or connected[i] == 0 or is_road(t):
-				continue
-			var d: Dictionary = Catalog.DEFS[t]
-			if d.has("out") or (is_zone(t) and lvl[i] == 0):
-				continue
-			if _live(i, reach):
-				dem += 0.5 * lvl[i] * (1.0 + (int(d["home"]) + int(d["jobs"])) * 0.1) if is_zone(t) else 1.0
-		if m == "power":
-			dem *= 1.0 + mod("power_dem")
+		var sig := hash([grid, lvl, layer, connected, str(offline.keys()), cells.size(), mod(m + "_out"), mod("power_dem")])
+		var nc: Dictionary = net_cache.get(m, {})
+		if nc.is_empty() or nc["sig"] != sig:
+			nc = _net_solve(m, layer, reach)
+			nc["sig"] = sig
+			nc["sat"] = -1.0
+			net_cache[m] = nc
+		nets += int(nc["nets"])
+		var sup: float = nc["sup"]
+		var dem: float = nc["dem"]
 		net_own[m] = sup
 		imports[m] = 0.0
 		if sup < dem:
@@ -805,13 +786,67 @@ func _net() -> void:
 		var sat := 1.0 if dem <= 0.001 else clampf(sup / dem, 0.0, 1.0)
 		if sup <= 0.0:
 			sat = 0.0
-		var val: PackedFloat32Array = net_val[m]
-		for i in cells:
-			val[i] = sat if _live(i, reach) else 0.0
+		if not is_equal_approx(sat, float(nc["sat"])):
+			nc["sat"] = sat
+			var val: PackedFloat32Array = net_val[m]
+			var live: PackedByteArray = nc["live"]
+			for i in cells:
+				val[i] = sat if live[i] == 1 else 0.0
 	up_svc += nets * 0.015
 	var raw := maxf(pop - 20.0, 0.0) * 0.15  # sewage produced; what the plants don't treat goes in the river
 	var clean := 1.0 if raw <= 0.0 else clampf(float(net_own["sewage"]) / raw, 0.0, 1.0)
 	river_health = move_toward(river_health, clean, 0.02)
+
+
+## Flood-fills a line layer from its plants and totals supply/demand. Pure function of the layout, so _net caches it.
+func _net_solve(m: String, layer: PackedByteArray, reach: PackedByteArray) -> Dictionary:
+	reach.fill(0)
+	var q: Array[int] = []
+	var sup := 0.0
+	for id in bt:
+		var out: Dictionary = Catalog.DEFS[id].get("out", {})
+		if not out.has(m):
+			continue
+		for i in bt[id]:
+			if offline.has(i):
+				continue
+			var hit := false
+			for j in _near(i):
+				if layer[j] == 1:
+					hit = true
+					if reach[j] == 0:
+						reach[j] = 1
+						q.append(j)
+			if hit:
+				sup += float(out[m]) * (1.0 + mod(m + "_out"))
+	while not q.is_empty():
+		var cur: int = q.pop_back()
+		for d in DIRS:
+			var n: Vector2i = cell(cur) + d
+			if inside(n.x, n.y):
+				var ni := n.y * W + n.x
+				if layer[ni] == 1 and reach[ni] == 0:
+					reach[ni] = 1
+					q.append(ni)
+	var dem := 0.0
+	var nets := 0
+	var live := PackedByteArray()
+	live.resize(W * H)
+	for i in cells:
+		nets += layer[i]
+		if _live(i, reach):
+			live[i] = 1
+		var t: int = grid[i]
+		if t == T.EMPTY or connected[i] == 0 or is_road(t):
+			continue
+		var d: Dictionary = Catalog.DEFS[t]
+		if d.has("out") or (is_zone(t) and lvl[i] == 0):
+			continue
+		if live[i] == 1:
+			dem += 0.5 * lvl[i] * (1.0 + (int(d["home"]) + int(d["jobs"])) * 0.1) if is_zone(t) else 1.0
+	if m == "power":
+		dem *= 1.0 + mod("power_dem")
+	return {"live": live, "sup": sup, "dem": dem, "nets": nets}
 
 
 func _near(i: int) -> Array[int]:
@@ -1196,11 +1231,13 @@ func _second() -> void:
 			offline.erase(k)
 			_log("The power plant is back online.")
 	_scan()
-	_crime()
-	land_t -= 1
-	if land_t <= 0:
-		land_t = 3
-		_land()
+	lod_n += 1
+	if lod_n % lod == 0:
+		_crime()
+		land_t -= 1
+		if land_t <= 0:
+			land_t = 5
+			_land()
 	_tribes()
 	_collect_mods()
 	home_load.clear()
@@ -1736,12 +1773,18 @@ func _land() -> void:
 	var tot := 0.0
 	var n := 0
 	land_val.fill(0.45)
+	var cm := {}  # per-metric coverage modifier, looked up once instead of per cell
+	for k in ["leisure", "edu", "health", "culture", "transit", "power", "water"]:
+		cm[k] = mod("cov_" + k)
+	var base := mood * 0.1 - 0.2 * crime
 	for i in cells:
 		if grid[i] == T.EMPTY and not _touch(i):
 			continue
 		var c := cell(i)
-		var v := 0.5 + 0.12 * cov_at(c, "leisure") + 0.08 * cov_at(c, "edu") + 0.08 * cov_at(c, "health") + 0.06 * cov_at(c, "culture") + 0.06 * cov_at(c, "transit")
-		v += 0.04 * cov_at(c, "power") + 0.04 * cov_at(c, "water") - 0.6 * poll_at(c) - 0.2 * crime + mood * 0.1
+		var v := 0.5 + base
+		v += 0.12 * clampf(raw_cov(c, "leisure") + cm["leisure"], 0.0, 1.0) + 0.08 * clampf(raw_cov(c, "edu") + cm["edu"], 0.0, 1.0) + 0.08 * clampf(raw_cov(c, "health") + cm["health"], 0.0, 1.0)
+		v += 0.06 * clampf(raw_cov(c, "culture") + cm["culture"], 0.0, 1.0) + 0.06 * clampf(raw_cov(c, "transit") + cm["transit"], 0.0, 1.0)
+		v += 0.04 * clampf(raw_cov(c, "power") + cm["power"], 0.0, 1.0) + 0.04 * clampf(raw_cov(c, "water") + cm["water"], 0.0, 1.0) - 0.6 * poll_at(c)
 		if grid[i] != T.EMPTY and not is_road(grid[i]):
 			v -= float(Catalog.DEFS[grid[i]].get("crime", 0.0)) * 0.5
 		land_val[i] = clampf(v, 0.0, 1.0)
@@ -2175,6 +2218,7 @@ func tick(dt: float) -> void:
 		clock -= 24.0
 		day += 1
 		_new_day()
+	flush()
 	if roads_dirty:
 		_rebuild_astar()
 	acc += dt
