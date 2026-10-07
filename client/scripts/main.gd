@@ -663,21 +663,6 @@ func _draw_borders(tr: Rect2i) -> void:
 		ci.draw_string(font, pos + off, txt, HORIZONTAL_ALIGNMENT_LEFT, -1, 16, col)
 		if linked or war:
 			ci.draw_rect(Rect2(pos - Vector2(4, 4) * 2, Vector2(16, 16)), col, false, 2.0)
-		if war:
-			# soldiers pacing along the front: yours in blue, theirs in red
-			var horiz := k == 0 or k == 2
-			var n: Vector2 = [Vector2(0, -1), Vector2(1, 0), Vector2(0, 1), Vector2(-1, 0)][k]
-			var span: float = (tr.size.x if horiz else tr.size.y) * TILE
-			var o0: Vector2 = Vector2(tr.position) * TILE
-			var tm := Time.get_ticks_msec() / 1000.0
-			for s in 40:
-				var f := (s + 0.5) / 40.0 * span
-				var base: Vector2 = (Vector2(o0.x + f, pos.y) if horiz else Vector2(pos.x, o0.y + f))
-				var mine := s % 2 == 0
-				var adv := (sin(tm * 2.0 + s) * 0.5 + 0.5) * 22.0
-				var sp := base + n * (-(10.0 + adv) if mine else (10.0 + adv * 0.6))
-				ci.draw_circle(sp, 6.0, Color("5b8de0") if mine else Color("d9382a"))
-				ci.draw_line(sp, sp + n * (-8.0 if mine else 8.0), Color.WHITE, 1.5)
 	for k in 4:
 		if int(city.gate[k]) > 0:
 			ci.draw_circle(mids[k] * TILE, 6.0, Color("f2cf4a"))
@@ -740,7 +725,7 @@ func _front(node: CanvasItem, a: City, b: City, p0: Vector2, p1: Vector2) -> voi
 		var span := ln * (f if side == 0 else 1.0 - f)
 		var col := Color("5b8de0") if side == 0 else Color("d9382a")
 		var bases := (c.bt.get(T.BASE, []) as Array).size()
-		var inf := mini(4 + 3 * (c.bt.get(T.BARRACKS, []) as Array).size() + 2 * bases, 24)
+		var inf := mini(8 + 3 * (c.bt.get(T.BARRACKS, []) as Array).size() + 2 * bases, 24)
 		var tanks := mini(bases + (1 if Diplo.mil(c) > 0.8 else 0), 8)
 		var jets := mini((c.bt.get(T.RADAR, []) as Array).size() + (1 if bases > 0 else 0), 6)
 		for i in inf:
