@@ -33,7 +33,7 @@ func _ready() -> void:
 	seed(20261007)
 	m.bench_seed = 20261007
 	m.open_setup()
-	m.start_game({"name": "Bench", "towns": 8, "mood": 1, "diff": 1, "land": 1, "river": 3, "auto": 2, "policy": true, "expand": true, "guide": false})
+	m.start_game({"name": "Bench", "towns": 8, "mood": 1, "diff": 1, "land": 1, "river": 3, "auto": 2, "policy": true, "expand": true, "guide": false, "spectate": true})
 	for _i in FAST_FORWARD:  # same cadence as the main loop: viewed town every step, others in 0.5 s batches
 		m.sig.tick(0.1)
 		if _i % 10 == 0:
@@ -115,7 +115,7 @@ func _report() -> void:
 		"ram_static_mb": Performance.get_monitor(Performance.MEMORY_STATIC) / 1048576.0,
 		"vram_mb": Performance.get_monitor(Performance.RENDER_VIDEO_MEM_USED) / 1048576.0,
 		"texture_mb": Performance.get_monitor(Performance.RENDER_TEXTURE_MEM_USED) / 1048576.0,
-		"second_stage_us_total": City.prof.duplicate(), "slow_frames": slow[0], "slow_avg_ms": slow[1] / maxf(slow[0], 1), "slow_sim_ms": slow[2] / maxf(slow[0], 1), "slow_chunk_ms": slow[3] / maxf(slow[0], 1), "slow_draw_ms": slow[4] / maxf(slow[0], 1), "effective_speed": (m.steps_done - steps0) * 0.1 / SAMPLE, "days_advanced": m.towns[0].day - day0, "total_pop": pop, "pop_each": m.towns.map(func(c): return c.pop),
+		"second_stage_us_total": City.prof.duplicate(), "slow_frames": slow[0], "slow_avg_ms": slow[1] / maxf(slow[0], 1), "slow_sim_ms": slow[2] / maxf(slow[0], 1), "slow_chunk_ms": slow[3] / maxf(slow[0], 1), "slow_draw_ms": slow[4] / maxf(slow[0], 1), "effective_speed": (m.steps_done - steps0) * 0.1 / SAMPLE, "days_advanced": m.towns[0].day - day0, "total_pop": pop, "towns_over": m.towns.filter(func(c): return c.over != "").size(), "pop_each": m.towns.map(func(c): return c.pop),
 	}
 	result_json = JSON.stringify(r)
 	print("BENCHMARK_JSON " + result_json)
