@@ -136,7 +136,11 @@ var saving_for := 0.0  # treasury target for a needed service; pauses other spen
 var burning := 0
 var burned := 0  # buildings lost to fire, lifetime
 var plaza := -1
-var clash := {}  # enemy town name -> [time of last battle, winner name], for the war visuals
+var army: Array = []  # units: {k, hp, tgt, s, l} (see Military); runtime keys ft/fg/fl are not saved
+var occ := {}  # enemy town name -> seconds it has held our border
+var raid := {}  # runtime: raid progress against a foe
+var train_on := true  # auto-train troops from barracks and bases
+var train_t := {}
 var road_comp := PackedByteArray()  # 1 on every road tile of the town's biggest connected road network
 # territory + diplomacy
 var terr := Rect2i(OX, OY, START_W, START_H)
@@ -2748,7 +2752,7 @@ func advisors() -> Array:
 		t += " %d petition(s) await your answer." % petitions.size()
 	a.append(["Campaign manager", t, approval >= 0.5])
 	if wars() > 0:
-		a.append(["General", "We are at war (%d battles so far). Voters are tiring: mood and approval fall the longer it lasts. Win it, or sue for peace after 3 battles. The Garrison policy and barracks cut raid damage and win battles." % int(war_battles()), false])
+		a.append(["General", "We are at war (%d x 20 s so far). Voters are tiring: mood and approval fall the longer it lasts. Barracks and bases train the infantry, tanks and jets that fight; radar posts allow jets. Keep the front or lose the border. Sue for peace after a minute." % int(war_battles()), false])
 	return a
 
 
@@ -2994,8 +2998,9 @@ func to_dict() -> Dictionary:
 	for k in ["town_name", "grid", "lvl", "build", "wire", "pipe", "sewer", "lamp", "water", "ore", "coins", "mood", "tax_r", "tax_c", "tax_i", "clock", "day",
 			"policies", "auto_mode", "auto_policy", "peak", "announced", "next_id", "recent", "active", "approval", "rep", "favor",
 			"petitions", "promises", "pet_recent", "kept", "broken", "next_election", "elections_won", "rally_used", "last_vote",
-			"season", "stock", "exported", "loans", "done_ms", "disasters_survived", "burned", "hist_coins", "hist_pop", "ruins", "offline", "lamp", "terr", "expansions", "auto_expand", "human", "temper", "rel", "treaty", "ev_scale", "gpos", "war_n", "war_sc"]:
+			"season", "stock", "exported", "loans", "done_ms", "disasters_survived", "burned", "hist_coins", "hist_pop", "ruins", "offline", "lamp", "terr", "expansions", "auto_expand", "human", "temper", "rel", "treaty", "ev_scale", "gpos", "war_n", "war_sc", "occ", "train_on", "train_t"]:
 		d[k] = get(k)
+	d["army"] = army.map(func(u: Dictionary) -> Dictionary: return {"k": u["k"], "hp": u["hp"], "tgt": u["tgt"], "s": u["s"], "l": u["l"]})
 	return d
 
 

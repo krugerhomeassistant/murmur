@@ -34,7 +34,7 @@ static func stance(r: float) -> String:
 
 
 static func mil(c: City) -> float:
-	return float(c.cov.get("defence", 0.0)) + 0.4 * (c.bt.get(T.BASE, []) as Array).size() + 0.15 * (c.bt.get(T.BARRACKS, []) as Array).size() + 0.1 * (c.bt.get(T.RADAR, []) as Array).size() + 0.35 * (c.bt.get(T.NAVYARD, []) as Array).size()
+	return Military.power(c) + float(c.cov.get("defence", 0.0)) + 0.4 * (c.bt.get(T.BASE, []) as Array).size() + 0.15 * (c.bt.get(T.BARRACKS, []) as Array).size() + 0.1 * (c.bt.get(T.RADAR, []) as Array).size() + 0.35 * (c.bt.get(T.NAVYARD, []) as Array).size()
 
 
 ## Which side of `a` town `b` lies on (0 N, 1 E, 2 S, 3 W), or -1 if not next to it.
@@ -163,11 +163,13 @@ static func act(a: City, b: City, what: String) -> String:
 			b.war_n[a.town_name] = 0
 			a.war_sc[b.town_name] = 0
 			b.war_sc[a.town_name] = 0
+			Military.conscript(a)
+			Military.conscript(b)
 			_shift(a, b, -0.3, -0.6)
 			_say(a, b, "%s declares war on %s!" % [a.town_name, b.town_name])
 			a.sounds.append("alarm")
 			b.sounds.append("alarm")
-			return "War declared on %s. Build barracks and bases: battles come every half minute or so." % b.town_name
+			return "War declared on %s. Militia muster; barracks and bases train real units that march to the front and fight." % b.town_name
 		"leave":
 			if t == "":
 				return "No treaty to cancel."
@@ -226,6 +228,8 @@ static func _offer(a: City, b: City, kind: String, extra: Dictionary) -> void:
 
 ## Called every sim second with all towns.
 static func second(towns: Array, rng: RandomNumberGenerator) -> void:
+	for c in towns:
+		Military.econ(c)
 	for i in towns.size():
 		for j in range(i + 1, towns.size()):
 			var a: City = towns[i]
@@ -244,10 +248,7 @@ static func second(towns: Array, rng: RandomNumberGenerator) -> void:
 					target -= 0.1  # envy
 				x.rel[y.town_name] = move_toward(rel(x, y), clampf(target, -1.0, 1.0), 0.003)
 			if treaty(a, b) == "war":
-				a.war_t -= 1.0
-				if a.war_t <= 0.0:
-					a.war_t = rng.randf_range(20.0, 35.0)
-					_battle(a, b, rng)
+				Military.fight(a, b)
 			a.dipl_t -= 1.0
 			if a.dipl_t > 0.0:
 				continue
@@ -255,41 +256,21 @@ static func second(towns: Array, rng: RandomNumberGenerator) -> void:
 			_event(a, b, rng)
 
 
-## One battle of a war: the side with the better roll raids the other, loots some coins, and a lopsided score ends the war.
-static func _battle(a: City, b: City, rng: RandomNumberGenerator) -> void:
-	var sa := (mil(a) + 0.3) * rng.randf_range(0.6, 1.4)
-	var sb := (mil(b) + 0.3) * rng.randf_range(0.6, 1.4)
-	var w: City = a if sa >= sb else b
-	var l: City = b if w == a else a
-	a.war_n[b.town_name] = int(a.war_n.get(b.town_name, 0)) + 1
-	b.war_n[a.town_name] = int(b.war_n.get(a.town_name, 0)) + 1
-	w.war_sc[l.town_name] = int(w.war_sc.get(l.town_name, 0)) + 1
-	var now := Time.get_ticks_msec() / 1000.0
-	a.clash[b.town_name] = [now, w.town_name]
-	b.clash[a.town_name] = [now, w.town_name]
-	_raid(w, l)
-	var loot := minf(l.coins * 0.1, 120.0) if l.coins > 0.0 else 0.0
-	l.coins -= loot
-	w.coins += loot
-	_shift(w, l, -0.02, -0.06)
-	var lead := int(w.war_sc.get(l.town_name, 0)) - int(l.war_sc.get(w.town_name, 0))
-	if lead >= 3:
-		var pay := minf(l.coins * 0.3, 300.0) if l.coins > 0.0 else 0.0
-		l.coins -= pay
-		w.coins += pay
-		sign_treaty(a, b, "")
-		var k := side(w, l)
-		var took := ""
-		if k >= 0 and w.can_expand(k) and l.cede((k + 2) % 4):
-			w.expand(k, true)
-			took = " %s annexes a strip of its land." % w.town_name
-		w.rep = clampf(w.rep + 0.1, -0.3, 0.3)  # victory rallies voters
-		l.rep = clampf(l.rep - 0.1, -0.3, 0.3)
-		_say(a, b, "%s surrenders to %s and pays $%d.%s The war is over." % [l.town_name, w.town_name, int(pay), took])
-	elif int(a.war_n.get(b.town_name, 0)) >= 10:
-		sign_treaty(a, b, "")
-		_shift(a, b, 0.1, 0.1)
-		_say(a, b, "%s and %s, exhausted, agree to a ceasefire." % [a.town_name, b.town_name])
+## The winner takes tribute and may annex a strip of the loser's land; the war ends.
+static func surrender(w: City, l: City) -> void:
+	var pay := minf(l.coins * 0.3, 300.0) if l.coins > 0.0 else 0.0
+	l.coins -= pay
+	w.coins += pay
+	sign_treaty(w, l, "")
+	l.occ[w.town_name] = 0.0
+	var k := side(w, l)
+	var took := ""
+	if k >= 0 and w.can_expand(k) and l.cede((k + 2) % 4):
+		w.expand(k, true)
+		took = " %s annexes a strip of its land." % w.town_name
+	w.rep = clampf(w.rep + 0.1, -0.3, 0.3)  # victory rallies voters
+	l.rep = clampf(l.rep - 0.1, -0.3, 0.3)
+	_say(w, l, "%s surrenders to %s and pays $%d.%s The war is over." % [l.town_name, w.town_name, int(pay), took])
 
 
 static func _event(a: City, b: City, rng: RandomNumberGenerator) -> void:

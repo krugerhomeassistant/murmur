@@ -1044,7 +1044,7 @@ func _side_text(c: City, p: City) -> String:
         return "%s lies far from you: no road link possible, diplomacy only." % p.town_name
     var s := "%s lies to the %s." % [p.town_name, Diplo.DIRN[k]]
     if Diplo.treaty(c, p) == "war":
-        return s + " AT WAR (battles %d, won %d)." % [int(c.war_n.get(p.town_name, 0)), int(c.war_sc.get(p.town_name, 0))]
+        return s + " AT WAR (%d s, enemy units destroyed %d).\nYour army: %s.\n%s army: %s.\nOccupation of your border: %d/40." % [int(c.war_n.get(p.town_name, 0)) * 20, int(c.war_sc.get(p.town_name, 0)), Military.summary(c), p.town_name, Military.summary(p), int(c.occ.get(p.town_name, 0.0))]
     if Diplo.linked(c, p):
         return s + " Road link open: trade and commuters flow."
     if int(c.gate[k]) == 0:
