@@ -42,19 +42,19 @@ Dense late-game maps are the usual killer of city builders, so performance is pr
 
 The one number we quote: **8 towns, 8x speed, every overlay on**, spectator mode (all towns on the planner, fixed seed), 30 s fast-forward then 15 s warm-up and 30 s sampled. Run it with **F9** in game or `godot --path client -- --benchmark`; results are written to `user://benchmark.json`.
 
-Rig: Intel i7-8700, NVIDIA GTX 1070 Ti, Godot 4.7.2 GL Compatibility, run from the editor (debugger attached, so pessimistic), 1080p window.
+Rig: Intel i7-8700, NVIDIA GTX 1070 Ti, Godot 4.7.2 GL Compatibility, run from the editor (debugger attached, so pessimistic), 1706x960 window.
 
 | Metric | Before | After |
 |---|---|---|
-| FPS (avg) | 77 | 111 |
-| Frame time p99 | 46.5 ms | 21.3 ms |
-| Frames over 25 ms | 426 | 9 |
-| Sim cost per frame | 6.0 ms | 1.8 ms |
-| Render CPU / GPU | n/a | 0.8 ms / 0.5 ms |
-| Draw calls (avg) | n/a | 126 |
-| RAM / VRAM | 81 MB / 27 MB | 89 MB / 25 MB |
+| FPS (avg) | 77 | 140 |
+| Frame time p99 | 46.5 ms | 17.7 ms |
+| Frames over 25 ms | 426 | 6 |
+| Sim cost per frame | 6.0 ms | 1.3 ms |
+| Render CPU / GPU | n/a | 0.7 ms / 1.4 ms |
+| Draw calls (avg) | n/a | 122 |
+| RAM / VRAM | 81 MB / 27 MB | 84 MB / 35 MB |
 
-"Before" is `main` plus the benchmark harness only; "After" is the current build with the continuous world view (two runs: 107 and 111 fps; the build just before the world view measured 128 fps, the extra per-town overlay layers cost a little). Effective speed held at 8.0x. Total population differs between builds because planner towns now have to build real border roads before they trade (about 500 to 610 across the 8 towns here). Remaining spikes are ~20 ms steps (planner, job matching); worker-thread simulation is on the roadmap.
+"Before" is `main` plus the benchmark harness only; "After" is `main` as of the armies, farm and planner-mining work (a single run, 702 total population across the 8 towns; the world-view build measured 107 to 111 fps on earlier runs and the build before it 128, so expect about 15% run-to-run variance). Effective speed held at 8.0x. Total population differs between builds because planner towns now have to build real border roads before they trade. Remaining spikes are ~20 ms steps (planner, job matching); worker-thread simulation is on the roadmap.
 
 Headless profilers (`tests/regionbench.gd`, `bench.gd`, `stageprof.gd`) are secondary: they miss rendering and frame pacing.
 
