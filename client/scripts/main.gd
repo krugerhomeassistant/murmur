@@ -70,6 +70,7 @@ func _ready() -> void:
 
 func run_benchmark(quit_after := false) -> void:
 	var b := Benchmark.new()
+	b.name = "Benchmark"
 	b.m = self
 	b.quit_after = quit_after
 	add_child(b)
@@ -288,6 +289,8 @@ func switch_town(i: int) -> void:
 # ---------- input ----------
 
 func _unhandled_input(e: InputEvent) -> void:
+	if e is InputEventKey and e.pressed and not e.echo and e.keycode == KEY_F9 and get_node_or_null("Benchmark") == null:
+		run_benchmark()
 	if not started:
 		return
 	if e is InputEventMouseButton and e.pressed:
@@ -314,8 +317,6 @@ func _unhandled_input(e: InputEvent) -> void:
 			KEY_F:
 				follow = not follow
 				headline = "Auto-follow %s." % ("on" if follow else "off")
-			KEY_F9:
-				run_benchmark()
 			KEY_F3:
 				perf_on = not perf_on
 			KEY_SPACE:
