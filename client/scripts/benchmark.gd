@@ -30,6 +30,8 @@ var phase := 0  # 0 warm-up, 1 sampling, 2 done
 func _ready() -> void:
 	DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
 	Engine.max_fps = 0
+	seed(20261007)
+	m.bench_seed = 20261007
 	m.open_setup()
 	m.start_game({"name": "Bench", "towns": 8, "mood": 1, "diff": 1, "land": 1, "river": 3, "auto": 2, "policy": true, "expand": true, "guide": false})
 	for _i in FAST_FORWARD:  # same cadence as the main loop: viewed town every step, others in 0.5 s batches

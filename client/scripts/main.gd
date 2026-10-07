@@ -27,6 +27,7 @@ var tool: int = INSPECT
 var speed := 1.0
 var follow := true  # spectator: auto-cycle the viewed town
 var follow_t := 0.0
+var bench_seed := 0
 var steps_done := 0  # sim steps run, for measuring the effective speed
 const MAX_BATCH := 2
 const SIM_BUDGET_MS := 6.0  # max sim work per frame; the game slows below the chosen speed instead of dropping frames
@@ -107,6 +108,9 @@ func _free_name() -> String:
 
 func _new_town(nm := "") -> City:
 	var t := City.new(sig)
+	if bench_seed != 0:  # reproducible worlds for the benchmark
+		t.rng.seed = bench_seed + towns.size()
+		t._gen_ore()
 	t.town_name = nm if nm != "" else _free_name()
 	t.temper = TEMPERS[towns.size() % TEMPERS.size()]
 	t.gpos = spiral(towns.size())
