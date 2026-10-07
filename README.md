@@ -38,24 +38,25 @@ Dense late-game maps are the usual killer of city builders, so performance is pr
 - The map is chunked: zoomed in it is baked to textures, mid zoom draws block buildings, zoomed out draws flat tiles.
 - Painting a road costs microseconds; the rescan is batched once per frame.
 
-### Measured numbers
+### Standard benchmark
 
-Test rig: Intel i7-8700, NVIDIA GTX 1070 Ti, Godot 4.7.2 GL Compatibility, run from the editor (debugger attached, so slightly pessimistic). Stress map: one dense 96x64 town, overlay off, simulation paused (render cost only), 1080p window. Sampled over ~20 s per row with a runtime sampler; "CPU/GPU" are Godot's viewport render-time monitors.
+The one number we quote: **8 towns, 8x speed, every overlay on**, spectator mode (all towns on the planner, fixed seed), 30 s fast-forward then 15 s warm-up and 30 s sampled. Run it with **F9** in game or `godot --path client -- --benchmark`; results are written to `user://benchmark.json`.
 
-| Camera zoom | FPS | Avg frame | p99 frame | GPU | Render CPU | Draw calls |
-|---|---|---|---|---|---|---|
-| 0.5 (far) | 341 | 2.94 ms | 3.70 ms | 0.59 ms | 0.66 ms | 33 |
-| 1.0 (mid) | 340 | ~2.9 ms | n/a | n/a | n/a | n/a |
-| 1.25 | 145 | ~6.9 ms | 15.2 ms | n/a | n/a | 320 |
-| 2.0 (close) | 212 | ~4.7 ms | 14.3 ms | n/a | n/a | 174 |
+Rig: Intel i7-8700, NVIDIA GTX 1070 Ti, Godot 4.7.2 GL Compatibility, run from the editor (debugger attached, so pessimistic), 1080p window.
 
-Memory (same map): about 72 MB static RAM; VRAM 22 MB zoomed out, up to 166 MB (142 MB textures) once every chunk is baked zoomed in.
+| Metric | Before | After |
+|---|---|---|
+| FPS (avg) | 77 | 128 |
+| Frame time p99 | 46.5 ms | 23.4 ms |
+| Frames over 25 ms | 426 | 28 |
+| Sim cost per frame | 6.0 ms | 1.9 ms |
+| Render CPU / GPU | n/a | 0.8 ms / 0.5 ms |
+| Draw calls (avg) | n/a | 113 |
+| RAM / VRAM | 81 MB / 27 MB | 89 MB / 35 MB |
 
-Headless simulation cost, 8-town region (`tests/region.gd`): 4.10 ms per 0.1 s step before the optimisation pass, 1.84 ms after. `place()` per tile: 2.8 ms before, 2 us after.
+"Before" is `main` plus the benchmark harness only. Effective speed held at 8.0x; total population about 780 across the 8 towns. Remaining spikes are ~22 ms steps (planner, job matching); worker-thread simulation is on the roadmap.
 
-Not yet measured: 8 towns at 8x speed end to end (the user-reported lag case) and an old-build render baseline; these will be added when measured. Worst sim steps still spike to about 20 ms (planner); worker-thread simulation is on the roadmap.
-
-Reproduce the sim numbers: `godot --headless --path client --script res://tests/regionbench.gd`. Other profilers: `bench.gd`, `bench2.gd`, `late.gd`, `place.gd`.
+Headless profilers (`tests/regionbench.gd`, `bench.gd`, `stageprof.gd`) are secondary: they miss rendering and frame pacing.
 
 ## Repo map
 
