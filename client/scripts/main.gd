@@ -163,6 +163,7 @@ func continue_game() -> void:
 
 
 func _begin() -> void:
+	pin_cell = -1
 	chunk_kick = true
 	setup.queue_free()
 	setup = null
@@ -239,6 +240,7 @@ func toggle_map() -> void:
 
 
 func switch_town(i: int) -> void:
+	pin_cell = -1
 	chunk_kick = true
 	city = towns[i]
 	sel = null
@@ -329,6 +331,9 @@ func _paint(click: bool) -> void:
 				headline = "Not enough coins."
 
 
+var pin_cell := -1  # tile whose info card is pinned (click with the Inspect tool)
+
+
 func _select(c: Vector2i) -> void:
 	var m := get_global_mouse_position() / TILE
 	var best: City.Citizen = null
@@ -341,6 +346,8 @@ func _select(c: Vector2i) -> void:
 				best = z
 	sel = best
 	sel_cell = -1 if best != null else c.y * City.W + c.x
+	var ci2 := c.y * City.W + c.x
+	pin_cell = -1 if best != null or pin_cell == ci2 or not city.inside(c.x, c.y) else ci2
 
 
 # ---------- loop ----------
