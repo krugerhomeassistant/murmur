@@ -68,3 +68,5 @@ Format: [Problem] -> [Root Cause] -> [Verified Solution]
 [Problem] Headless numbers disagreed with felt lag -> [Cause] stutter is CPU sim spikes (20 ms steps, batched off-screen towns), invisible to averages -> [Solution] judge by the windowed benchmark (F9), p99 and slow-frame count; per-frame `SIM_BUDGET_MS`, `MAX_BATCH`, layout-hash scan skipping.
 
 - [Wars sometimes never ended (units parked in range along the front but could not hit each other)] -> [stop distance ignored the sideways lane offset that range checks include, so two units 88 px apart along the line with a 100 px lane gap were out of range forever] -> [stop distance now subtracts the lane gap and LANE is kept small (35 px per lane unit) so every weapon can close; tests/war.gd passed 6/6 afterwards. Flaky headless tests deserve a loop of runs, not one]
+
+- [Planner never built military buildings under threat] -> [service scores are divided by cost/100+0.5 and must beat a 0.2 floor, so a bonus of ~1 times threat lost to cheap services] -> [bonus scaled to 3-6 times threat for barracks/base/radar/naval yard; test with a hostile pair and topped-up coins (tests/ai.gd)]

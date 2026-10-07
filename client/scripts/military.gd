@@ -128,6 +128,25 @@ static func summary(c: City) -> String:
 	return "%d units%s (room for %d)" % [c.army.size(), (": " + ", ".join(parts)) if not parts.is_empty() else "", room]
 
 
+## Planner towns train what counters the enemy: sums the target classes of every unit a hostile neighbour has and bumps the weights of types that beat the big ones.
+static func adapt(c: City) -> void:
+	var tot := {"soft": 0, "armor": 0, "air": 0, "ship": 0}
+	var n := 0
+	for p in c.partners:
+		if Diplo.treaty(c, p) == "war" or (Diplo.treaty(c, p) == "" and Diplo.rel(c, p) < -0.2):
+			for u in p.army:
+				tot[KIND[u["k"]]["t"]] += 1
+				n += 1
+	var w := DEF_W.duplicate()
+	if n >= 3:
+		var up := {"air": ["aa", "fighter"], "armor": ["gren", "art", "heli", "bomber", "htank"], "soft": ["tank", "snip", "art", "ltank", "bomber"], "ship": ["destroyer", "patrol", "bomber", "art"]}
+		for cl in up:
+			if float(tot[cl]) / n >= 0.25:
+				for k in up[cl]:
+					w[k] = mini(int(w[k]) + (2 if float(tot[cl]) / n >= 0.5 else 1), 3)
+	c.train_w = w
+
+
 static func rank(u: Dictionary) -> int:
 	return int(u.get("rk", 0))
 
@@ -164,6 +183,11 @@ static func econ(c: City) -> void:
 	c.coins -= up
 	if c.coins < -50.0 and not c.army.is_empty():
 		c.army.pop_back()  # unpaid troops desert
+	if not c.human:
+		c.train_t["_a"] = float(c.train_t.get("_a", 0.0)) + 1.0
+		if float(c.train_t["_a"]) >= 10.0:
+			c.train_t["_a"] = 0.0
+			adapt(c)
 	if c.train_on:
 		var cap := caps(c)
 		var cnt := counts(c)
