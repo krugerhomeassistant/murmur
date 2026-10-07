@@ -5,3 +5,4 @@ dist/
 *.import~
 .mcp.json
 client/benchmark_result.json
+client/benchmark_progress.txt

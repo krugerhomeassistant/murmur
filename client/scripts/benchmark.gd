@@ -18,6 +18,7 @@ var sim := 0.0
 var draw := 0.0
 var n := 0
 var day0 := 0
+var beat := -1
 var phase := 0  # 0 warm-up, 1 sampling, 2 done
 
 
@@ -40,6 +41,11 @@ func _process(_d: float) -> void:
 	t += dt / 1000.0
 	m.speed = 8.0
 	m.overlay = "all"
+	if int(Time.get_ticks_msec() / 5000) != beat:  # progress heartbeat so a stalled run is visible
+		beat = int(Time.get_ticks_msec() / 5000)
+		var hb := FileAccess.open("res://benchmark_progress.txt", FileAccess.WRITE)
+		if hb != null:
+			hb.store_string("phase %d t %.1f samples %d day %d fps %d" % [phase, t, n, m.towns[0].day, Engine.get_frames_per_second()])
 	if phase == 0 and t >= WARM:
 		phase = 1
 		t = 0.0
