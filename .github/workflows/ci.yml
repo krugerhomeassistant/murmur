@@ -33,3 +33,4 @@ jobs:
           godot --headless --path client -s tests/war.gd | tee w.txt && grep -q WAR_OK w.txt && grep -q MIX_OK w.txt && grep -q NAVAL_OK w.txt
           godot --headless --path client -s tests/ai.gd | tee a.txt && grep -q AI_OK a.txt
           godot --headless --path client -s tests/farms.gd | tee f.txt && grep -q FARMS_OK f.txt
+          godot --headless --path client -s tests/pmine.gd | tee p.txt && grep -q PMINE_OK p.txt

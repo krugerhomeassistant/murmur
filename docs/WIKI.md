@@ -108,3 +108,6 @@ Setup Rivers = 'One river through neighbouring towns' (default). Main._fresh pic
 
 ## Farm variants
 Farm-sector zones (sector -> effect): `farm` grain, seasonal crops; `orchard` 1.5x crops; `ranch` food on the spot, a little smell; `green` (greenhouse, unlock 80) crops 0.85x of a field-summer rate in every season; `fishfarm` (unlock 70, must touch water) food on the spot scaled by river_health. Crops need a mill; ranch and fish farm food does not. Planner towns pick a variant via City._farm_variant (fields 3, orchard 1, ranch 1 or 3 when food is short without a mill, greenhouse 0.5 or 2.5 in lean seasons, fish farm 1 while the river is healthy).
+
+## Planner mining
+Planner towns (City._planner) lay a road to the nearest ore deposit when none touches a road (City._plan_ore_road: BFS from the main road network over empty owned land), zone mines on roadside ore once pop >= 60 (at most 8 + 12 per foundry mine jobs, weight 0.5 regardless of industrial demand), and build a foundry as soon as a mine works and then 1 per 12 mine jobs.
