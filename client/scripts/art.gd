@@ -482,7 +482,7 @@ static func _draw(ci: CanvasItem, id: int, night: bool, k: Color) -> void:
 
 ## Grown zone buildings (houses, shops, factories...). `h` varies colours per plot, `lv` is the level 1-3.
 static func building(ci: CanvasItem, r: Rect2, shape: String, body: Color, lv: int, ok: bool, night: bool, h: int) -> bool:
-	if not shape in ["house", "terrace", "tower", "condo", "shop", "factory", "office", "farm"]:
+	if not shape in ["house", "terrace", "tower", "condo", "shop", "factory", "office", "farm", "orchard", "ranch", "green", "fishfarm"]:
 		return false
 	ci.draw_set_transform(r.position)
 	var k := Color.WHITE if ok else Color(0.6, 0.6, 0.6)
@@ -588,6 +588,42 @@ static func building(ci: CanvasItem, r: Rect2, shape: String, body: Color, lv: i
 			_r(ci, 15.5, oy - 4, 1, 4, Color("7f8c8d"))
 			ci.draw_circle(Vector2(16, oy - 4), 1.0, Color("e74c3c") if int(t * 1.5) % 2 == 0 else Color("7a2a20"))
 			_r(ci, 14, 26, 4, 3, Color("2c3e50") * k)
+		"orchard":
+			ci.draw_rect(Rect2(1, 1, 30, 30), Color("a8c070") * k)
+			for row in 3:
+				for col in 3:
+					var cx := 6.0 + col * 10.0
+					var cy := 7.0 + row * 9.0
+					_r(ci, cx - 0.7, cy + 1, 1.4, 3.5, Color("6a4a2a") * k)
+					ci.draw_circle(Vector2(cx, cy), 3.6, Color("4f9a3a") * k)
+					ci.draw_circle(Vector2(cx - 1.2, cy - 0.6), 0.7, Color("d94a3a"))
+					ci.draw_circle(Vector2(cx + 1.2, cy + 0.8), 0.7, Color("d94a3a"))
+		"ranch":
+			ci.draw_rect(Rect2(1, 1, 30, 30), Color("9cc46a") * k)
+			for s in 9:
+				_r(ci, 2 + s * 3.2, 4, 0.8, 5, Color("7a5a3a") * k)  # fence
+			_r(ci, 2, 5, 28, 0.8, Color("7a5a3a") * k)
+			_r(ci, 17, 16, 12, 11, Color("8a3a2a") * k)
+			_tri(ci, Vector2(16, 16), Vector2(30, 16), Vector2(23, 10), Color("5a2a20") * k)
+			for c in 3:
+				_r(ci, 3 + c * 5, 18 + (c % 2) * 5, 4, 2.4, Color("f4efe0") * k)
+				_r(ci, 4 + c * 5, 18.4 + (c % 2) * 5, 1.4, 1.2, Color("2a2a2a") * k)
+		"green":
+			ci.draw_rect(Rect2(1, 1, 30, 30), Color("9fbf8a") * k)
+			_r(ci, 3, 6, 26, 20, Color(0.75, 0.92, 0.95, 0.85) * k)
+			for col in 6:
+				_r(ci, 3 + col * 5.0, 6, 0.8, 20, Color("e8f4f4") * k)
+			for col in 5:
+				ci.draw_circle(Vector2(5.5 + col * 5.0, 21), 1.6, Color("4f9a3a") * k)
+			_tri(ci, Vector2(2, 6), Vector2(30, 6), Vector2(16, 2), Color("d8eef0") * k)
+		"fishfarm":
+			ci.draw_rect(Rect2(1, 1, 30, 30), Color("c4b48a") * k)
+			_r(ci, 3, 4, 12, 9, Color("4a8fb8") * k)
+			_r(ci, 17, 4, 12, 9, Color("3f82ab") * k)
+			_r(ci, 3, 16, 12, 9, Color("3f82ab") * k)
+			_r(ci, 17, 16, 12, 9, Color("4a8fb8") * k)
+			for p in 4:
+				ci.draw_circle(Vector2(9 + (p % 2) * 14.0, 8.5 + (p / 2) * 12.0), 0.9, Color(1, 1, 1, 0.8))
 		"farm":
 			ci.draw_rect(Rect2(1, 1, 30, 30), Color("c4b46a") * k)
 			for s in 5:
@@ -783,7 +819,7 @@ static func zone(ci: CanvasItem, r: Rect2, shape: String, zc: Color, ok: bool) -
 			for row in 4:
 				_r(ci, 12, 9 + row * 4, 3, 2, line)
 				_r(ci, 17, 9 + row * 4, 3, 2, line)
-		"farm":
+		"farm", "orchard", "ranch", "green", "fishfarm":
 			for s in 5:
 				_r(ci, 4, 6 + s * 5, 24, 2, line)
 		"condo":
