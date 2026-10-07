@@ -316,7 +316,7 @@ func cell() -> Vector2i:
 
 
 func _paint(click: bool) -> void:
-	chunk_kick = true
+	_dirty_cell(cell())
 	var c := cell()
 	if not city.inside(c.x, c.y):
 		return
@@ -369,17 +369,31 @@ func _select(c: Vector2i) -> void:
 const FAR_ZOOM := 0.7  # below this, tiles are flat colour (level of detail 2)
 const MID_ZOOM := 1.2  # below this, simple block buildings (level of detail 1); above, full art
 const CH := 16  # chunk size in tiles
-var chunk_hz := 8.0  # re-record rate of a visible chunk (animation smoothness)
-const CHUNK_MS := 5.0  # recording budget per frame; under load chunks refresh slower instead of dropping fps
+var chunk_hz := 4.0  # re-record rate of a visible chunk (animation smoothness)
+const CHUNK_MS := 3.0  # recording budget per frame; under load chunks refresh slower instead of dropping fps
 var chunk_ms := 3.0  # smoothed cost of recording one chunk
 var chunks: Array[TileLayer] = []
 var chunk_kick := true  # set when the map changes: re-record visible chunks now
 var chunk_rr := 0
+var bake_debt := 0.0
 var far_mode := 0
 var ci: CanvasItem = self  # target of the tile-drawing helpers (a chunk while one is being recorded)
 var perf_on := false  # F3: fps / sim ms / draw ms overlay
 var sim_ms := 0.0
 var draw_ms := 0.0
+
+
+## Marks the chunks around a tile for an immediate re-bake (edits, painting) without refreshing the whole view.
+func _dirty_cell(c: Vector2i) -> void:
+	if chunks.is_empty():
+		return
+	var per_row := ceili(City.W / float(CH))
+	for dy in range(-1, 2):
+		for dx in range(-1, 2):
+			var cx := (c.x + dx) / CH
+			var cy := (c.y + dy) / CH
+			if c.x + dx >= 0 and c.y + dy >= 0 and cx < per_row and cy * per_row + cx < chunks.size():
+				chunks[cy * per_row + cx].stamp = -1
 
 
 func _lod() -> int:
@@ -398,7 +412,6 @@ func _chunks() -> void:
 				l.y1 = mini(City.H, cy * CH + CH) - 1
 				l.show_behind_parent = true
 				add_child(l)
-				l.setup()
 				chunks.append(l)
 	var lv := _lod()
 	if lv != far_mode:
@@ -407,16 +420,16 @@ func _chunks() -> void:
 	var vp := get_viewport_rect().size / cam.zoom
 	var view := Rect2(cam.position - vp * 0.5, vp).grow(TILE * CH * 0.5)  # half a chunk of prefetch so panning never shows an unbaked chunk
 	var now := Time.get_ticks_msec()
-	var budget := 999 if chunk_kick else maxi(1, int(CHUNK_MS / maxf(chunk_ms, 0.2)))
+	bake_debt = maxf(bake_debt - CHUNK_MS, 0.0)  # leaky budget: average spend stays under CHUNK_MS per frame
 	var n := chunks.size()
 	for k in n:
 		var l: TileLayer = chunks[(k + chunk_rr) % n]
 		var seen := view.intersects(Rect2(l.x0 * TILE, l.y0 * TILE, (l.x1 - l.x0 + 1) * TILE, (l.y1 - l.y0 + 1) * TILE))
 		l.visible = seen
-		if seen and budget > 0 and (chunk_kick or now - l.stamp >= 1000.0 / chunk_hz):
+		if seen and (chunk_kick or l.stamp < 0 or (bake_debt < CHUNK_MS and now - l.stamp >= 1000.0 / chunk_hz)):
 			l.stamp = now
 			l.refresh(far_mode)
-			budget -= 1
+			bake_debt += chunk_ms
 	chunk_rr = (chunk_rr + 3) % n
 	chunk_kick = false
 
