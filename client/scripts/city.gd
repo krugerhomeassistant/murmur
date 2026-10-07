@@ -18,6 +18,8 @@ const DEBT_LIMIT := -150.0
 const WEATHER_PENALTY := {"clear": 0.0, "rain": 0.05, "heatwave": 0.1, "storm": 0.2, "snow": 0.05, "fog": 0.02}
 const DAY_SECS := 60.0  # sim seconds per day
 const BRIDGE_X := 4.0  # a road tile over water costs this much more
+## Index offsets of the 13-cell diamond (radius 2) around a tile.
+const DIAMOND: Array[int] = [-2 * W, -W - 1, -W, -W + 1, -2, -1, 0, 1, 2, W - 1, W, W + 1, 2 * W]
 const WALK := 2.4  # cells per sim second
 const GROW_COST := 25.0
 const BUILD_SECS := 8.0
@@ -197,6 +199,12 @@ var orch_jobs := 0
 var ranch_jobs := 0
 var mine_jobs := 0
 var mine_yield := 0.0  # sum of level x deposit richness over mines
+var scan_sig := 0
+var shop_sig := 0
+var zones: Array[int] = []  # connected zone cells from the last cell pass; _grow walks these instead of every cell
+var crime_t := 0
+var cov_sig := 0
+var up_svc_base := 0.0
 var ore := PackedByteArray()  # ore deposit richness per cell, 0 = none
 var svc_jobs := 0
 var jobs := 0
@@ -686,148 +694,170 @@ func _add_prov(m: String, c: Vector2i, s: float, r: int) -> void:
 
 ## Recount everything that depends on the map.
 func _scan() -> void:
-	roads = 0
-	avenues = 0
-	blds = 0
-	housing = 0
-	shop_jobs = 0
-	fac_jobs = 0
-	off_jobs = 0
-	farm_jobs = 0
-	orch_jobs = 0
-	ranch_jobs = 0
-	mine_jobs = 0
-	mine_yield = 0.0
-	svc_jobs = 0
-	up_zone = 0.0
-	tier_sum = 0.0
-	grant_sum = 0.0
-	up_svc = 0.0
-	tour_sum = 0.0
-	homes.clear()
-	works.clear()
-	spots.clear()
-	bt.clear()
-	prov.clear()
-	polluters.clear()
-	plaza = -1
-	gate = [0, 0, 0, 0]
-	var best := 1e9
-	for i in cells:
-		var t := grid[i]
-		if t == T.EMPTY:
-			connected[i] = 0
-			continue
-		var ok := _road_next_to(i) >= 0
-		connected[i] = 1 if ok else 0
-		if not ok:
-			continue
-		var d: Dictionary = Catalog.DEFS[t]
-		var kind: String = d["kind"]
-		var c := cell(i)
-		if kind == "road":
-			roads += 1
-			var gx := i % W
-			var gy := i / W
-			if gy < terr.position.y + 3:
-				gate[0] += 1
-			if gx >= terr.end.x - 3:
-				gate[1] += 1
-			if gy >= terr.end.y - 3:
-				gate[2] += 1
-			if gx < terr.position.x + 3:
-				gate[3] += 1
-			if t == T.AVENUE:
-				avenues += 1
-			var dist := center(i).distance_to(Vector2(W, H) * 0.5)
-			if dist < best:
-				best = dist
-				plaza = i
-		elif kind == "zone":
-			var L: int = lvl[i]
-			if L > 0:
-				blds += L
-				up_zone += float(d["up"]) * L
-				var hp: int = d["home"]
-				var jp: int = d["jobs"]
-				if hp > 0:
-					homes.append(i)
-					housing += hp * L
-					tier_sum += hp * L * float(d.get("tier", 1.0))
-				if jp > 0:
+	var scan_t0 := Time.get_ticks_usec()
+	var sg := hash([grid, lvl, lamp, terr])  # the cell pass only reads these; skip it while the layout is unchanged
+	if sg != scan_sig:
+		roads = 0
+		avenues = 0
+		blds = 0
+		housing = 0
+		shop_jobs = 0
+		fac_jobs = 0
+		off_jobs = 0
+		farm_jobs = 0
+		orch_jobs = 0
+		ranch_jobs = 0
+		mine_jobs = 0
+		mine_yield = 0.0
+		svc_jobs = 0
+		up_zone = 0.0
+		tier_sum = 0.0
+		grant_sum = 0.0
+		up_svc = 0.0
+		tour_sum = 0.0
+		homes.clear()
+		zones.clear()
+		works.clear()
+		spots.clear()
+		bt.clear()
+		prov.clear()
+		polluters.clear()
+		plaza = -1
+		gate = [0, 0, 0, 0]
+		var best := 1e9
+		for i in cells:
+			var t := grid[i]
+			if t == T.EMPTY:
+				connected[i] = 0
+				continue
+			var ok := _road_next_to(i) >= 0
+			connected[i] = 1 if ok else 0
+			if not ok:
+				continue
+			var d: Dictionary = Catalog.DEFS[t]
+			var kind: String = d["kind"]
+			var c := cell(i)
+			if kind == "road":
+				roads += 1
+				var gx := i % W
+				var gy := i / W
+				if gy < terr.position.y + 3:
+					gate[0] += 1
+				if gx >= terr.end.x - 3:
+					gate[1] += 1
+				if gy >= terr.end.y - 3:
+					gate[2] += 1
+				if gx < terr.position.x + 3:
+					gate[3] += 1
+				if t == T.AVENUE:
+					avenues += 1
+				var dist := center(i).distance_to(Vector2(W, H) * 0.5)
+				if dist < best:
+					best = dist
+					plaza = i
+			elif kind == "zone":
+				zones.append(i)
+				var L: int = lvl[i]
+				if L > 0:
+					blds += L
+					up_zone += float(d["up"]) * L
+					var hp: int = d["home"]
+					var jp: int = d["jobs"]
+					if hp > 0:
+						homes.append(i)
+						housing += hp * L
+						tier_sum += hp * L * float(d.get("tier", 1.0))
+					if jp > 0:
+						works.append(i)
+						match String(d["sector"]):
+							"com":
+								shop_jobs += jp * L
+							"ind":
+								fac_jobs += jp * L
+							"office":
+								off_jobs += jp * L
+							"farm":
+								farm_jobs += jp * L
+							"orchard":
+								orch_jobs += jp * L
+							"ranch":
+								ranch_jobs += jp * L
+							"mine":
+								mine_jobs += jp * L
+								mine_yield += L * maxi(int(ore[i]), 1)
+					if d.has("poll"):
+						polluters.append([c.x, c.y, float(d["poll"][1]) * L, int(d["poll"][0])])
+					if t == T.COM:
+						spots.append(i)
+			else:
+				up_svc += float(d["up"])
+				if not bt.has(t):
+					bt[t] = []
+				bt[t].append(i)
+				var sj: int = d.get("jobs", 0)
+				if sj > 0:
 					works.append(i)
-					match String(d["sector"]):
-						"com":
-							shop_jobs += jp * L
-						"ind":
-							fac_jobs += jp * L
-						"office":
-							off_jobs += jp * L
-						"farm":
-							farm_jobs += jp * L
-						"orchard":
-							orch_jobs += jp * L
-						"ranch":
-							ranch_jobs += jp * L
-						"mine":
-							mine_jobs += jp * L
-							mine_yield += L * maxi(int(ore[i]), 1)
-				if d.has("poll"):
-					polluters.append([c.x, c.y, float(d["poll"][1]) * L, int(d["poll"][0])])
-				if t == T.COM:
+					svc_jobs += sj
+				if d.get("spot", false):
 					spots.append(i)
-		else:
-			up_svc += float(d["up"])
-			if not bt.has(t):
-				bt[t] = []
-			bt[t].append(i)
-			var sj: int = d.get("jobs", 0)
-			if sj > 0:
-				works.append(i)
-				svc_jobs += sj
-			if d.get("spot", false):
-				spots.append(i)
-			if d.has("tour"):
-				tour_sum += float(d["tour"])
-			grant_sum += float(d.get("grant", 0.0))
-			for m in d["prov"]:
-				_add_prov(m, c, float(d["prov"][m]), int(d["r"]))
-			if d.has("poll"):
-				polluters.append([c.x, c.y, float(d["poll"][1]), int(d["poll"][0])])
-	for i in cells:
-		if lamp[i] == 1 and is_road(grid[i]):
-			if not bt.has(T.LIGHT):
-				bt[T.LIGHT] = []
-			bt[T.LIGHT].append(i)
-			_add_prov("light", cell(i), 0.7, 4)
-			up_svc += 0.1
-	jobs = shop_jobs + fac_jobs + off_jobs + farm_jobs + orch_jobs + ranch_jobs + mine_jobs + svc_jobs
-	res_mult = tier_sum / maxf(housing, 1)
+				if d.has("tour"):
+					tour_sum += float(d["tour"])
+				grant_sum += float(d.get("grant", 0.0))
+				for m in d["prov"]:
+					_add_prov(m, c, float(d["prov"][m]), int(d["r"]))
+				if d.has("poll"):
+					polluters.append([c.x, c.y, float(d["poll"][1]), int(d["poll"][0])])
+		for i in cells:
+			if lamp[i] == 1 and is_road(grid[i]):
+				if not bt.has(T.LIGHT):
+					bt[T.LIGHT] = []
+				bt[T.LIGHT].append(i)
+				_add_prov("light", cell(i), 0.7, 4)
+				up_svc += 0.1
+		jobs = shop_jobs + fac_jobs + off_jobs + farm_jobs + orch_jobs + ranch_jobs + mine_jobs + svc_jobs
+		res_mult = tier_sum / maxf(housing, 1)
+		scan_sig = sg
+		up_svc_base = up_svc
+		cov_sig = 0
+	up_svc = up_svc_base
+	var qt := _pf("scan_cells", scan_t0)
 	_net()
-	for m in Catalog.METRICS:
-		var sum := 0.0
+	qt = _pf("scan_net", qt)
+	var csg := hash([sg, mods])  # coverage depends on the layout and the policy/event modifiers only
+	if csg != cov_sig:
+		cov_sig = csg
+		for m in Catalog.METRICS:
+			var sum := 0.0
+			for h in homes:
+				sum += cov_at(cell(h), m)
+			cov[m] = sum / maxi(homes.size(), 1) if not homes.is_empty() else 0.0
+		var ps := 0.0
 		for h in homes:
-			sum += cov_at(cell(h), m)
-		cov[m] = sum / maxi(homes.size(), 1) if not homes.is_empty() else 0.0
-	var ps := 0.0
-	for h in homes:
-		ps += minf(1.0, poll_at(cell(h)))
-	pollution = ps / maxi(homes.size(), 1) * mod("poll_mult") if not homes.is_empty() else 0.0
+			ps += minf(1.0, poll_at(cell(h)))
+		pollution = ps / maxi(homes.size(), 1) * mod("poll_mult") if not homes.is_empty() else 0.0
+	_pf("scan_cov", qt)
 
 
 ## Power and water networks: plants feed connected lines; buildings touching a live line share the supply.
 func _net() -> void:
 	var nets := 0
+	var nt := Time.get_ticks_usec()
 	for m in NETS:
 		var layer: PackedByteArray = _nl(m)
 		var reach: PackedByteArray = net_reach[m]
-		var sig := hash([grid, lvl, layer, connected, str(offline.keys()), cells.size(), mod(m + "_out"), mod("power_dem")])
+		var sig := hash([scan_sig, layer, str(offline.keys()), cells.size(), mod(m + "_out"), mod("power_dem")])  # scan_sig already covers grid, lvl and lamp (connected derives from grid)
+		nt = _pf("net_hash", nt)
 		var nc: Dictionary = net_cache.get(m, {})
 		if nc.is_empty() or nc["sig"] != sig:
-			nc = _net_solve(m, layer, reach)
+			# the flood fill depends on lines, plants and outages only; growth (lvl) just changes demand, so keep `reach` and supply then
+			var rsig := hash([grid, layer, str(offline.keys()), cells.size(), mod(m + "_out")])
+			var keep: bool = not nc.is_empty() and nc.get("rsig", 0) == rsig
+			nc = _net_solve(m, layer, reach, keep, float(nc["sup"]) if keep else 0.0)
+			nc["rsig"] = rsig
 			nc["sig"] = sig
 			nc["sat"] = -1.0
 			net_cache[m] = nc
+		nt = _pf("net_solve", nt)
 		nets += int(nc["nets"])
 		var sup: float = nc["sup"]
 		var dem: float = nc["dem"]
@@ -840,17 +870,19 @@ func _net() -> void:
 				if take > 0.0:
 					sup += take
 					imports[m] = float(imports[m]) + take
+		nt = _pf("net_imports", nt)
 		net_sup[m] = sup
 		net_dem[m] = dem
 		var sat := 1.0 if dem <= 0.001 else clampf(sup / dem, 0.0, 1.0)
 		if sup <= 0.0:
 			sat = 0.0
 		if not is_equal_approx(sat, float(nc["sat"])):
-			nc["sat"] = sat
 			var val: PackedFloat32Array = net_val[m]
-			var live: PackedByteArray = nc["live"]
-			for i in cells:
-				val[i] = sat if live[i] == 1 else 0.0
+			if float(nc["sat"]) < 0.0:  # freshly solved layout: clear the old map once
+				val.fill(0.0)
+			nc["sat"] = sat
+			for i in nc["idx"]:
+				val[i] = sat
 	up_svc += nets * 0.015
 	var raw := maxf(pop - 20.0, 0.0) * 0.15  # sewage produced; what the plants don't treat goes in the river
 	var clean := 1.0 if raw <= 0.0 else clampf(float(net_own["sewage"]) / raw, 0.0, 1.0)
@@ -858,9 +890,37 @@ func _net() -> void:
 
 
 ## Flood-fills a line layer from its plants and totals supply/demand. Pure function of the layout, so _net caches it.
-func _net_solve(m: String, layer: PackedByteArray, reach: PackedByteArray) -> Dictionary:
-	reach.fill(0)
+func _net_solve(m: String, layer: PackedByteArray, reach: PackedByteArray, keep := false, kept_sup := 0.0) -> Dictionary:
 	var q: Array[int] = []
+	var sup := kept_sup
+	if not keep:
+		reach.fill(0)
+		sup = _flood(m, layer, reach, q)
+	var dem := 0.0
+	var nets := 0
+	var live := PackedByteArray()
+	live.resize(W * H)
+	var idx := PackedInt32Array()  # live cells, so a supply change rewrites only these
+	for i in cells:
+		nets += layer[i]
+		if _live(i, reach):
+			live[i] = 1
+			idx.append(i)
+		var t: int = grid[i]
+		if t == T.EMPTY or connected[i] == 0 or is_road(t):
+			continue
+		var d: Dictionary = Catalog.DEFS[t]
+		if d.has("out") or (is_zone(t) and lvl[i] == 0):
+			continue
+		if live[i] == 1:
+			dem += 0.5 * lvl[i] * (1.0 + (int(d["home"]) + int(d["jobs"])) * 0.1) if is_zone(t) else 1.0
+	if m == "power":
+		dem *= 1.0 + mod("power_dem")
+	return {"live": live, "idx": idx, "sup": sup, "dem": dem, "nets": nets}
+
+
+## Floods a line layer from its working plants into `reach`; returns the total supply.
+func _flood(m: String, layer: PackedByteArray, reach: PackedByteArray, q: Array[int]) -> float:
 	var sup := 0.0
 	for id in bt:
 		var out: Dictionary = Catalog.DEFS[id].get("out", {})
@@ -887,25 +947,7 @@ func _net_solve(m: String, layer: PackedByteArray, reach: PackedByteArray) -> Di
 				if layer[ni] == 1 and reach[ni] == 0:
 					reach[ni] = 1
 					q.append(ni)
-	var dem := 0.0
-	var nets := 0
-	var live := PackedByteArray()
-	live.resize(W * H)
-	for i in cells:
-		nets += layer[i]
-		if _live(i, reach):
-			live[i] = 1
-		var t: int = grid[i]
-		if t == T.EMPTY or connected[i] == 0 or is_road(t):
-			continue
-		var d: Dictionary = Catalog.DEFS[t]
-		if d.has("out") or (is_zone(t) and lvl[i] == 0):
-			continue
-		if live[i] == 1:
-			dem += 0.5 * lvl[i] * (1.0 + (int(d["home"]) + int(d["jobs"])) * 0.1) if is_zone(t) else 1.0
-	if m == "power":
-		dem *= 1.0 + mod("power_dem")
-	return {"live": live, "sup": sup, "dem": dem, "nets": nets}
+	return sup
 
 
 func _near(i: int) -> Array[int]:
@@ -932,19 +974,29 @@ func _crime() -> void:
 	var sz := clampf(pop / 50.0, 0.1, 1.0)  # small towns have little crime
 	var tot := 0.0
 	crime_val.fill(0.0)
+	var m_pol := mod("cov_police")  # modifier lookups hoisted out of the per-building loop
+	var m_lit := mod("cov_light")
+	var m_jus := mod("cov_justice")
+	var m_cr := mod("crime_mult")
 	for i in cells:
-		if grid[i] == T.EMPTY or is_road(grid[i]):
+		var gi := grid[i]
+		if gi == T.EMPTY or is_road(gi):
 			continue
 		var c := cell(i)
 		var dens := 0
-		for dy in range(-2, 3):
-			for dx in range(-2, 3):
-				if absi(dx) + absi(dy) <= 2 and inside(c.x + dx, c.y + dy) and grid[(c.y + dy) * W + c.x + dx] != T.EMPTY:
+		if c.x >= 2 and c.x < W - 2 and c.y >= 2 and c.y < H - 2:  # interior: no bounds checks needed
+			for o in DIAMOND:
+				if grid[i + o] != T.EMPTY:
 					dens += 1
-		var v := base + sz * (0.3 * float(dens) / 13.0 + 0.3 * (1.0 - cov_at(c, "police")) + float(Catalog.DEFS[grid[i]].get("crime", 0.0)))
-		v *= 1.0 - 0.25 * cov_at(c, "light")
-		v *= 1.0 - 0.35 * cov_at(c, "justice")
-		v = clampf(v * mod("crime_mult"), 0.0, 1.0)
+		else:
+			for dy in range(-2, 3):
+				for dx in range(-2, 3):
+					if absi(dx) + absi(dy) <= 2 and inside(c.x + dx, c.y + dy) and grid[(c.y + dy) * W + c.x + dx] != T.EMPTY:
+						dens += 1
+		var v := base + sz * (0.3 * float(dens) / 13.0 + 0.3 * (1.0 - clampf(raw_cov(c, "police") + m_pol, 0.0, 1.0)) + float(Catalog.DEFS[gi].get("crime", 0.0)))
+		v *= 1.0 - 0.25 * clampf(raw_cov(c, "light") + m_lit, 0.0, 1.0)
+		v *= 1.0 - 0.35 * clampf(raw_cov(c, "justice") + m_jus, 0.0, 1.0)
+		v = clampf(v * m_cr, 0.0, 1.0)
 		crime_val[i] = v if dens > 0 else 0.0
 	for h in homes:
 		tot += crime_val[h]
@@ -1289,7 +1341,7 @@ func _pf(stage: String, t0: int) -> int:
 
 
 func _second() -> void:
-	var p := Time.get_ticks_usec()
+	var pt := Time.get_ticks_usec()
 	var sn := int((day - 1) / 7) % 4
 	if sn != season:
 		season = sn
@@ -1300,21 +1352,24 @@ func _second() -> void:
 		if float(offline[k]) <= 0.0:
 			offline.erase(k)
 			_log("The power plant is back online.")
-	p = _pf("offline", p)
+	pt = _pf("offline", pt)
 	_scan()
-	p = _pf("scan", p)
+	pt = _pf("scan", pt)
 	lod_n += 1
 	if lod_n % lod == 0:
-		_crime()
-		p = _pf("crime", p)
+		crime_t -= 1
+		if crime_t <= 0:  # slow-moving maps: every 3rd second is plenty
+			crime_t = 3
+			_crime()
+			pt = _pf("crime", pt)
 		land_t -= 1
 		if land_t <= 0:
-			land_t = 5
+			land_t = 10
 			_land()
-			p = _pf("land", p)
+			pt = _pf("land", pt)
 	_tribes()
 	_collect_mods()
-	p = _pf("tribes_mods", p)
+	pt = _pf("tribes_mods", pt)
 	home_load.clear()
 	work_load.clear()
 	var keep: Array[Citizen] = []
@@ -1335,25 +1390,30 @@ func _second() -> void:
 			else:
 				c.work = -1
 				c.commute = 0
+	var open_works: Array[int] = []  # workplaces with a free slot, so each job-seeker scans only these
+	for w in works:
+		if work_load.get(w, 0) < _cap(w):
+			open_works.append(w)
 	for c in citizens:
-		if c.work >= 0:
+		if c.work >= 0 or open_works.is_empty():
 			continue
 		var best := -1
 		var bd := 1 << 30
-		var hc := cell(c.home)
-		for w in works:
-			if work_load.get(w, 0) >= _cap(w):
-				continue
-			var wc := cell(w)
-			var d := absi(wc.x - hc.x) + absi(wc.y - hc.y)
+		var hx := c.home % W
+		var hy := c.home / W
+		for w in open_works:
+			var d := absi(w % W - hx) + absi(w / W - hy)
 			if d < bd:
 				bd = d
 				best = w
 		if best >= 0:
 			c.work = best
 			c.commute = bd
-			work_load[best] = work_load.get(best, 0) + 1
-	p = _pf("jobs", p)
+			var nl: int = work_load.get(best, 0) + 1
+			work_load[best] = nl
+			if nl >= _cap(best):
+				open_works.erase(best)
+	pt = _pf("jobs", pt)
 	pop = citizens.size()
 	employed = 0
 	for c in citizens:
@@ -1374,20 +1434,22 @@ func _second() -> void:
 			cs += c.commute
 			cn += 1
 	avg_commute = cs / maxf(cn, 1)
-	var ss := 0.0
-	var shops: Array[int] = []
-	for i in works:
-		if grid[i] == T.COM:
-			shops.append(i)
-	for h in homes:
-		var best := 40
-		var hc := cell(h)
-		for sidx in shops:
-			var sc := cell(sidx)
-			best = mini(best, absi(sc.x - hc.x) + absi(sc.y - hc.y))
-		ss += best
-	avg_shop = ss / maxf(homes.size(), 1) if not homes.is_empty() else 0.0
-	p = _pf("shops", p)
+	if shop_sig != scan_sig:  # average walk to a shop depends on the layout only
+		shop_sig = scan_sig
+		var ss := 0.0
+		var shops: Array[int] = []
+		for i in works:
+			if grid[i] == T.COM:
+				shops.append(i)
+		for h in homes:
+			var best := 40
+			var hx := h % W
+			var hy := h / W
+			for sidx in shops:
+				best = mini(best, absi(sidx % W - hx) + absi(sidx / W - hy))
+			ss += best
+		avg_shop = ss / maxf(homes.size(), 1) if not homes.is_empty() else 0.0
+	pt = _pf("shops", pt)
 	var market := sig.get_f("market")
 	unemp = 0.0 if pop == 0 else 1.0 - float(employed) / pop
 	shop_gap = clampf(1.0 - shop_jobs / maxf(pop * 0.5, 3.0), 0.0, 1.0)
@@ -1399,11 +1461,11 @@ func _second() -> void:
 			target -= float(M["w"]) * _need(m)
 		elif String(M["kind"]) == "bonus":
 			target += float(M["w"]) * float(cov[m])
-	p = _pf("mood", p)
+	pt = _pf("mood", pt)
 	_sickness()
-	p = _pf("sickness", p)
+	pt = _pf("sickness", pt)
 	_traffic()
-	p = _pf("traffic", p)
+	pt = _pf("traffic", pt)
 	target -= 0.08 * congestion + 0.25 * float(sick_n) / maxf(pop, 1)
 	if pop >= 40 and float(flow.get("food_local", 1.0)) < 0.3:
 		target -= 0.03
@@ -1431,14 +1493,14 @@ func _second() -> void:
 		msg = "A family packs up and leaves."
 	pop = citizens.size()
 	_grow()
-	p = _pf("demand_grow", p)
+	pt = _pf("demand_grow", pt)
 	plan_t += 1
 	if plan_t >= 8:
 		plan_t = 0
 		_planner()
-		p = _pf("planner", p)
+		pt = _pf("planner", pt)
 	_money(market)
-	p = _pf("money", p)
+	pt = _pf("money", pt)
 	for l in loans.duplicate():
 		l["left"] = float(l["left"]) - float(l["pay"])
 		if float(l["left"]) <= 0.0:
@@ -1544,11 +1606,10 @@ func dem_for(t: int) -> float:
 func _grow() -> void:
 	var empties: Array[int] = []
 	var scale := (1.0 + blds / 15.0) * mod("build_cost_mult")
-	for i in cells:
+	for i in zones.duplicate():  # duplicate: growth below changes lvl, which can trigger a rescan that rebuilds `zones`
 		var t := grid[i]
 		if not is_zone(t) or connected[i] == 0:
 			continue
-		var dd: float = dem_for(t)
 		if lvl[i] == 0:
 			if build[i] > 0.0:
 				build[i] += maxf(mod("build_mult"), 1.0) / BUILD_SECS
@@ -1558,7 +1619,7 @@ func _grow() -> void:
 					msg = "A new %s opened." % String(Catalog.DEFS[t]["n"]).to_lower().replace(" zone", "")
 			else:
 				empties.append(i)
-		elif lvl[i] < int(Catalog.DEFS[t]["max"]) and dd > 0.15 and mood > 0.45 and coins > GROW_COST * scale * 4.0 + saving_for and rng.randf() < 0.08:
+		elif lvl[i] < int(Catalog.DEFS[t]["max"]) and mood > 0.45 and dem_for(t) > 0.15 and coins > GROW_COST * scale * 4.0 + saving_for and rng.randf() < 0.08:
 			lvl[i] += 1
 			coins -= GROW_COST * scale * 1.6
 			msg = "A building was upgraded."
