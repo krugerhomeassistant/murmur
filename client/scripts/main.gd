@@ -27,6 +27,10 @@ var tool: int = INSPECT
 var speed := 1.0
 var follow := true  # spectator: auto-cycle the viewed town
 var follow_t := 0.0
+var bench_seed := 0
+var steps_done := 0  # sim steps run, for measuring the effective speed
+const MAX_BATCH := 99  # baseline: no staggering
+const SIM_BUDGET_MS := 1.0e9  # baseline: no budget  # max sim work per frame; the game slows below the chosen speed instead of dropping frames
 var acc := 0.0
 var headline := "Welcome to Murmur. Lay roads, zone homes, shops and jobs beside them. The city will grow on its own as needs arise."
 var sel: City.Citizen = null
@@ -64,6 +68,16 @@ func _ready() -> void:
 	hud.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	layer.add_child(hud)
 	open_setup()
+	if "--benchmark" in OS.get_cmdline_user_args():
+		run_benchmark(true)
+
+
+func run_benchmark(quit_after := false) -> void:
+	var b := Benchmark.new()
+	b.name = "Benchmark"
+	b.m = self
+	b.quit_after = quit_after
+	add_child(b)
 
 
 ## Square spiral from the first town: every town sits next to the previous one.
@@ -94,6 +108,9 @@ func _free_name() -> String:
 
 func _new_town(nm := "") -> City:
 	var t := City.new(sig)
+	if bench_seed != 0:  # reproducible worlds for the benchmark
+		t.rng.seed = bench_seed + towns.size()
+		t._gen_ore()
 	t.town_name = nm if nm != "" else _free_name()
 	t.temper = TEMPERS[towns.size() % TEMPERS.size()]
 	t.gpos = spiral(towns.size())
@@ -279,6 +296,8 @@ func switch_town(i: int) -> void:
 # ---------- input ----------
 
 func _unhandled_input(e: InputEvent) -> void:
+	if e is InputEventKey and e.pressed and not e.echo and e.keycode == KEY_F9 and get_node_or_null("Benchmark") == null:
+		run_benchmark()
 	if not started:
 		return
 	if e is InputEventMouseButton and e.pressed:
@@ -400,6 +419,9 @@ var ci: CanvasItem = self  # target of the tile-drawing helpers (a chunk while o
 var perf_on := false  # F3: fps / sim ms / draw ms overlay
 var sim_ms := 0.0
 var draw_ms := 0.0
+var last_sim := 0.0  # unsmoothed per-frame costs (ms) for spike analysis
+var last_chunk := 0.0
+var last_draw := 0.0
 
 
 ## Marks the chunks around a tile for an immediate re-bake (edits, painting) without refreshing the whole view.
@@ -473,12 +495,17 @@ func _process(delta: float) -> void:
 	if started:
 		acc = minf(acc + delta * speed, STEP * 20.0)  # never owe more than 20 steps: slow down instead of freezing
 		while acc >= STEP:
+			if Time.get_ticks_usec() - p0 > SIM_BUDGET_MS * 1000.0:  # out of frame budget: run slower than asked rather than stutter
+				acc = minf(acc, STEP)
+				break
 			acc -= STEP
+			steps_done += 1
 			sig.tick(STEP)
 			dacc += STEP
 			if dacc >= 1.0:
 				dacc -= 1.0
 				Diplo.second(towns, city.rng)
+			var batched := 0
 			for t in towns:
 				if t == city:
 					t.lod = 1
@@ -486,9 +513,10 @@ func _process(delta: float) -> void:
 				else:  # off-screen towns tick in 0.5s batches and refresh slow analyses less often
 					t.lod = 3
 					t.pend += STEP
-					if t.pend >= 0.5:
+					if t.pend >= 0.5 and batched < MAX_BATCH:  # at most MAX_BATCH towns per step so batches never pile into one 30 ms frame
 						t.tick(t.pend)
 						t.pend = 0.0
+						batched += 1
 					t.msg = ""
 			if city.msg != "":
 				headline = city.msg
@@ -502,11 +530,14 @@ func _process(delta: float) -> void:
 			last_day = city.day
 			if city.over == "":
 				save_game()
-	sim_ms = lerpf(sim_ms, (Time.get_ticks_usec() - p0) / 1000.0, 0.1)
+	last_sim = (Time.get_ticks_usec() - p0) / 1000.0
+	sim_ms = lerpf(sim_ms, last_sim, 0.1)
+	var c0 := Time.get_ticks_usec()
 	var b := 0.78 + 0.22 * cos((city.clock - 13.0) / 24.0 * TAU)
 	mod.color = Color(b, b, minf(1.0, b + 0.1))
 	city.flush()
 	_chunks()
+	last_chunk = (Time.get_ticks_usec() - c0) / 1000.0
 	queue_redraw()
 
 
@@ -665,7 +696,8 @@ func _draw() -> void:
 	if sel_cell >= 0 and sel == null:
 		var sc := City.cell(sel_cell)
 		draw_rect(Rect2(sc.x * TILE, sc.y * TILE, TILE, TILE), Color("ffd166"), false, 2.0)
-	draw_ms = lerpf(draw_ms, (Time.get_ticks_usec() - d0) / 1000.0, 0.1)
+	last_draw = (Time.get_ticks_usec() - d0) / 1000.0
+	draw_ms = lerpf(draw_ms, last_draw, 0.1)
 
 
 ## Static tile layer for one chunk (grass, ground, water, roads, buildings, wires). Re-recorded by _chunks(), not every frame.
