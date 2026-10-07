@@ -1,9 +1,10 @@
 class_name Benchmark
 extends Node
 ## Standard windowed benchmark: 8 towns, 8x speed, "all" overlay, vsync off.
-## Run: `godot --path client -- --benchmark` (or press F9 in game). Warm-up 90 s, sample 30 s,
+## Run: `godot --path client -- --benchmark` (or press F9 in game). Fast-forward ~50 sim-min, warm-up 15 s, sample 30 s,
 ## prints a markdown table and writes user://benchmark.json (and res://benchmark_result.json from the editor), then quits when started with --benchmark.
-const WARM := 90.0
+const FAST_FORWARD := 30000  # 0.1 s steps simulated before the window opens: about 50 sim-minutes, so towns are grown
+const WARM := 15.0
 const SAMPLE := 30.0
 var m
 var quit_after := false
@@ -29,6 +30,18 @@ func _ready() -> void:
 	Engine.max_fps = 0
 	m.open_setup()
 	m.start_game({"name": "Bench", "towns": 8, "mood": 1, "diff": 1, "land": 1, "river": 3, "auto": 2, "policy": true, "expand": true, "guide": false})
+	for _i in FAST_FORWARD:  # same cadence as the main loop: viewed town every step, others in 0.5 s batches
+		m.sig.tick(0.1)
+		if _i % 10 == 0:
+			Diplo.second(m.towns, m.city.rng)
+		for c in m.towns:
+			if c == m.city:
+				c.tick(0.1)
+			else:
+				c.pend += 0.1
+				if c.pend >= 0.5:
+					c.tick(c.pend)
+					c.pend = 0.0
 	m.speed = 8.0
 	m.overlay = "all"
 	m.follow = false
@@ -83,14 +96,14 @@ func _report() -> void:
 	var r := {
 		"hardware": "%s | %s | %d threads | %d MB RAM" % [OS.get_processor_name(), RenderingServer.get_video_adapter_name(), OS.get_processor_count(), int(OS.get_memory_info().get("physical", 0)) / 1048576],
 		"build": "Godot %s, %s build, %s, window %s" % [Engine.get_version_info().string, "debug (editor/debugger)" if OS.is_debug_build() else "release", RenderingServer.get_current_rendering_method(), str(DisplayServer.window_get_size())],
-		"scenario": "8 towns, 8x speed, all overlays, zoom 1.0, vsync off, %ds warm-up, %ds sample" % [int(WARM), int(SAMPLE)],
+		"scenario": "8 towns grown by %d sim-s fast-forward, then 8x speed, all overlays, zoom 1.0, vsync off, %ds warm-up, %ds sample" % [FAST_FORWARD / 10, int(WARM), int(SAMPLE)],
 		"fps_avg": 1000.0 / avg, "frame_ms_avg": avg, "frame_ms_p50": _pct(s, 0.5), "frame_ms_p95": _pct(s, 0.95), "frame_ms_p99": _pct(s, 0.99), "frame_ms_max": s[-1],
 		"render_cpu_ms": cpu / n, "render_gpu_ms": gpu / n, "draw_calls_avg": calls / n, "draw_calls_max": calls_max,
 		"sim_ms_avg": sim / n, "draw_ms_avg": draw / n,
 		"ram_static_mb": Performance.get_monitor(Performance.MEMORY_STATIC) / 1048576.0,
 		"vram_mb": Performance.get_monitor(Performance.RENDER_VIDEO_MEM_USED) / 1048576.0,
 		"texture_mb": Performance.get_monitor(Performance.RENDER_TEXTURE_MEM_USED) / 1048576.0,
-		"days_advanced": m.towns[0].day - day0, "total_pop": pop,
+		"days_advanced": m.towns[0].day - day0, "total_pop": pop, "pop_each": m.towns.map(func(c): return c.pop),
 	}
 	result_json = JSON.stringify(r)
 	print("BENCHMARK_JSON " + result_json)
