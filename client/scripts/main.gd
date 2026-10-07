@@ -445,7 +445,6 @@ const CH := 16  # chunk size in tiles
 var chunk_hz := 4.0  # re-record rate of a visible chunk (animation smoothness)
 const CHUNK_MS := 3.0  # recording budget per frame; under load chunks refresh slower instead of dropping fps
 var chunk_ms := 3.0  # smoothed cost of recording one chunk
-const KIND_HP := {"inf": 30.0, "tank": 140.0, "jet": 60.0}
 const WORLD_ZOOM := 0.25  # below this: live thumbnails and names instead of tiles (level of detail 3)
 var layers := {}  # City -> TownLayer (chunks, thumbnail, overlay)
 var city_view: City  # the town the camera is over
@@ -730,7 +729,7 @@ func draw_fx(node: CanvasItem) -> void:
 							node.draw_set_transform(pos, ang)
 							node.draw_colored_polygon(PackedVector2Array([Vector2(12, 0) * sz, Vector2(-8, -8) * sz, Vector2(-4, 0), Vector2(-8, 8) * sz]), col.lightened(0.2))
 							node.draw_set_transform(Vector2.ZERO)
-					var mx: float = float(KIND_HP[un["k"]])
+					var mx: float = float(Military.KIND[un["k"]]["hp"])
 					if float(un["hp"]) < mx * 0.99:
 						node.draw_rect(Rect2(pos + Vector2(-8, -10) * sz, Vector2(16 * sz, 2.0 * sz)), Color(0, 0, 0, 0.6))
 						node.draw_rect(Rect2(pos + Vector2(-8, -10) * sz, Vector2(16 * sz * float(un["hp"]) / mx, 2.0 * sz)), Color("6fd06f") if float(un["hp"]) / mx > 0.4 else Color("e0a030"))

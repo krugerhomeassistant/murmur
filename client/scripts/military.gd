@@ -8,9 +8,9 @@ extends RefCounted
 const T = Catalog.Id
 const TILE := 32.0
 const KIND := {
-	"inf": {"n": "infantry", "hp": 30.0, "dmg": 2.4, "rng": 110.0, "spd": 9.0, "cost": 25.0, "upk": 0.02, "train": 8.0},
-	"tank": {"n": "tanks", "hp": 140.0, "dmg": 6.5, "rng": 240.0, "spd": 14.0, "cost": 140.0, "upk": 0.08, "train": 35.0},
-	"jet": {"n": "jets", "hp": 60.0, "dmg": 9.0, "rng": 200.0, "spd": 45.0, "cost": 220.0, "upk": 0.12, "train": 50.0},
+	"inf": {"n": "infantry", "hp": 75.0, "dmg": 2.4, "rng": 110.0, "spd": 9.0, "cost": 25.0, "upk": 0.02, "train": 8.0},
+	"tank": {"n": "tanks", "hp": 350.0, "dmg": 6.5, "rng": 240.0, "spd": 14.0, "cost": 140.0, "upk": 0.08, "train": 35.0},
+	"jet": {"n": "jets", "hp": 150.0, "dmg": 9.0, "rng": 200.0, "spd": 45.0, "cost": 220.0, "upk": 0.12, "train": 50.0},
 }
 const VS := {  # damage multiplier, attacker kind -> target kind
 	"inf": {"inf": 1.0, "tank": 0.25, "jet": 0.15},
@@ -167,7 +167,8 @@ static func fight(a: City, b: City) -> void:
 		if best >= 0:
 			target_s = float(gpos[best]) if side[i] == 0 else ln - float(gpos[best])
 			target_s -= signf(target_s - own_s) * float(kd["rng"]) * 0.8  # stop at firing range
-		u["s"] = clampf(own_s + clampf(target_s - own_s, -float(kd["spd"]), float(kd["spd"])), 0.0, ln)
+		var spd := float(kd["spd"]) * (1.0 + 0.12 * float(u["l"]))  # lane-based jitter so a column does not arrive as one clump
+		u["s"] = clampf(own_s + clampf(target_s - own_s, -spd, spd), 0.0, ln)
 		if best >= 0:
 			u["l"] = float(u["l"]) + clampf(float(all[best]["l"]) - float(u["l"]), -0.1, 0.1)
 	for i in all.size():
