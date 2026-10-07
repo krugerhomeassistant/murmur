@@ -436,6 +436,11 @@ static func _draw(ci: CanvasItem, id: int, night: bool, k: Color) -> void:
 			_r(ci, 20, 4, 4, 11, Color("5a4a44") * k)
 			ci.draw_circle(Vector2(22, 4), 2.0, Color("ff9a3c") if int(t * 2.0) % 2 == 0 else Color("a8501c"))
 			_r(ci, 10, 20, 8, 8, Color("ff9a3c") * k)
+		T.FOUNDRY:
+			_r(ci, 6, 14, 20, 15, Color("7a6a62") * k)
+			_r(ci, 20, 4, 5, 12, Color("5a4a44") * k)
+			ci.draw_circle(Vector2(22, 4 + 2.0 * sin(t * 2.0)), 3.0, Color(1.0, 0.55, 0.2, 0.7))
+			_r(ci, 10, 20, 8, 9, Color("e67e22") * k)
 		T.MILL:
 			_r(ci, 9, 12, 14, 17, Color("c9b98a") * k)
 			_tri(ci, Vector2(8, 12), Vector2(24, 12), Vector2(16, 5), Color("8a5a3a") * k)
