@@ -704,6 +704,8 @@ func draw_chunk(c_item: CanvasItem, x0: int, y0: int, x1: int, y1: int) -> void:
 			if t == T.EMPTY:
 				if not wet and not far:
 					Art.ground(ci, x, y, city.owns(x, y), city.season)
+				if city.ore[i] > 0 and not wet:
+					Art.ore(ci, x, y, int(city.ore[i]), far)
 				continue
 			var d: Dictionary = Catalog.DEFS[t]
 			if far:  # zoomed out: one flat rect per tile, detail is sub-pixel anyway

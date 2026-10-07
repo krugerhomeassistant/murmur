@@ -166,7 +166,7 @@ var rally_used := false
 var last_vote := 0.0
 var season := 0
 # economy
-var stock := {"crops": 0.0, "food": 0.0, "goods": 0.0}
+var stock := {"crops": 0.0, "food": 0.0, "goods": 0.0, "ore": 0.0, "metal": 0.0}
 var flow := {}
 var cap := 60.0
 var exported := 0.0
@@ -193,6 +193,11 @@ var shop_jobs := 0
 var fac_jobs := 0
 var off_jobs := 0
 var farm_jobs := 0
+var orch_jobs := 0
+var ranch_jobs := 0
+var mine_jobs := 0
+var mine_yield := 0.0  # sum of level x deposit richness over mines
+var ore := PackedByteArray()  # ore deposit richness per cell, 0 = none
 var svc_jobs := 0
 var jobs := 0
 var up_zone := 0.0
@@ -248,6 +253,8 @@ func _init(s: Signals) -> void:
 		net_val[m] = PackedFloat32Array()
 		net_val[m].resize(W * H)
 	rng.randomize()
+	ore.resize(W * H)
+	_gen_ore()
 	gen_river(rng.randi())
 	for m in Catalog.METRICS:
 		need_pop[m] = Catalog.need_pop(m)
@@ -486,6 +493,8 @@ func place(x: int, y: int, t: int) -> bool:
 		return true
 	if at(x, y) != T.EMPTY:
 		return false
+	if t == T.MINE and ore[y * W + x] == 0:
+		return false
 	var wet := water[y * W + x] == 1
 	if wet and (not is_road(t) or coins < cost_of(t) * BRIDGE_X):
 		return false
@@ -543,6 +552,20 @@ func _log(text: String) -> void:
 ## Index of a seed-relative cell (the starting town is drawn around (24, 16) of a 48x32 plan).
 static func sidx(x: int, y: int) -> int:
 	return (y + OY) * W + x + OX
+
+
+## Ore blobs: three inside the starting territory, the rest anywhere. Richness 1-3 (richest at the centre).
+func _gen_ore() -> void:
+	ore.fill(0)
+	for k in 12:
+		var cx := rng.randi_range(W / 2 - 20, W / 2 + 20) if k < 3 else rng.randi_range(2, W - 3)
+		var cy := rng.randi_range(H / 2 - 10, H / 2 + 10) if k < 3 else rng.randi_range(2, H - 3)
+		var rad := rng.randi_range(2, 3)
+		for y in range(cy - rad, cy + rad + 1):
+			for x in range(cx - rad, cx + rad + 1):
+				var d := absi(x - cx) + absi(y - cy)
+				if inside(x, y) and d <= rad and rng.randf() < 0.85:
+					ore[y * W + x] = maxi(int(ore[y * W + x]), 3 - d * 3 / (rad + 1))
 
 
 func set_start(w: int, h: int) -> void:
@@ -671,6 +694,10 @@ func _scan() -> void:
 	fac_jobs = 0
 	off_jobs = 0
 	farm_jobs = 0
+	orch_jobs = 0
+	ranch_jobs = 0
+	mine_jobs = 0
+	mine_yield = 0.0
 	svc_jobs = 0
 	up_zone = 0.0
 	tier_sum = 0.0
@@ -738,6 +765,13 @@ func _scan() -> void:
 							off_jobs += jp * L
 						"farm":
 							farm_jobs += jp * L
+						"orchard":
+							orch_jobs += jp * L
+						"ranch":
+							ranch_jobs += jp * L
+						"mine":
+							mine_jobs += jp * L
+							mine_yield += L * maxi(int(ore[i]), 1)
 				if d.has("poll"):
 					polluters.append([c.x, c.y, float(d["poll"][1]) * L, int(d["poll"][0])])
 				if t == T.COM:
@@ -767,7 +801,7 @@ func _scan() -> void:
 			bt[T.LIGHT].append(i)
 			_add_prov("light", cell(i), 0.7, 4)
 			up_svc += 0.1
-	jobs = shop_jobs + fac_jobs + off_jobs + farm_jobs + svc_jobs
+	jobs = shop_jobs + fac_jobs + off_jobs + farm_jobs + orch_jobs + ranch_jobs + mine_jobs + svc_jobs
 	res_mult = tier_sum / maxf(housing, 1)
 	_net()
 	for m in Catalog.METRICS:
@@ -1414,7 +1448,7 @@ func _money(market: float) -> void:
 	var r_tax := employed * tax_r * 12.0 * econ * prodm * wise * fin * f * res_mult * (0.75 + 0.5 * land_avg)
 	var sales := minf(pop * 0.6, shop_jobs * 2.0) * (1.0 + 0.25 * float(cov["commerce"])) * mod("sales_mult") * (1.0 - 0.3 * clampf((avg_shop - 8.0) / 20.0, 0.0, 1.0))
 	var r_com := sales * 0.8 * econ * prodm * laf_c * fin * f
-	var goods := (fac_jobs * 0.6 * emp + farm_jobs * 0.3) * mod("goods_mult")
+	var goods := (fac_jobs * 0.6 * emp + (farm_jobs + orch_jobs + ranch_jobs) * 0.3 + mine_jobs * 0.4 * emp) * mod("goods_mult")
 	var r_ind := goods * 1.2 * econ * prodm * wise * laf_i * fin * f
 	var r_off := off_jobs * emp * 1.6 * econ * prodm * (0.5 + 0.5 * float(cov["edu"])) * mod("office_mult") * laf_c * fin * f
 	var r_tour := tour_sum * 3.0 * econ * mood * mod("tour_mult") * f
@@ -1474,6 +1508,10 @@ func dem_for(t: int) -> float:
 			return ind_dem
 		"office":
 			return off_dem
+		"orchard", "ranch":
+			return ind_dem * 0.4 + 0.05
+		"mine":
+			return ind_dem * 0.3
 		"farm":
 			return ind_dem * 0.5 + 0.1 + (0.3 * (1.0 - float(flow.get("food_local", 1.0))) if bt.has(T.MILL) else 0.0)
 	return 0.0
@@ -2723,12 +2761,22 @@ func _trade(market: float) -> Array:
 	var mills := (bt.get(T.MILL, []) as Array).size()
 	var deps := (bt.get(T.DEPOT, []) as Array).size() + 2 * (bt.get(T.PORT, []) as Array).size()
 	cap = 60.0 + 250.0 * (bt.get(T.WAREHOUSE, []) as Array).size()
-	var crops := farm_jobs * emp * 0.12 * float(Civics.SEASONS[season]["harvest"])
+	for k in ["ore", "metal"]:  # saves from before mining
+		if not stock.has(k):
+			stock[k] = 0.0
+	var crops := (farm_jobs + 1.5 * orch_jobs) * emp * 0.12 * float(Civics.SEASONS[season]["harvest"])
+	var mined := mine_yield * emp * 0.05
+	var foundries := (bt.get(T.FOUNDRY, []) as Array).size()
+	var smelt := minf(float(stock["ore"]) + mined, foundries * 2.0)
+	stock["ore"] = float(stock["ore"]) + mined - smelt
+	stock["metal"] = float(stock["metal"]) + smelt * 0.5
+	var mused := minf(float(stock["metal"]), fac_jobs * emp * 0.02)
+	stock["metal"] = float(stock["metal"]) - mused
 	var milled := minf(float(stock["crops"]) + crops, mills * 3.0)
-	var goods := fac_jobs * emp * 0.06 * mod("goods_mult")
+	var goods := (fac_jobs * emp * 0.06 + mused * 3.0) * mod("goods_mult")
 	var fish := (bt.get(T.FISHDOCK, []) as Array).size() * 6.0 * emp * 0.15 * river_health
 	stock["crops"] = float(stock["crops"]) + crops - milled
-	stock["food"] = float(stock["food"]) + milled + fish
+	stock["food"] = float(stock["food"]) + milled + fish + ranch_jobs * emp * 0.1
 	stock["goods"] = float(stock["goods"]) + goods
 	var fneed := pop * 0.05
 	var gneed := pop * 0.03 + shop_jobs * 0.02
@@ -2745,12 +2793,12 @@ func _trade(market: float) -> Array:
 		var lim := cap * (0.2 if deps > 0 else 0.8)
 		if float(stock[k]) > lim:
 			var sell := (float(stock[k]) - lim) * (0.25 if deps > 0 else 0.5)
-			ex += sell * float({"crops": 0.6, "food": 1.5, "goods": 2.0}[k]) * RATE * xp
+			ex += sell * float({"crops": 0.6, "food": 1.5, "goods": 2.0, "ore": 0.8, "metal": 3.0}[k]) * RATE * xp
 			stock[k] = float(stock[k]) - sell
 			sold += sell
 		stock[k] = minf(float(stock[k]), cap)
 	exported += sold
-	flow = {"crops": crops, "food": milled + fish, "goods": goods, "food_need": fneed, "goods_need": gneed,
+	flow = {"crops": crops, "food": milled + fish + ranch_jobs * emp * 0.1, "goods": goods, "ore": mined, "metal": smelt * 0.5, "food_need": fneed, "goods_need": gneed,
 		"food_local": fl / fneed if fneed > 0.0 else 1.0, "goods_local": gl / gneed if gneed > 0.0 else 1.0,
 		"export": sold, "price": price, "imp": imp, "ex": ex}
 	return [ex, imp]
@@ -2763,7 +2811,7 @@ func to_dict() -> Dictionary:
 	for c in citizens:
 		cs.append([c.id, c.home, c.work, c.tribe, c.nm, c.bias, c.shift, c.spd, c.commute, c.sick])
 	var d := {"v": 1, "cit": cs}
-	for k in ["town_name", "grid", "lvl", "build", "wire", "pipe", "sewer", "lamp", "water", "coins", "mood", "tax_r", "tax_c", "tax_i", "clock", "day",
+	for k in ["town_name", "grid", "lvl", "build", "wire", "pipe", "sewer", "lamp", "water", "ore", "coins", "mood", "tax_r", "tax_c", "tax_i", "clock", "day",
 			"policies", "auto_mode", "auto_policy", "peak", "announced", "next_id", "recent", "active", "approval", "rep", "favor",
 			"petitions", "promises", "pet_recent", "kept", "broken", "next_election", "elections_won", "rally_used", "last_vote",
 			"season", "stock", "exported", "loans", "done_ms", "disasters_survived", "burned", "hist_coins", "hist_pop", "ruins", "offline", "lamp", "terr", "expansions", "auto_expand", "human", "temper", "rel", "treaty", "ev_scale", "gpos", "war_n", "war_sc"]:

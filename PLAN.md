@@ -109,3 +109,7 @@ Goal: Murmur, a cozy interactive city-builder (Godot) with an optional Live Data
 - [ ] Ferries; split animated tiles from static baked chunks; hand-play tuning at 500+ pop.
 - [ ] Install notes: godot-claude-skills live in .claude/skills (done).
 - [ ] Threading (perf): no threads today. Tick off-screen towns on WorkerThreadPool with a start-of-tick snapshot of partner net_own/net_dem/treaty state (the only cross-town reads); join before Diplo.second. Keep only if the 6-8 town benchmark improves.
+
+## Priority notes (user, 2026-10-07)
+- [ ] BENCHMARK STANDARD: real windowed run (not headless), 8 towns, 8x speed, ALL overlays on; report fps/p99/CPU/GPU/RAM/VRAM for that. README table must use it. Headless sim numbers are secondary only.
+- [ ] REPO PROFESSIONALISM pass: screenshots/GIF in README, consistent docs structure, docs/ folder, CONTRIBUTING/CODE_OF_CONDUCT/SECURITY, release notes, badges accurate, remove dev clutter, LICENSE check, tidy PLAN/WIKI/LESSONS layout.

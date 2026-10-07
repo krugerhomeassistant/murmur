@@ -53,7 +53,7 @@ static func service(ci: CanvasItem, r: Rect2, id: int, ok: bool, night: bool) ->
 
 
 static func _has(id: int) -> bool:
-	return id in [T.FIRE, T.POLICE, T.CLINIC, T.HOSPITAL, T.SCHOOL, T.LIBRARY, T.UNIVERSITY, T.PARK, T.PLAYGROUND, T.PLAZA, T.CINEMA, T.MUSEUM, T.STADIUM, T.THEME, T.CHURCH, T.BAR, T.BUS, T.TRAIN, T.WIND, T.SOLAR, T.COAL, T.WATER, T.LANDFILL, T.RECYCLE, T.MARKET, T.BANK, T.MALL, T.HOTEL, T.UNION_HALL, T.CHAMBER, T.COURT, T.PRISON, T.BASE, T.BARRACKS, T.RADAR, T.MILL, T.WAREHOUSE, T.DEPOT, T.TOWNHALL, T.SEWAGE, T.PORT, T.NAVYARD, T.FISHDOCK]
+	return id in [T.FIRE, T.POLICE, T.CLINIC, T.HOSPITAL, T.SCHOOL, T.LIBRARY, T.UNIVERSITY, T.PARK, T.PLAYGROUND, T.PLAZA, T.CINEMA, T.MUSEUM, T.STADIUM, T.THEME, T.CHURCH, T.BAR, T.BUS, T.TRAIN, T.WIND, T.SOLAR, T.COAL, T.WATER, T.LANDFILL, T.RECYCLE, T.MARKET, T.BANK, T.MALL, T.HOTEL, T.UNION_HALL, T.CHAMBER, T.COURT, T.PRISON, T.BASE, T.BARRACKS, T.RADAR, T.MILL, T.WAREHOUSE, T.DEPOT, T.TOWNHALL, T.SEWAGE, T.PORT, T.NAVYARD, T.FISHDOCK, T.FOUNDRY]
 
 
 static func _draw(ci: CanvasItem, id: int, night: bool, k: Color) -> void:
@@ -431,6 +431,16 @@ static func _draw(ci: CanvasItem, id: int, night: bool, k: Color) -> void:
 			ci.draw_arc(Vector2(16, 12), 10.0, ra, ra + 2.4, 12, Color("ecf0f1") * k, 3.0)
 			ci.draw_line(Vector2(16, 12), Vector2(16, 14), Color("7f8c8d"), 2.0)
 			ci.draw_arc(Vector2(16, 12), 13.0, ra - 0.2, ra + 0.8, 8, Color(0.5, 1.0, 0.6, 0.5), 1.0)
+		T.FOUNDRY:
+			_r(ci, 6, 14, 20, 14, Color("8a5a4a") * k)
+			_r(ci, 20, 4, 4, 11, Color("5a4a44") * k)
+			ci.draw_circle(Vector2(22, 4), 2.0, Color("ff9a3c") if int(t * 2.0) % 2 == 0 else Color("a8501c"))
+			_r(ci, 10, 20, 8, 8, Color("ff9a3c") * k)
+		T.FOUNDRY:
+			_r(ci, 6, 14, 20, 15, Color("7a6a62") * k)
+			_r(ci, 20, 4, 5, 12, Color("5a4a44") * k)
+			ci.draw_circle(Vector2(22, 4 + 2.0 * sin(t * 2.0)), 3.0, Color(1.0, 0.55, 0.2, 0.7))
+			_r(ci, 10, 20, 8, 9, Color("e67e22") * k)
 		T.MILL:
 			_r(ci, 9, 12, 14, 17, Color("c9b98a") * k)
 			_tri(ci, Vector2(8, 12), Vector2(24, 12), Vector2(16, 5), Color("8a5a3a") * k)
@@ -654,6 +664,19 @@ static func ground(ci: CanvasItem, x: int, y: int, owned: bool, season: int) -> 
 		ci.draw_circle(p + Vector2(8 + h % 12, 12 + h % 9), 2.0, Color("78a860"))
 	elif h == 18:
 		_tree(ci, p + Vector2(16, 22), h, season)
+
+
+## Ore deposit: dark rock flecks (richness 1-3 = more flecks); one rect when zoomed out.
+static func ore(ci: CanvasItem, x: int, y: int, rich: int, far: bool) -> void:
+	var p := Vector2(x, y) * 32.0
+	if far:
+		ci.draw_rect(Rect2(p + Vector2(8, 8), Vector2(16, 16)), Color("5a5a66"))
+		return
+	var h := (x * 73856093 ^ y * 19349663) & 255
+	for s in 2 + rich:
+		var q := p + Vector2(5 + ((h >> s) * 7 + s * 11) % 22, 5 + ((h >> s) * 5 + s * 13) % 22)
+		ci.draw_rect(Rect2(q, Vector2(5, 4)), Color("4a4a56"))
+		ci.draw_rect(Rect2(q + Vector2(1, 0), Vector2(3, 1)), Color("8a8a9a"))
 
 
 ## River cell: shaded water, moving ripples, muddy banks, and a few fish (swimming, sometimes jumping).
