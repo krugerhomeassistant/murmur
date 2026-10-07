@@ -737,6 +737,7 @@ func _town_col(c: City) -> Color:
 ## Everything live in one town that is not baked into its chunks: overlays, fire, lights, traffic, people, rim, cursor.
 func draw_overlay(node: CanvasItem, t: City) -> void:
 	var d0 := Time.get_ticks_usec()
+	var tcol := _town_col(t)  # relative to the viewed town, so before `city` is swapped
 	var keep := city
 	city = t
 	ci = node
@@ -756,14 +757,14 @@ func draw_overlay(node: CanvasItem, t: City) -> void:
 	ci.draw_rect(Rect2(0, tr.position.y * TILE, tr.position.x * TILE, tr.size.y * TILE), dim)
 	ci.draw_rect(Rect2(tr.end.x * TILE, tr.position.y * TILE, (City.W - tr.end.x) * TILE, tr.size.y * TILE), dim)
 	var rim := Rect2(Vector2(tr.position) * TILE, Vector2(tr.size) * TILE)
-	ci.draw_rect(rim, _town_col(t) if lod == 3 else Color(1.0, 0.82, 0.4, 0.5), false, 3.0 / cam.zoom.x if lod == 3 else 3.0)
+	ci.draw_rect(rim, tcol if lod == 3 else Color(1.0, 0.82, 0.4, 0.5), false, 3.0 / cam.zoom.x if lod == 3 else 3.0)
 	if lod == 3:  # world view: just the name and the rim
 		var fs := int(22.0 / cam.zoom.x)
 		var lab := "%s  pop %d" % [t.town_name, t.pop]
 		var font0 := ThemeDB.fallback_font
-		var lp := rim.get_center() - Vector2(font0.get_string_size(lab, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x * 0.5, 0)
+		var lp := Vector2(rim.get_center().x - font0.get_string_size(lab, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x * 0.5, rim.position.y - fs * 0.4)
 		ci.draw_string(font0, lp + Vector2(2, 2) / cam.zoom.x, lab, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Color(0, 0, 0, 0.8))
-		ci.draw_string(font0, lp, lab, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Color("f3e7cf"))
+		ci.draw_string(font0, lp, lab, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, tcol)
 		city = keep
 		ci = self
 		draw_acc += (Time.get_ticks_usec() - d0) / 1000.0
