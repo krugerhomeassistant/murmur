@@ -24,3 +24,6 @@ None yet. Selfcheck: `City.selfcheck()` run at startup (prints `SELFCHECK_OK`).
 - Soak: new City, loop `c.sig.tick(0.25); c.tick(0.25)`; check `City.selfcheck()` -> SELFCHECK_OK.
 - Editor autosave tab-converts city.gd/main.gd; patch scripts must normalise indentation.
 - Headless test: `godot --headless -s tests/smoke.gd`.
+
+## Godot Claude Skills (installed 2026-10-07)
+Source: https://github.com/alexmeckes/godot-claude-skills (MIT, v1.0.0, commit below). Copied to `.claude/skills/`: `godot-code-gen`, `godot-live-edit`, `godot-interactive`, `godot-scene-design`, `godot-shader`. Pure markdown (reviewed, no scripts). They describe a `godot-mcp` workflow; this project uses the `godot-ai` MCP, so treat the tool names as guidance, not literal. Update by re-copying `skills/*` from upstream.
