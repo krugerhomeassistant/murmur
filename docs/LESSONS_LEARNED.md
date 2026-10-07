@@ -58,3 +58,11 @@ Format: [Problem] -> [Root Cause] -> [Verified Solution]
 [Problem] Godot Linux binary usable in the cloud container for headless benches -> [Solution] download github release 4.7.2-stable zip to scratch; addon parse errors from godot_ai are expected (addon not in repo clone) and harmless.
 
 [Problem] game_eval hangs >10s when building a big town -> [Solution] it is just slow; wait and re-eval, or build in smaller evals.
+
+[Problem] godot-ai `input_key`/`debug_status` freeze the running game -> [Cause] they suspend it -> [Solution] call `game_manage resume` right after; read results through `@export` vars via `get_node_info` (files under user:// are not visible from the VM).
+
+[Problem] GDScript parse errors after instrumenting city.gd -> [Cause] for-loop var shadowing a local, locals not visible across functions -> [Solution] rename, use member vars; parse-check with the local binary first: `/home/claude/godot-bin/godot --headless --path client -s tests/X.gd` from the repo root (not client/).
+
+[Problem] Benchmark inflated (days_advanced 0) -> [Cause] the human town ended early -> [Solution] benchmark runs spectator mode and reports `towns_over`.
+
+[Problem] Headless numbers disagreed with felt lag -> [Cause] stutter is CPU sim spikes (20 ms steps, batched off-screen towns), invisible to averages -> [Solution] judge by the windowed benchmark (F9), p99 and slow-frame count; per-frame `SIM_BUDGET_MS`, `MAX_BATCH`, layout-hash scan skipping.
