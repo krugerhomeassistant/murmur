@@ -1278,7 +1278,18 @@ func _hit(i: int) -> void:
 
 # ---------- per second ----------
 
+## Microseconds spent per stage of _second(), summed over all towns (read by the benchmark).
+static var prof := {}
+
+
+func _pf(stage: String, t0: int) -> int:
+	var n := Time.get_ticks_usec()
+	prof[stage] = int(prof.get(stage, 0)) + n - t0
+	return n
+
+
 func _second() -> void:
+	var p := Time.get_ticks_usec()
 	var sn := int((day - 1) / 7) % 4
 	if sn != season:
 		season = sn
@@ -1289,16 +1300,21 @@ func _second() -> void:
 		if float(offline[k]) <= 0.0:
 			offline.erase(k)
 			_log("The power plant is back online.")
+	p = _pf("offline", p)
 	_scan()
+	p = _pf("scan", p)
 	lod_n += 1
 	if lod_n % lod == 0:
 		_crime()
+		p = _pf("crime", p)
 		land_t -= 1
 		if land_t <= 0:
 			land_t = 5
 			_land()
+			p = _pf("land", p)
 	_tribes()
 	_collect_mods()
+	p = _pf("tribes_mods", p)
 	home_load.clear()
 	work_load.clear()
 	var keep: Array[Citizen] = []
@@ -1337,6 +1353,7 @@ func _second() -> void:
 			c.work = best
 			c.commute = bd
 			work_load[best] = work_load.get(best, 0) + 1
+	p = _pf("jobs", p)
 	pop = citizens.size()
 	employed = 0
 	for c in citizens:
@@ -1370,6 +1387,7 @@ func _second() -> void:
 			best = mini(best, absi(sc.x - hc.x) + absi(sc.y - hc.y))
 		ss += best
 	avg_shop = ss / maxf(homes.size(), 1) if not homes.is_empty() else 0.0
+	p = _pf("shops", p)
 	var market := sig.get_f("market")
 	unemp = 0.0 if pop == 0 else 1.0 - float(employed) / pop
 	shop_gap = clampf(1.0 - shop_jobs / maxf(pop * 0.5, 3.0), 0.0, 1.0)
@@ -1381,8 +1399,11 @@ func _second() -> void:
 			target -= float(M["w"]) * _need(m)
 		elif String(M["kind"]) == "bonus":
 			target += float(M["w"]) * float(cov[m])
+	p = _pf("mood", p)
 	_sickness()
+	p = _pf("sickness", p)
 	_traffic()
+	p = _pf("traffic", p)
 	target -= 0.08 * congestion + 0.25 * float(sick_n) / maxf(pop, 1)
 	if pop >= 40 and float(flow.get("food_local", 1.0)) < 0.3:
 		target -= 0.03
@@ -1410,11 +1431,14 @@ func _second() -> void:
 		msg = "A family packs up and leaves."
 	pop = citizens.size()
 	_grow()
+	p = _pf("demand_grow", p)
 	plan_t += 1
 	if plan_t >= 8:
 		plan_t = 0
 		_planner()
+		p = _pf("planner", p)
 	_money(market)
+	p = _pf("money", p)
 	for l in loans.duplicate():
 		l["left"] = float(l["left"]) - float(l["pay"])
 		if float(l["left"]) <= 0.0:

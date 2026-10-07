@@ -68,6 +68,7 @@ func _process(_d: float) -> void:
 		t = 0.0
 		day0 = m.towns[0].day
 		steps0 = m.steps_done
+		City.prof.clear()
 	elif phase == 1:
 		var vp := get_viewport().get_viewport_rid()
 		ft.append(dt)
@@ -114,7 +115,7 @@ func _report() -> void:
 		"ram_static_mb": Performance.get_monitor(Performance.MEMORY_STATIC) / 1048576.0,
 		"vram_mb": Performance.get_monitor(Performance.RENDER_VIDEO_MEM_USED) / 1048576.0,
 		"texture_mb": Performance.get_monitor(Performance.RENDER_TEXTURE_MEM_USED) / 1048576.0,
-		"slow_frames": slow[0], "slow_avg_ms": slow[1] / maxf(slow[0], 1), "slow_sim_ms": slow[2] / maxf(slow[0], 1), "slow_chunk_ms": slow[3] / maxf(slow[0], 1), "slow_draw_ms": slow[4] / maxf(slow[0], 1), "effective_speed": (m.steps_done - steps0) * 0.1 / SAMPLE, "days_advanced": m.towns[0].day - day0, "total_pop": pop, "pop_each": m.towns.map(func(c): return c.pop),
+		"second_stage_us_total": City.prof.duplicate(), "slow_frames": slow[0], "slow_avg_ms": slow[1] / maxf(slow[0], 1), "slow_sim_ms": slow[2] / maxf(slow[0], 1), "slow_chunk_ms": slow[3] / maxf(slow[0], 1), "slow_draw_ms": slow[4] / maxf(slow[0], 1), "effective_speed": (m.steps_done - steps0) * 0.1 / SAMPLE, "days_advanced": m.towns[0].day - day0, "total_pop": pop, "pop_each": m.towns.map(func(c): return c.pop),
 	}
 	result_json = JSON.stringify(r)
 	print("BENCHMARK_JSON " + result_json)
