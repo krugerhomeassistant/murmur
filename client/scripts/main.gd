@@ -756,6 +756,20 @@ func draw_fx(node: CanvasItem) -> void:
 								node.draw_set_transform(pos, ang)
 								node.draw_colored_polygon(PackedVector2Array([Vector2(12, 0) * sz * f, Vector2(-8, -8 if k != "fighter" else -5) * sz * f, Vector2(-4, 0) * sz * f, Vector2(-8, 8 if k != "fighter" else 5) * sz * f]), col.lightened(0.2))
 								node.draw_set_transform(Vector2.ZERO)
+						"patrol", "destroyer", "transport":
+							var k := String(un["k"])
+							var f := 0.8 if k == "patrol" else (1.4 if k == "destroyer" else 1.2)
+							node.draw_circle(pos, 13.0 * sz * f, Color(0.25, 0.5, 0.8, 0.35))  # water under the hull
+							node.draw_set_transform(pos, ang)
+							node.draw_colored_polygon(PackedVector2Array([Vector2(14, 0) * sz * f, Vector2(8, -5) * sz * f, Vector2(-12, -5) * sz * f, Vector2(-12, 5) * sz * f, Vector2(8, 5) * sz * f]), col.darkened(0.3))
+							if k == "transport":
+								node.draw_rect(Rect2(-8 * sz * f, -3 * sz * f, 12 * sz * f, 6 * sz * f), Color("c9b98a"))
+							else:
+								node.draw_rect(Rect2(-2 * sz * f, -2.5 * sz * f, 6 * sz * f, 5 * sz * f), col)
+								node.draw_line(Vector2(2, 0) * sz * f, Vector2(13, 0) * sz * f, Color("2a2a2a"), 1.8 * sz)
+								if k == "destroyer":
+									node.draw_line(Vector2(-7, 0) * sz * f, Vector2(-1, 0) * sz * f, Color("2a2a2a"), 1.8 * sz)
+							node.draw_set_transform(Vector2.ZERO)
 					var mx: float = Military.max_hp(un)
 					for rk in Military.rank(un):  # veteran chevrons
 						node.draw_rect(Rect2(pos + Vector2(-8 + rk * 4, 8) * sz, Vector2(3, 1.6) * sz), Color("f2cf4a"))
@@ -774,6 +788,26 @@ func draw_fx(node: CanvasItem) -> void:
 				var bp: Vector2 = l[0] + u * float(e["g"]) + nv * float(e["l"]) * 70.0 * sz
 				node.draw_circle(bp, (8.0 + 24.0 * ph) * sz, Color(1.0, 0.55 - 0.3 * ph, 0.1, (1.0 - ph) * 0.85))
 				node.draw_circle(bp + Vector2(0, -18.0 * ph * sz), (5.0 + 14.0 * ph) * sz, Color(0.25, 0.25, 0.25, (1.0 - ph) * 0.55))
+	_draw_blasts(node)
+
+
+## Buildings hit by raids and bombs: a fireball, then a column of smoke for a few seconds.
+func _draw_blasts(node: CanvasItem) -> void:
+	var now := Time.get_ticks_msec()
+	var sz := clampf(1.1 / cam.zoom.x, 1.0, 8.0)
+	for e in Military.blasts:
+		var t: City = null
+		for c in towns:
+			if c.town_name == e["t"]:
+				t = c
+		if t == null or not vis.get(t, false):
+			continue
+		var ph := clampf((now - int(e["ts"])) / 9000.0, 0.0, 1.0)
+		var p: Vector2 = origin(t) + e["p"]
+		if ph < 0.15:
+			node.draw_circle(p, (10.0 + 60.0 * ph) * sz, Color(1.0, 0.6 - ph, 0.1, 0.9 - ph * 4.0))
+		for k in 4:
+			node.draw_circle(p + Vector2(sin(k * 2.1 + ph * 3.0) * 6.0, -16.0 * (k + 1) * ph * sz), (6.0 + 5.0 * k) * sz * (0.5 + ph), Color(0.2, 0.2, 0.2, (1.0 - ph) * 0.5))
 
 
 ## Line from this town to its east and south neighbours: green = a road reaches the shared border, grey = not yet, red = war.

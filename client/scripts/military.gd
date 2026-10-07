@@ -10,26 +10,31 @@ extends RefCounted
 const T = Catalog.Id
 const TILE := 32.0
 const KIND := {
-	"inf": {"n": "Rifleman", "t": "soft", "hp": 75.0, "dmg": 2.4, "rng": 110.0, "spd": 9.0, "cost": 25.0, "upk": 0.02, "train": 8.0, "cap": {T.BARRACKS: 6, T.BASE: 4}, "vs": {"soft": 1.0, "armor": 0.25, "air": 0.15}},
-	"gren": {"n": "Grenadier", "t": "soft", "hp": 80.0, "dmg": 3.2, "rng": 90.0, "spd": 8.0, "cost": 40.0, "upk": 0.03, "train": 12.0, "cap": {T.BARRACKS: 2, T.BASE: 2}, "vs": {"soft": 0.8, "armor": 1.8, "air": 0.0}},
-	"snip": {"n": "Sniper", "t": "soft", "hp": 45.0, "dmg": 5.5, "rng": 330.0, "spd": 8.0, "cost": 50.0, "upk": 0.03, "train": 16.0, "cap": {T.BARRACKS: 2}, "vs": {"soft": 1.6, "armor": 0.1, "air": 0.2}},
+	"inf": {"n": "Rifleman", "t": "soft", "hp": 75.0, "dmg": 2.4, "rng": 110.0, "spd": 9.0, "cost": 25.0, "upk": 0.02, "train": 8.0, "cap": {T.BARRACKS: 6, T.BASE: 4}, "vs": {"soft": 1.0, "armor": 0.25, "air": 0.15, "ship": 0.1}},
+	"gren": {"n": "Grenadier", "t": "soft", "hp": 80.0, "dmg": 3.2, "rng": 90.0, "spd": 8.0, "cost": 40.0, "upk": 0.03, "train": 12.0, "cap": {T.BARRACKS: 2, T.BASE: 2}, "vs": {"soft": 0.8, "armor": 1.8, "air": 0.0, "ship": 0.3}},
+	"snip": {"n": "Sniper", "t": "soft", "hp": 45.0, "dmg": 5.5, "rng": 330.0, "spd": 8.0, "cost": 50.0, "upk": 0.03, "train": 16.0, "cap": {T.BARRACKS: 2}, "vs": {"soft": 1.6, "armor": 0.1, "air": 0.2, "ship": 0.1}},
 	"medic": {"n": "Medic", "t": "soft", "hp": 60.0, "dmg": 0.0, "rng": 110.0, "spd": 9.0, "cost": 40.0, "upk": 0.03, "train": 14.0, "cap": {T.BARRACKS: 1, T.BASE: 1}, "vs": {}, "heal": 2.5},
-	"ltank": {"n": "Light tank", "t": "armor", "hp": 220.0, "dmg": 4.5, "rng": 220.0, "spd": 22.0, "cost": 100.0, "upk": 0.05, "train": 22.0, "cap": {T.BASE: 3}, "vs": {"soft": 1.4, "armor": 0.8, "air": 0.0}},
-	"tank": {"n": "Battle tank", "t": "armor", "hp": 350.0, "dmg": 6.5, "rng": 240.0, "spd": 14.0, "cost": 140.0, "upk": 0.08, "train": 35.0, "cap": {T.BASE: 3}, "vs": {"soft": 1.6, "armor": 1.0, "air": 0.0}},
-	"htank": {"n": "Heavy tank", "t": "armor", "hp": 650.0, "dmg": 8.5, "rng": 250.0, "spd": 9.0, "cost": 260.0, "upk": 0.14, "train": 60.0, "cap": {T.BASE: 1}, "vs": {"soft": 1.5, "armor": 1.3, "air": 0.0}},
-	"art": {"n": "Artillery", "t": "armor", "hp": 120.0, "dmg": 12.0, "rng": 600.0, "spd": 8.0, "cost": 200.0, "upk": 0.09, "train": 40.0, "cap": {T.BASE: 2}, "vs": {"soft": 1.5, "armor": 0.9, "air": 0.0}},
-	"aa": {"n": "Anti-air", "t": "armor", "hp": 140.0, "dmg": 5.0, "rng": 380.0, "spd": 10.0, "cost": 150.0, "upk": 0.07, "train": 28.0, "cap": {T.BASE: 1}, "vs": {"soft": 0.3, "armor": 0.2, "air": 3.0}},
-	"jet": {"n": "Strike jet", "t": "air", "hp": 150.0, "dmg": 9.0, "rng": 200.0, "spd": 45.0, "cost": 220.0, "upk": 0.12, "train": 50.0, "cap": {T.BASE: 2}, "radar": true, "vs": {"soft": 1.2, "armor": 1.5, "air": 0.8}},
-	"fighter": {"n": "Fighter", "t": "air", "hp": 120.0, "dmg": 6.0, "rng": 220.0, "spd": 55.0, "cost": 200.0, "upk": 0.1, "train": 45.0, "cap": {T.BASE: 2}, "radar": true, "vs": {"soft": 0.5, "armor": 0.4, "air": 2.2}},
-	"bomber": {"n": "Bomber", "t": "air", "hp": 220.0, "dmg": 10.0, "rng": 140.0, "spd": 38.0, "cost": 300.0, "upk": 0.16, "train": 65.0, "cap": {T.BASE: 1}, "radar": true, "vs": {"soft": 1.3, "armor": 1.8, "air": 0.0}},
-	"heli": {"n": "Helicopter", "t": "air", "hp": 160.0, "dmg": 7.0, "rng": 190.0, "spd": 30.0, "cost": 240.0, "upk": 0.13, "train": 50.0, "cap": {T.BASE: 1}, "vs": {"soft": 1.4, "armor": 1.6, "air": 0.3}},
+	"ltank": {"n": "Light tank", "t": "armor", "hp": 220.0, "dmg": 4.5, "rng": 220.0, "spd": 22.0, "cost": 100.0, "upk": 0.05, "train": 22.0, "cap": {T.BASE: 3}, "vs": {"soft": 1.4, "armor": 0.8, "air": 0.0, "ship": 0.3}},
+	"tank": {"n": "Battle tank", "t": "armor", "hp": 350.0, "dmg": 6.5, "rng": 240.0, "spd": 14.0, "cost": 140.0, "upk": 0.08, "train": 35.0, "cap": {T.BASE: 3}, "vs": {"soft": 1.6, "armor": 1.0, "air": 0.0, "ship": 0.5}},
+	"htank": {"n": "Heavy tank", "t": "armor", "hp": 650.0, "dmg": 8.5, "rng": 250.0, "spd": 9.0, "cost": 260.0, "upk": 0.14, "train": 60.0, "cap": {T.BASE: 1}, "vs": {"soft": 1.5, "armor": 1.3, "air": 0.0, "ship": 0.6}},
+	"art": {"n": "Artillery", "t": "armor", "hp": 120.0, "dmg": 12.0, "rng": 600.0, "spd": 8.0, "cost": 200.0, "upk": 0.09, "train": 40.0, "cap": {T.BASE: 2}, "vs": {"soft": 1.5, "armor": 0.9, "air": 0.0, "ship": 1.0}},
+	"aa": {"n": "Anti-air", "t": "armor", "hp": 140.0, "dmg": 5.0, "rng": 380.0, "spd": 10.0, "cost": 150.0, "upk": 0.07, "train": 28.0, "cap": {T.BASE: 1}, "vs": {"soft": 0.3, "armor": 0.2, "air": 3.0, "ship": 0.0}},
+	"jet": {"n": "Strike jet", "t": "air", "hp": 150.0, "dmg": 9.0, "rng": 200.0, "spd": 45.0, "cost": 220.0, "upk": 0.12, "train": 50.0, "cap": {T.BASE: 2}, "radar": true, "vs": {"soft": 1.2, "armor": 1.5, "air": 0.8, "ship": 1.2}},
+	"fighter": {"n": "Fighter", "t": "air", "hp": 120.0, "dmg": 6.0, "rng": 220.0, "spd": 55.0, "cost": 200.0, "upk": 0.1, "train": 45.0, "cap": {T.BASE: 2}, "radar": true, "vs": {"soft": 0.5, "armor": 0.4, "air": 2.2, "ship": 0.5}},
+	"bomber": {"n": "Bomber", "t": "air", "hp": 220.0, "dmg": 10.0, "rng": 140.0, "spd": 38.0, "cost": 300.0, "upk": 0.16, "train": 65.0, "cap": {T.BASE: 1}, "radar": true, "vs": {"soft": 1.3, "armor": 1.8, "air": 0.0, "ship": 2.0}},
+	"heli": {"n": "Helicopter", "t": "air", "hp": 160.0, "dmg": 7.0, "rng": 190.0, "spd": 30.0, "cost": 240.0, "upk": 0.13, "train": 50.0, "cap": {T.BASE: 1}, "vs": {"soft": 1.4, "armor": 1.6, "air": 0.3, "ship": 1.0}},
+	"patrol": {"n": "Patrol boat", "t": "ship", "hp": 160.0, "dmg": 4.0, "rng": 200.0, "spd": 28.0, "cost": 120.0, "upk": 0.06, "train": 25.0, "cap": {T.NAVYARD: 3}, "vs": {"soft": 1.0, "armor": 0.5, "air": 0.3, "ship": 1.0}},
+	"destroyer": {"n": "Destroyer", "t": "ship", "hp": 520.0, "dmg": 8.0, "rng": 320.0, "spd": 16.0, "cost": 320.0, "upk": 0.15, "train": 60.0, "cap": {T.NAVYARD: 2}, "vs": {"soft": 1.3, "armor": 1.0, "air": 1.0, "ship": 1.4}},
+	"transport": {"n": "Transport", "t": "ship", "hp": 400.0, "dmg": 0.0, "rng": 100.0, "spd": 12.0, "cost": 200.0, "upk": 0.08, "train": 40.0, "cap": {T.NAVYARD: 1}, "vs": {}, "lands": 6},
 }
-const DEF_W := {"inf": 2, "gren": 1, "snip": 1, "medic": 1, "ltank": 1, "tank": 2, "htank": 1, "art": 1, "aa": 1, "jet": 1, "fighter": 1, "bomber": 1, "heli": 1}
+const DEF_W := {"inf": 2, "gren": 1, "snip": 1, "medic": 1, "ltank": 1, "tank": 2, "htank": 1, "art": 1, "aa": 1, "jet": 1, "fighter": 1, "bomber": 1, "heli": 1, "patrol": 1, "destroyer": 1, "transport": 1}
 const RANKS := ["Recruit", "Veteran", "Elite", "Legend"]
 const RANK_XP := [250.0, 800.0, 2000.0]  # damage dealt (or healed) to reach rank 1, 2, 3
 const RANK_DMG := 0.15  # per rank
 const RANK_HP := 0.10
+const LANE := 35.0  # px of sideways offset per unit of lane, counted in range checks (must stay below the shortest weapon range / 2)
 static var booms: Array = []  # runtime only: explosions for the war visuals
+static var blasts: Array = []  # runtime only: buildings hit by raids and bombers {t: town, p: town-space pixel, ts: ms}
 
 
 static func origin(c: City) -> Vector2:
@@ -56,6 +61,23 @@ static func line(a: City, b: City) -> PackedVector2Array:
 			p0 = origin(a) + Vector2(a.terr.position.x, ca.y) * TILE
 			p1 = origin(b) + Vector2(b.terr.end.x, cb.y) * TILE
 	return PackedVector2Array([p0, p1])
+
+
+## Ships can only fight where a river runs across the border between two neighbours (water on both edges).
+static func river(a: City, b: City) -> bool:
+	var d := Diplo.side(a, b)
+	return d >= 0 and _wet_edge(a, d) and _wet_edge(b, (d + 2) % 4)
+
+
+static func _wet_edge(c: City, d: int) -> bool:
+	var r := c.terr
+	var xs := range(r.position.x, r.end.x) if d % 2 == 0 else [r.end.x - 1 if d == 1 else r.position.x]
+	var ys := range(r.position.y, r.end.y) if d % 2 == 1 else [r.position.y if d == 0 else r.end.y - 1]
+	for y in ys:
+		for x in xs:
+			if c.water[y * City.W + x] == 1:
+				return true
+	return false
 
 
 static func caps(c: City) -> Dictionary:
@@ -156,13 +178,14 @@ static func econ(c: City) -> void:
 	var foes: Array = []
 	for p in c.partners:
 		if Diplo.treaty(c, p) == "war":
-			foes.append(p.town_name)
+			foes.append(p)
 	var i := 0
 	for u in c.army:
-		if foes.is_empty():
+		var ok: Array = foes.filter(func(p: City) -> bool: return KIND[u["k"]]["t"] != "ship" or river(c, p))  # ships only where a river joins the towns
+		if ok.is_empty():
 			u["tgt"] = ""
-		elif not foes.has(u["tgt"]):
-			u["tgt"] = foes[i % foes.size()]
+		elif not ok.any(func(p: City) -> bool: return p.town_name == u["tgt"]):
+			u["tgt"] = (ok[i % ok.size()] as City).town_name
 			i += 1
 		if u["tgt"] == "" and float(u["s"]) > 0.0:
 			u["s"] = maxf(float(u["s"]) - float(KIND[u["k"]]["spd"]), 0.0)  # march home
@@ -197,7 +220,7 @@ static func fight(a: City, b: City) -> void:
 	var mc := [0, 0]
 	for i in n:
 		gpos.append(float(all[i]["s"]) if side[i] == 0 else ln - float(all[i]["s"]))
-		if not KIND[all[i]["k"]].has("heal"):
+		if not KIND[all[i]["k"]].has("heal") and not KIND[all[i]["k"]].has("lands"):
 			ms[side[i]] += float(all[i]["s"])
 			mc[side[i]] += 1
 	var hits: Array = []
@@ -209,6 +232,14 @@ static func fight(a: City, b: City) -> void:
 		var kd: Dictionary = KIND[u["k"]]
 		var own_s := float(u["s"])
 		var spd := float(kd["spd"]) * (1.0 + 0.12 * float(u["l"]))  # lane-based jitter so a column does not arrive as one clump
+		if kd.has("lands"):  # transports hold back until the enemy fleet is gone, then run for the shore
+			var ships := false
+			for j in n:
+				if side[j] != side[i] and KIND[all[j]["k"]]["t"] == "ship":
+					ships = true
+			var tg: float = (ms[side[i]] / maxf(mc[side[i]], 1) - 70.0) if ships else ln - 20.0
+			u["s"] = clampf(own_s + clampf(tg - own_s, -spd, spd), 0.0, ln)
+			continue
 		if kd.has("heal"):
 			var cand: Array = []
 			for j in n:
@@ -232,7 +263,7 @@ static func fight(a: City, b: City) -> void:
 			var vs := float(kd["vs"].get(KIND[all[j]["k"]]["t"], 0.0))
 			if vs <= 0.0:
 				continue
-			var d := absf(float(gpos[j]) - float(gpos[i])) + absf(float(all[j]["l"]) - float(u["l"])) * 60.0
+			var d := absf(float(gpos[j]) - float(gpos[i])) + absf(float(all[j]["l"]) - float(u["l"])) * LANE
 			if d < nd:
 				nd = d
 				near = j
@@ -250,7 +281,7 @@ static func fight(a: City, b: City) -> void:
 		var target_s := ln - 20.0
 		if near >= 0:
 			target_s = float(gpos[near]) if side[i] == 0 else ln - float(gpos[near])
-			target_s -= signf(target_s - own_s) * float(kd["rng"]) * 0.8  # stop at firing range
+			target_s -= signf(target_s - own_s) * maxf(float(kd["rng"]) * 0.8 - absf(float(all[near]["l"]) - float(u["l"])) * LANE, 10.0)  # stop at firing range, allowing for the sideways gap
 		u["s"] = clampf(own_s + clampf(target_s - own_s, -spd, spd), 0.0, ln)
 	for i in n:
 		all[i]["hp"] = minf(float(all[i]["hp"]) - float(hits[i]) + float(heals[i]), max_hp(all[i]))
@@ -263,6 +294,7 @@ static func fight(a: City, b: City) -> void:
 			booms.append({"a": a.town_name, "b": b.town_name, "g": gpos[i], "l": all[i]["l"], "t": now})
 			owner.sounds.append("alarm")
 	booms = booms.filter(func(e: Dictionary) -> bool: return now - int(e["t"]) < 3000)
+	blasts = blasts.filter(func(e: Dictionary) -> bool: return now - int(e["ts"]) < 9000)
 	a.war_t -= 1.0
 	if a.war_t <= 0.0:
 		a.war_t = 20.0
@@ -270,6 +302,8 @@ static func fight(a: City, b: City) -> void:
 		b.war_n[a.town_name] = int(b.war_n.get(a.town_name, 0)) + 1
 	_occupy(a, b, ln)
 	_occupy(b, a, ln)
+	_bomb(a, b, ln)
+	_bomb(b, a, ln)
 	if a.war_n.get(b.town_name, 0) >= 30 and a.army.size() + b.army.size() < 6:
 		Diplo.sign_treaty(a, b, "")
 		Diplo._say(a, b, "%s and %s, with their armies spent, agree to a ceasefire." % [a.town_name, b.town_name])
@@ -280,7 +314,7 @@ static func _occupy(att: City, vic: City, ln: float) -> void:
 	var n := 0
 	for u in _of(att, vic.town_name):
 		if float(u["s"]) >= ln - 80.0:
-			n += 1
+			n += int(KIND[u["k"]].get("lands", 1))
 	var def := 0
 	for u in _of(vic, att.town_name):
 		if float(u["s"]) <= 300.0:
@@ -298,3 +332,20 @@ static func _occupy(att: City, vic: City, ln: float) -> void:
 			Diplo.surrender(att, vic)
 	else:
 		vic.occ[att.town_name] = maxf(float(vic.occ.get(att.town_name, 0.0)) - 1.0, 0.0)
+
+
+## Bombers over an enemy town with no fighters, jets or anti-air left to stop them flatten its buildings, one strike per bomber every few seconds.
+static func _bomb(att: City, vic: City, ln: float) -> void:
+	var nb := 0
+	for u in _of(att, vic.town_name):
+		if u["k"] == "bomber" and float(u["s"]) >= ln - 150.0:
+			nb += 1
+	if nb == 0:
+		return
+	for u in _of(vic, att.town_name):
+		if u["k"] in ["aa", "fighter", "jet"]:
+			return
+	att.raid["b" + vic.town_name] = float(att.raid.get("b" + vic.town_name, 0.0)) + 0.15 * nb
+	if float(att.raid["b" + vic.town_name]) >= 1.0:
+		att.raid["b" + vic.town_name] = 0.0
+		vic.strike(1, att)

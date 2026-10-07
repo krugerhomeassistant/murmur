@@ -207,7 +207,7 @@ static func _raid(from: City, to: City) -> void:
 	var sev := 1.0 - 0.7 * clampf(float(to.cov.get("defence", 0.0)), 0.0, 1.0)
 	var n := int(round(3.0 * sev))
 	if n > 0 and to.pop > 15:
-		to._destroy(n)
+		to.strike(n, from)
 		to._offer_recovery("raid by %s" % from.town_name)
 	to.sounds.append("alarm")
 	_say(from, to, "%s raids %s's border%s." % [from.town_name, to.town_name, (": %d buildings lost" % n) if n > 0 else ", but the defences hold"])
