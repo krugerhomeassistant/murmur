@@ -169,8 +169,6 @@ static func fight(a: City, b: City) -> void:
 			target_s -= signf(target_s - own_s) * float(kd["rng"]) * 0.8  # stop at firing range
 		var spd := float(kd["spd"]) * (1.0 + 0.12 * float(u["l"]))  # lane-based jitter so a column does not arrive as one clump
 		u["s"] = clampf(own_s + clampf(target_s - own_s, -spd, spd), 0.0, ln)
-		if best >= 0:
-			u["l"] = float(u["l"]) + clampf(float(all[best]["l"]) - float(u["l"]), -0.1, 0.1)
 	for i in all.size():
 		all[i]["hp"] = float(all[i]["hp"]) - float(hits[i])
 	for i in all.size():

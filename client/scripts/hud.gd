@@ -880,6 +880,7 @@ func _process(_d: float) -> void:
     var rt := ""
     for t in m.towns:
         rt += "[b]%s[/b]%s  pop %d  $%d  mood %d%%\n[color=#9aa88f]Imports power %.0f water %.0f   commuters in %d   trade %+.2f/s%s[/color]\n\n" % [t.town_name, "  (viewing)" if t == c else "", t.pop, int(t.coins), int(t.mood * 100.0), t.imports["power"], t.imports["water"], t.commuters_in, t.trade_net, "   GAME OVER" if t.over != "" else ""]
+    rt += "[b]Army[/b] (T: auto-train %s)\n[color=#9aa88f]%s[/color]\n" % ["on" if c.train_on else "off", Military.summary(c)]
     region_l.text = rt
     terr_l.text = "Territory %dx%d of %dx%d. Next strip costs $%d (annexed %d times)." % [c.terr.size.x, c.terr.size.y, City.W, City.H, int(c.expand_cost()), c.expansions]
     for d in 4:

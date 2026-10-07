@@ -356,6 +356,9 @@ func _unhandled_input(e: InputEvent) -> void:
 			KEY_F:
 				follow = not follow
 				headline = "Auto-follow %s." % ("on" if follow else "off")
+			KEY_T:
+				city.train_on = not city.train_on
+				headline = "Auto-train troops %s." % ("on" if city.train_on else "off")
 			KEY_F3:
 				perf_on = not perf_on
 			KEY_SPACE:
