@@ -46,15 +46,15 @@ Rig: Intel i7-8700, NVIDIA GTX 1070 Ti, Godot 4.7.2 GL Compatibility, run from t
 
 | Metric | Before | After |
 |---|---|---|
-| FPS (avg) | 77 | 128 |
-| Frame time p99 | 46.5 ms | 23.4 ms |
-| Frames over 25 ms | 426 | 28 |
-| Sim cost per frame | 6.0 ms | 1.9 ms |
+| FPS (avg) | 77 | 111 |
+| Frame time p99 | 46.5 ms | 21.3 ms |
+| Frames over 25 ms | 426 | 9 |
+| Sim cost per frame | 6.0 ms | 1.8 ms |
 | Render CPU / GPU | n/a | 0.8 ms / 0.5 ms |
-| Draw calls (avg) | n/a | 113 |
-| RAM / VRAM | 81 MB / 27 MB | 89 MB / 35 MB |
+| Draw calls (avg) | n/a | 126 |
+| RAM / VRAM | 81 MB / 27 MB | 89 MB / 25 MB |
 
-"Before" is `main` plus the benchmark harness only. Effective speed held at 8.0x; total population about 780 across the 8 towns. Remaining spikes are ~22 ms steps (planner, job matching); worker-thread simulation is on the roadmap.
+"Before" is `main` plus the benchmark harness only; "After" is the current build with the continuous world view (two runs: 107 and 111 fps; the build just before the world view measured 128 fps, the extra per-town overlay layers cost a little). Effective speed held at 8.0x. Total population differs between builds because planner towns now have to build real border roads before they trade (about 500 to 610 across the 8 towns here). Remaining spikes are ~20 ms steps (planner, job matching); worker-thread simulation is on the roadmap.
 
 Headless profilers (`tests/regionbench.gd`, `bench.gd`, `stageprof.gd`) are secondary: they miss rendering and frame pacing.
 
