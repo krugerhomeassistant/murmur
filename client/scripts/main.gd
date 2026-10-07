@@ -28,6 +28,7 @@ var speed := 1.0
 var follow := true  # spectator: auto-cycle the viewed town
 var follow_t := 0.0
 var steps_done := 0  # sim steps run, for measuring the effective speed
+const MAX_BATCH := 2
 const SIM_BUDGET_MS := 6.0  # max sim work per frame; the game slows below the chosen speed instead of dropping frames
 var acc := 0.0
 var headline := "Welcome to Murmur. Lay roads, zone homes, shops and jobs beside them. The city will grow on its own as needs arise."
@@ -500,6 +501,7 @@ func _process(delta: float) -> void:
 			if dacc >= 1.0:
 				dacc -= 1.0
 				Diplo.second(towns, city.rng)
+			var batched := 0
 			for t in towns:
 				if t == city:
 					t.lod = 1
@@ -507,9 +509,10 @@ func _process(delta: float) -> void:
 				else:  # off-screen towns tick in 0.5s batches and refresh slow analyses less often
 					t.lod = 3
 					t.pend += STEP
-					if t.pend >= 0.5:
+					if t.pend >= 0.5 and batched < MAX_BATCH:  # at most MAX_BATCH towns per step so batches never pile into one 30 ms frame
 						t.tick(t.pend)
 						t.pend = 0.0
+						batched += 1
 					t.msg = ""
 			if city.msg != "":
 				headline = city.msg
