@@ -1,0 +1,6 @@
+dist/
+.godot/
+*.zip
+*.tmp
+*.import~
+.mcp.json

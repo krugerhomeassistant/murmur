@@ -1,0 +1,812 @@
+extends Node2D
+## Murmur: input, camera, drawing, sim loop. Rules in city.gd, data in catalog.gd/events.gd, UI in hud.gd.
+
+const TILE := 32
+const STEP := 0.1
+const WATER_ADD := 96  # world editor tools
+const WATER_DEL := 97
+const INSPECT := 98
+const BULLDOZE := 99
+const GRASS := Color("8fae78")
+const GRASS_B := Color("8aab74")
+const T = Catalog.Id
+## 'All' overlay dots, left to right: power, water, fire, police, health, leisure
+const ALL_DOTS := ["power", "water", "fire", "police", "health", "leisure"]
+
+var sig := Signals.new()
+var city: City
+var towns: Array[City] = []
+const TOWN_NAMES := ["Brookfield", "Ashby", "Northgate", "Eastmoor", "Wexford", "Stonebridge", "Hollin", "Marlow"]
+var started := false
+var setup: Setup
+var has_save := false
+const TEMPERS := [0.0, 0.2, -0.25, 0.05]  # baseline attitude of each town to the others
+var dacc := 0.0
+const FOUND_COST := 300.0
+var tool: int = INSPECT
+var speed := 1.0
+var acc := 0.0
+var headline := "Welcome to Murmur. Lay roads, zone homes, shops and jobs beside them. The city will grow on its own as needs arise."
+var sel: City.Citizen = null
+var sel_cell := -1
+var overlay := ""
+var cam: Camera2D
+var mod: CanvasModulate
+var hud: Hud
+var sfx: Sfx
+const SAVE := "user://murmur_save.bin"
+var last_day := -1
+const CAR_COLS := [Color("c0392b"), Color("2e86c1"), Color("f4f1e8"), Color("2c3e50"), Color("27ae60"), Color("d68910")]
+
+
+func _ready() -> void:
+	has_save = load_game()
+	if not has_save:
+		_fresh({})
+	sfx = Sfx.new()
+	sfx.m = self
+	add_child(sfx)
+	if "--selfcheck" in OS.get_cmdline_user_args():
+		print(City.selfcheck())  # slow: run from game_eval otherwise
+	cam = Camera2D.new()
+	cam.position = Vector2(City.W, City.H) * TILE * 0.5
+	add_child(cam)
+	mod = CanvasModulate.new()
+	add_child(mod)
+	var layer := CanvasLayer.new()
+	add_child(layer)
+	hud = Hud.new()
+	hud.m = self
+	hud.set_anchors_preset(Control.PRESET_FULL_RECT)
+	hud.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	layer.add_child(hud)
+	open_setup()
+
+
+## Square spiral from the first town: every town sits next to the previous one.
+static func spiral(n: int) -> Vector2i:
+	var p := Vector2i.ZERO
+	var dirs := [Vector2i(1, 0), Vector2i(0, 1), Vector2i(-1, 0), Vector2i(0, -1)]
+	var k := 0
+	var run := 1
+	var di := 0
+	while k < n:
+		for rep in 2:
+			for s in run:
+				if k >= n:
+					return p
+				p += dirs[di % 4]
+				k += 1
+			di += 1
+		run += 1
+	return p
+
+
+func _free_name() -> String:
+	for n in TOWN_NAMES:
+		if towns.all(func(t: City) -> bool: return t.town_name != n):
+			return n
+	return "Town %d" % (towns.size() + 1)
+
+
+func _new_town(nm := "") -> City:
+	var t := City.new(sig)
+	t.town_name = nm if nm != "" else _free_name()
+	t.temper = TEMPERS[towns.size() % TEMPERS.size()]
+	t.gpos = spiral(towns.size())
+	t.seed_start()
+	for o in towns:
+		o.partners.append(t)
+		t.partners.append(o)
+	towns.append(t)
+	return t
+
+
+## Build a fresh region from setup options (empty dict = defaults).
+func _fresh(o: Dictionary) -> void:
+	towns.clear()
+	var diff: int = o.get("diff", 1)
+	var land: int = o.get("land", 1)
+	var lw: int = [40, 48, 64][land]
+	var lh: int = [24, 32, 40][land]
+	var mood: int = o.get("mood", 1)
+	city = _new_town(o.get("name", "Murmur"))
+	city.temper = 0.0
+	var n: int = o.get("towns", 2)
+	for k in range(1, n):
+		var nb := _new_town()
+		nb.human = false
+		nb.coins = 400.0
+		nb.temper = [0.2, TEMPERS[k % TEMPERS.size()], -0.25, randf_range(-0.3, 0.3)][mood]
+	for k in towns.size():
+		towns[k].acc = 0.3 * k
+		towns[k].set_start(lw, lh)
+		if o.get("river", 0) >= 1:
+			towns[k].water.fill(0)
+		towns[k].ev_scale = [1.5, 1.0, 0.7][diff]
+	city.coins = [600.0, 300.0, 150.0][diff]
+	city.auto_mode = o.get("auto", 2)
+	city.auto_policy = o.get("policy", true)
+	city.auto_expand = o.get("expand", true)
+	headline = "Welcome to %s. %s Lay roads and zone beside them; the city grows as needs arise." % [city.town_name, ("Your neighbour %s runs itself (Region tab)." % towns[1].town_name) if n > 1 else "You are on your own."]
+
+
+func open_setup() -> void:
+	started = false
+	if setup != null:
+		setup.queue_free()
+	setup = Setup.new()
+	setup.m = self
+	setup.has_save = has_save or FileAccess.file_exists(SAVE)
+	hud.add_child(setup)
+
+
+func start_game(o: Dictionary) -> void:
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(SAVE))
+	_fresh(o)
+	_begin()
+	hud.guide.visible = false
+	if o.get("river", 0) == 2:
+		tool = WATER_ADD
+		speed = 0.0
+		headline = "World editor: drag to paint rivers and lakes (Build menu: Remove water erases). Press 1x when ready to play."
+	if o.get("guide", false):
+		hud.guide.restart()
+
+
+func continue_game() -> void:
+	if towns.is_empty() or not load_game():
+		return
+	headline = "Welcome back to %s. Day %d." % [city.town_name, city.day]
+	_begin()
+
+
+func _begin() -> void:
+	setup.queue_free()
+	setup = null
+	started = true
+	speed = 1.0
+	last_day = -1
+	tool = INSPECT
+	sel = null
+	sel_cell = -1
+	cam.position = Vector2(City.W, City.H) * TILE * 0.5
+	hud.reset()
+
+
+func save_game() -> void:
+	var f := FileAccess.open(SAVE, FileAccess.WRITE)
+	if f == null:
+		return
+	var ts: Array = []
+	for t in towns:
+		ts.append(t.to_dict())
+	f.store_var({"v": 2, "cur": towns.find(city), "towns": ts, "sig": sig.v.duplicate()})
+
+
+func load_game() -> bool:
+	var f := FileAccess.open(SAVE, FileAccess.READ)
+	if f == null:
+		return false
+	var d: Variant = f.get_var()
+	if not (d is Dictionary) or int((d as Dictionary).get("v", 0)) != 2 or (d["towns"] as Array).is_empty():
+		return false  # older saves used a smaller map
+	towns.clear()
+	for td in d["towns"]:
+		var t := City.new(sig)
+		for o in towns:
+			o.partners.append(t)
+			t.partners.append(o)
+		t.from_dict(td)
+		if towns.size() > 0 and t.gpos == Vector2i.ZERO:
+			t.gpos = spiral(towns.size())
+		towns.append(t)
+	sig.v = d.get("sig", sig.v)
+	city = towns[clampi(int(d.get("cur", 0)), 0, towns.size() - 1)]
+	return true
+
+
+func new_game() -> void:
+	if started and city.over == "":
+		save_game()
+	else:
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(SAVE))
+	has_save = FileAccess.file_exists(SAVE)
+	open_setup()
+
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_WM_CLOSE_REQUEST and started and city.over == "":
+		save_game()
+
+
+func found_town() -> void:
+	if city.coins < FOUND_COST:
+		headline = "Founding a town costs $%d." % int(FOUND_COST)
+	else:
+		city.coins -= FOUND_COST
+		var t := _new_town()
+		t.coins = 300.0
+		headline = "%s founded! Neighbouring towns now trade power, water and commuters." % t.town_name
+		switch_town(towns.size() - 1)
+
+
+func toggle_map() -> void:
+	hud.rmap.visible = not hud.rmap.visible
+
+
+func switch_town(i: int) -> void:
+	city = towns[i]
+	sel = null
+	sel_cell = -1
+	cam.position = Vector2(City.W, City.H) * TILE * 0.5
+	if hud != null:
+		hud.sync_town()
+
+
+# ---------- input ----------
+
+func _unhandled_input(e: InputEvent) -> void:
+	if not started:
+		return
+	if e is InputEventMouseButton and e.pressed:
+		if e.button_index == MOUSE_BUTTON_LEFT:
+			_paint(true)
+		elif e.button_index == MOUSE_BUTTON_WHEEL_UP:
+			cam.zoom = (cam.zoom * 1.1).clamp(Vector2(0.5, 0.5), Vector2(2.5, 2.5))
+		elif e.button_index == MOUSE_BUTTON_WHEEL_DOWN:
+			cam.zoom = (cam.zoom / 1.1).clamp(Vector2(0.5, 0.5), Vector2(2.5, 2.5))
+	elif e is InputEventMouseMotion:
+		if e.button_mask & (MOUSE_BUTTON_MASK_RIGHT | MOUSE_BUTTON_MASK_MIDDLE):
+			cam.position -= e.relative / cam.zoom.x
+		elif e.button_mask & MOUSE_BUTTON_MASK_LEFT:
+			_paint(false)
+	elif e is InputEventKey and e.pressed and not e.echo:
+		match e.keycode:
+			KEY_R:
+				if city.over != "":
+					new_game()
+			KEY_SPACE:
+				speed = 1.0 if speed == 0.0 else 0.0
+			KEY_Q, KEY_ESCAPE:
+				tool = INSPECT
+			KEY_M:
+				toggle_map()
+			KEY_B:
+				tool = BULLDOZE
+			KEY_1:
+				tool = T.ROAD
+			KEY_2:
+				tool = T.RES
+			KEY_3:
+				tool = T.COM
+			KEY_4:
+				tool = T.IND
+			KEY_5:
+				tool = T.PARK
+			KEY_6:
+				tool = T.FIRE
+
+
+func cell() -> Vector2i:
+	var m := get_global_mouse_position()
+	return Vector2i(floori(m.x / TILE), floori(m.y / TILE))
+
+
+func _paint(click: bool) -> void:
+	var c := cell()
+	if not city.inside(c.x, c.y):
+		return
+	match tool:
+		INSPECT:
+			if click:
+				_select(c)
+		BULLDOZE:
+			if city.bulldoze(c.x, c.y):
+				sfx.cue("bulldoze")
+		WATER_ADD:
+			city.set_water(c.x, c.y, 1)
+		WATER_DEL:
+			city.set_water(c.x, c.y, 0)
+		_:
+			if not city.unlocked(tool):
+				if click:
+					headline = "%s unlocks at population %d." % [Catalog.DEFS[tool]["n"], Catalog.DEFS[tool]["unlock"]]
+			elif city.place(c.x, c.y, tool):
+				sfx.cue("place")
+			elif click and not city.owns(c.x, c.y):
+				headline = "That land isn't yours yet. Annex it from the Region tab."
+			elif click and tool == T.LIGHT:
+				headline = "Street lamps go on a road tile, at least 2 tiles from another lamp."
+			elif city.at(c.x, c.y) == T.EMPTY and click:
+				headline = "Not enough coins."
+
+
+func _select(c: Vector2i) -> void:
+	var m := get_global_mouse_position() / TILE
+	var best: City.Citizen = null
+	var bd := 0.7
+	for z in city.citizens:
+		if z.path.size() > 0:
+			var d := z.pos.distance_to(m)
+			if d < bd:
+				bd = d
+				best = z
+	sel = best
+	sel_cell = -1 if best != null else c.y * City.W + c.x
+
+
+# ---------- loop ----------
+
+func _process(delta: float) -> void:
+	delta = minf(delta, 0.25)
+	var v := Vector2(
+		float(Input.is_key_pressed(KEY_D) or Input.is_key_pressed(KEY_RIGHT)) - float(Input.is_key_pressed(KEY_A) or Input.is_key_pressed(KEY_LEFT)),
+		float(Input.is_key_pressed(KEY_S) or Input.is_key_pressed(KEY_DOWN)) - float(Input.is_key_pressed(KEY_W) or Input.is_key_pressed(KEY_UP)))
+	cam.position += v * 700.0 * delta / cam.zoom.x
+	cam.position = cam.position.clamp(Vector2.ZERO, Vector2(City.W, City.H) * TILE)
+	if started:
+		acc += delta * speed
+		while acc >= STEP:
+			acc -= STEP
+			sig.tick(STEP)
+			dacc += STEP
+			if dacc >= 1.0:
+				dacc -= 1.0
+				Diplo.second(towns, city.rng)
+			for t in towns:
+				t.tick(STEP)
+				if t != city:
+					t.msg = ""
+			if city.msg != "":
+				headline = city.msg
+				city.msg = ""
+		for t in towns:
+			if t == city:
+				for snd in t.sounds:
+					sfx.cue(snd)
+			t.sounds.clear()
+		if city.day != last_day:
+			last_day = city.day
+			if city.over == "":
+				save_game()
+	var b := 0.78 + 0.22 * cos((city.clock - 13.0) / 24.0 * TAU)
+	mod.color = Color(b, b, minf(1.0, b + 0.1))
+	queue_redraw()
+
+
+# ---------- drawing ----------
+
+## Label each side of the territory with the town that lies there; gold bars mark border roads.
+func _draw_borders(tr: Rect2i) -> void:
+	var font := ThemeDB.fallback_font
+	var mids := [Vector2(tr.position.x + tr.size.x * 0.5, tr.position.y), Vector2(tr.end.x, tr.position.y + tr.size.y * 0.5), Vector2(tr.position.x + tr.size.x * 0.5, tr.end.y), Vector2(tr.position.x, tr.position.y + tr.size.y * 0.5)]
+	var arrows := ["^", ">", "v", "<"]
+	for p in city.partners:
+		var k := Diplo.side(city, p)
+		if k < 0:
+			continue
+		var war := Diplo.treaty(city, p) == "war"
+		var linked := Diplo.linked(city, p)
+		var col := Color("d9382a") if war else (Color("9fd3a0") if linked else Color("f2cf4a"))
+		var txt := "%s %s  %s" % [arrows[k], p.town_name, "WAR" if war else ("linked" if linked else "needs a road to this border")]
+		var pos: Vector2 = mids[k] * TILE
+		var off: Vector2 = [Vector2(-170, -14), Vector2(10, 5), Vector2(-170, 28), Vector2(-350, 5)][k]
+		draw_string(font, pos + off, txt, HORIZONTAL_ALIGNMENT_LEFT, -1, 16, col)
+		if linked or war:
+			draw_rect(Rect2(pos - Vector2(4, 4) * 2, Vector2(16, 16)), col, false, 2.0)
+		if war:
+			# soldiers pacing along the front: yours in blue, theirs in red
+			var horiz := k == 0 or k == 2
+			var n: Vector2 = [Vector2(0, -1), Vector2(1, 0), Vector2(0, 1), Vector2(-1, 0)][k]
+			var span: float = (tr.size.x if horiz else tr.size.y) * TILE
+			var o0: Vector2 = Vector2(tr.position) * TILE
+			var tm := Time.get_ticks_msec() / 1000.0
+			for s in 40:
+				var f := (s + 0.5) / 40.0 * span
+				var base: Vector2 = (Vector2(o0.x + f, pos.y) if horiz else Vector2(pos.x, o0.y + f))
+				var mine := s % 2 == 0
+				var adv := (sin(tm * 2.0 + s) * 0.5 + 0.5) * 22.0
+				var sp := base + n * (-(10.0 + adv) if mine else (10.0 + adv * 0.6))
+				draw_circle(sp, 6.0, Color("5b8de0") if mine else Color("d9382a"))
+				draw_line(sp, sp + n * (-8.0 if mine else 8.0), Color.WHITE, 1.5)
+	for k in 4:
+		if int(city.gate[k]) > 0:
+			draw_circle(mids[k] * TILE, 6.0, Color("f2cf4a"))
+
+func _draw() -> void:
+	var vp := get_viewport_rect().size / cam.zoom
+	var tl := cam.position - vp * 0.5
+	var x0 := maxi(0, floori(tl.x / TILE))
+	var y0 := maxi(0, floori(tl.y / TILE))
+	var x1 := mini(City.W - 1, floori((tl.x + vp.x) / TILE))
+	var y1 := mini(City.H - 1, floori((tl.y + vp.y) / TILE))
+	draw_rect(Rect2(-400, -400, City.W * TILE + 800, City.H * TILE + 800), Color("5d7552"))
+	var grass: Color = Civics.SEASONS[city.season]["grass"]
+	var grass_b := grass.darkened(0.05)
+	draw_rect(Rect2(0, 0, City.W * TILE, City.H * TILE), grass)
+	var tr := city.terr
+	var dim := Color(0.05, 0.08, 0.04, 0.42)
+	draw_rect(Rect2(0, 0, City.W * TILE, tr.position.y * TILE), dim)
+	draw_rect(Rect2(0, tr.end.y * TILE, City.W * TILE, (City.H - tr.end.y) * TILE), dim)
+	draw_rect(Rect2(0, tr.position.y * TILE, tr.position.x * TILE, tr.size.y * TILE), dim)
+	draw_rect(Rect2(tr.end.x * TILE, tr.position.y * TILE, (City.W - tr.end.x) * TILE, tr.size.y * TILE), dim)
+	draw_rect(Rect2(Vector2(tr.position) * TILE, Vector2(tr.size) * TILE), Color(1.0, 0.82, 0.4, 0.5), false, 3.0)
+	_draw_borders(tr)
+	var night := city.clock >= 19.0 or city.clock < 6.0
+	var lane := Color(0.92, 0.85, 0.5, 0.55)
+	for y in range(y0, y1 + 1):
+		for x in range(x0, x1 + 1):
+			var i := y * City.W + x
+			var r := Rect2(x * TILE, y * TILE, TILE, TILE)
+			if (x * 7 + y * 13) % 11 == 0:
+				draw_rect(r, grass_b)
+			var t: int = city.grid[i]
+			var wet: bool = city.water[i] == 1
+			if wet:
+				var wn := 0
+				if y > 0 and city.water[i - City.W] == 0:
+					wn |= 1
+				if x + 1 < City.W and city.water[i + 1] == 0:
+					wn |= 2
+				if y + 1 < City.H and city.water[i + City.W] == 0:
+					wn |= 4
+				if x > 0 and city.water[i - 1] == 0:
+					wn |= 8
+				Art.water(self, x, y, wn, night, city.river_health)
+			if t == T.EMPTY:
+				if not wet:
+					Art.ground(self, x, y, city.owns(x, y), city.season)
+				continue
+			var d: Dictionary = Catalog.DEFS[t]
+			match String(d["kind"]):
+				"road":
+					draw_rect(r, d["col"])
+					var c := r.get_center()
+					draw_circle(c, 1.5, lane)
+					if x + 1 < City.W and city.is_road(city.grid[i + 1]):
+						draw_line(c, c + Vector2(TILE, 0), lane, 1.0 if t == T.ROAD else 2.5)
+					if y + 1 < City.H and city.is_road(city.grid[i + City.W]):
+						draw_line(c, c + Vector2(0, TILE), lane, 1.0 if t == T.ROAD else 2.5)
+					if wet:
+						Art.bridge(self, r, x > 0 and city.is_road(city.grid[i - 1]) or x + 1 < City.W and city.is_road(city.grid[i + 1]))
+				"zone":
+					if city.lvl[i] == 0:
+						_zone(r, t, i)
+					else:
+						_building(r, d, city.lvl[i], city.connected[i] == 1, night)
+				_:
+					_service(r, d, city.connected[i] == 1, night, t)
+	_nets(x0, y0, x1, y1)
+	_boats()
+	if overlay != "":
+		_overlay(x0, y0, x1, y1)
+	var tt := Time.get_ticks_msec() * 0.001
+	for i in city.flames:
+		if city.burn[i] > 0.0:
+			var fr := Rect2((i % City.W) * TILE, floori(i / float(City.W)) * TILE, TILE, TILE).grow(-3)
+			draw_rect(fr, Color(1.0, 0.45, 0.1, 0.6 + 0.25 * sin(tt * 14.0 + i)))
+			draw_circle(fr.get_center() + Vector2(sin(tt * 9.0 + i) * 3.0, -6), 4.0, Color(1, 0.85, 0.2, 0.8))
+
+	for k in city.offline:
+		var oc := City.cell(k)
+		draw_rect(Rect2(oc.x * TILE, oc.y * TILE, TILE, TILE), Color(0, 0, 0, 0.5))
+		draw_string(ThemeDB.fallback_font, Vector2(oc.x * TILE, oc.y * TILE + 20), "OFF", HORIZONTAL_ALIGNMENT_CENTER, TILE, 11, Color("f2cf4a"))
+	if night:
+		for li in city.bt.get(T.LIGHT, []):
+			draw_circle(City.center(li) * TILE, TILE * 1.6, Color(1.0, 0.9, 0.5, 0.12))
+	for li in city.bt.get(T.LIGHT, []):
+		var lc := City.center(li) * TILE + Vector2(9, -9)
+		draw_line(lc + Vector2(0, 8), lc, Color("555555"), 2.0)
+		draw_circle(lc, 3.0, Color("ffe9a0") if night else Color("d8c88a"))
+	for b in city.buses:
+		var bp: Vector2 = b["pos"]
+		var bd: Vector2 = b["dir"]
+		draw_set_transform(bp * TILE, bd.angle())
+		draw_rect(Rect2(-9, -4, 18, 8), Color("f2c14e"))
+		for k in 3:
+			draw_rect(Rect2(-6 + k * 5, -3, 3, 2), Color("3a4a5a"))
+		if night:
+			draw_circle(Vector2(9, -2), 1.5, Color("fff3b0"))
+			draw_circle(Vector2(9, 2), 1.5, Color("fff3b0"))
+		draw_set_transform(Vector2.ZERO, 0.0)
+	for c in city.citizens:
+		if c.car and c.path.size() > 0 and c != sel:
+			var dv := c.path[mini(c.pi, c.path.size() - 1)] - c.pos
+			draw_set_transform(c.pos * TILE, dv.angle() if dv.length() > 0.01 else 0.0)
+			draw_rect(Rect2(-5, -3, 10, 6), CAR_COLS[c.id % CAR_COLS.size()])
+			draw_rect(Rect2(0, -2, 3, 4), Color(0.6, 0.75, 0.85))
+			if night:
+				draw_circle(Vector2(6, -2), 1.2, Color("fff3b0"))
+				draw_circle(Vector2(6, 2), 1.2, Color("fff3b0"))
+			draw_set_transform(Vector2.ZERO, 0.0)
+			continue
+		if c.path.size() == 0 and c != sel:
+			continue
+		var p := c.pos * TILE
+		draw_circle(p + Vector2(0, 1.5), 4.2, Color(0, 0, 0, 0.3))
+		var col := Color("f3e7cf") if c.mood > 0.6 else (Color("e0a458") if c.mood > 0.35 else Color("c0392b"))
+		if c.sick > 0.0:
+			col = Color("8fc46a")
+		draw_circle(p, 3.4, col)
+		if c.protesting and city.protest:
+			draw_line(p, p + Vector2(0, -9), Color.WHITE, 1.0)
+			draw_rect(Rect2(p + Vector2(-4, -14), Vector2(8, 5)), Color("f3e7cf"))
+		if c == sel:
+			draw_arc(p, 8.0, 0.0, TAU, 20, Color.WHITE, 1.5)
+	var font := ThemeDB.fallback_font
+	for c in city.citizens:
+		if c.bubble_t <= 0.0:
+			continue
+		var p := c.pos * TILE + Vector2(0, -14)
+		var sz := font.get_string_size(c.bubble, HORIZONTAL_ALIGNMENT_LEFT, -1, 11)
+		draw_rect(Rect2(p + Vector2(-sz.x * 0.5 - 4, -sz.y), sz + Vector2(8, 4)), Color(0.08, 0.1, 0.09, 0.85))
+		draw_string(font, p + Vector2(-sz.x * 0.5, -2), c.bubble, HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color("f3e7cf"))
+
+	var view := Rect2(tl, vp)
+	match sig.weather():
+		"rain":
+			draw_rect(view, Color(0.2, 0.25, 0.35, 0.22))
+			_rain(view, 120)
+		"storm":
+			draw_rect(view, Color(0.1, 0.12, 0.2, 0.4))
+			_rain(view, 220)
+		"heatwave":
+			draw_rect(view, Color(0.9, 0.55, 0.15, 0.14))
+		"snow":
+			draw_rect(view, Color(0.85, 0.9, 1.0, 0.16))
+			_snow(view)
+		"fog":
+			draw_rect(view, Color(0.8, 0.82, 0.85, 0.3))
+		"cold_snap":
+			draw_rect(view, Color(0.6, 0.75, 1.0, 0.12))
+	if not city.twister.is_empty():
+		var tp: Vector2 = city.twister["pos"] * TILE
+		for k in 6:
+			var a := tt * 9.0 + k * 1.05
+			draw_arc(tp + Vector2(sin(tt * 3.0 + k) * 3.0, -k * 7.0), 8.0 + k * 4.0, a, a + 4.0, 12, Color(0.35, 0.35, 0.38, 0.75), 3.0)
+	var rim := Rect2(Vector2(tr.position) * TILE, Vector2(tr.size) * TILE)
+	if city.protest:
+		draw_rect(rim, Color("b03a2e"), false, 4.0)
+
+	var hc := cell()
+	if city.inside(hc.x, hc.y):
+		draw_rect(Rect2(hc.x * TILE, hc.y * TILE, TILE, TILE), Color(1, 1, 1, 0.9), false, 2.0)
+		if tool < INSPECT and Catalog.DEFS.has(tool) and Catalog.DEFS[tool].has("r"):
+			draw_circle(City.center(hc.y * City.W + hc.x) * TILE, float(Catalog.DEFS[tool]["r"]) * TILE * 0.9, Color(1, 1, 1, 0.12))
+	if sel_cell >= 0 and sel == null:
+		var sc := City.cell(sel_cell)
+		draw_rect(Rect2(sc.x * TILE, sc.y * TILE, TILE, TILE), Color("ffd166"), false, 2.0)
+
+
+func _overlay(x0: int, y0: int, x1: int, y1: int) -> void:
+	var font := ThemeDB.fallback_font
+	for y in range(y0, y1 + 1):
+		for x in range(x0, x1 + 1):
+			var i := y * City.W + x
+			var r := Rect2(x * TILE, y * TILE, TILE, TILE)
+			if overlay == "pollution":
+				var p := clampf(city.poll_at(Vector2i(x, y)) * 2.0, 0.0, 1.0)
+				if p > 0.02:
+					draw_rect(r, Color(0.45, 0.3, 0.1, p * 0.6))
+			elif overlay == "land":
+				var lv: float = city.land_val[i]
+				draw_rect(r, Color(1.0 - lv, lv, 0.2, 0.5))
+			elif overlay == "traffic":
+				if city.is_road(city.grid[i]):
+					var tv := clampf(city.traffic[i] / (8.0 if city.grid[i] == T.AVENUE else 3.0), 0.0, 1.5)
+					draw_rect(r, Color(tv, 1.0 - minf(tv, 1.0), 0.1, 0.55))
+			elif overlay == "crime":
+				if city.crime_val[i] > 0.0:
+					draw_rect(r, Color(0.85, 0.1, 0.1, city.crime_val[i] * 0.7))
+			elif overlay == "all":
+				var p := clampf(city.poll_at(Vector2i(x, y)) * 2.0, 0.0, 1.0)
+				if p > 0.05:
+					draw_rect(r, Color(0.45, 0.3, 0.1, p * 0.4))
+				if city.crime_val[i] > 0.0:
+					draw_rect(r, Color(0.85, 0.1, 0.1, city.crime_val[i] * 0.4))
+				var t: int = city.grid[i]
+				if t != T.EMPTY and not city.is_road(t):
+					var k := 0
+					for mk in ALL_DOTS:
+						var ok := city.raw_cov(Vector2i(x, y), mk) > 0.3
+						draw_rect(Rect2(x * TILE + 2 + (k % 3) * 9, y * TILE + 2 + (k / 3) * 5, 7, 4), Color("5fbf6a") if ok else Color("d9534f"))
+						k += 1
+					if city.burn[i] > 0.0:
+						draw_string(font, r.position + Vector2(0, 30), "FIRE", HORIZONTAL_ALIGNMENT_CENTER, TILE, 9, Color.WHITE)
+			else:
+				var c := clampf(city.raw_cov(Vector2i(x, y), overlay), 0.0, 1.0)
+				draw_rect(r, Color(0.2, 0.8, 0.4, c * 0.45) if c > 0.0 else Color(0.8, 0.2, 0.2, 0.18))
+
+
+func _building(r: Rect2, d: Dictionary, lv: int, ok: bool, night: bool) -> void:
+	if Art.building(self, r, String(d.get("shape", "")), d["col"], lv, ok, night, int(r.position.x / 32.0) * 7 + int(r.position.y / 32.0) * 13):
+		if not ok:
+			draw_string(ThemeDB.fallback_font, r.position + Vector2(12, 20), "!", HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color(1, 0.3, 0.2))
+		return
+	var body: Color = d["col"]
+	if not ok:
+		body = body.darkened(0.35)
+	var h := 3.0 * lv
+	draw_rect(r.grow(-1), Color(body, 0.25))
+	var base := Rect2(r.position + Vector2(4, 7), Vector2(TILE - 8, TILE - 10))
+	draw_rect(base, body.darkened(0.3))
+	var up := Rect2(base.position - Vector2(0, h), base.size)
+	if d["shape"] == "tower":
+		up = Rect2(base.position + Vector2(3, -h * 1.8), base.size - Vector2(6, 0) + Vector2(0, h * 1.8))
+	draw_rect(up, body)
+	draw_rect(Rect2(up.position, Vector2(up.size.x, 5)), body.lightened(0.25))
+	match String(d["shape"]):
+		"house":
+			var y := up.position.y
+			draw_colored_polygon(PackedVector2Array([Vector2(up.position.x - 1, y), Vector2(up.end.x + 1, y), Vector2(r.position.x + TILE * 0.5, y - 7)]), Color("9a5a4a") if ok else Color("5a3a30"))
+		"terrace":
+			for k in 3:
+				var gx := up.position.x + k * (up.size.x / 3.0)
+				draw_colored_polygon(PackedVector2Array([Vector2(gx, up.position.y), Vector2(gx + up.size.x / 3.0, up.position.y), Vector2(gx + up.size.x / 6.0, up.position.y - 6)]), Color("9a5a4a") if ok else Color("5a3a30"))
+		"condo":
+			draw_rect(Rect2(up.position.x + 2, up.position.y - 4, up.size.x - 4, 6), Color("7fb2d4"))
+			draw_line(Vector2(up.position.x + 4, up.position.y + 6), Vector2(up.end.x - 4, up.end.y - 2), Color(1, 1, 1, 0.35), 1.0)
+		"shop":
+			draw_rect(Rect2(up.position.x, up.end.y - 6, up.size.x, 4), Color("e8e2d0") if ok else Color("8a8678"))
+		"factory":
+			draw_rect(Rect2(up.end.x - 7, up.position.y - 8, 5, 9), body.darkened(0.2))
+			draw_rect(Rect2(up.position.x + 3, up.position.y - 4, 5, 5), body.darkened(0.2))
+		"office":
+			draw_rect(Rect2(up.position.x + 4, up.position.y - 5, up.size.x - 8, 5), body.lightened(0.15))
+		"farm":
+			draw_rect(Rect2(r.position + Vector2(3, 18), Vector2(TILE - 6, 10)), Color("a89850"))
+			for k in 4:
+				draw_line(r.position + Vector2(5 + k * 7, 19), r.position + Vector2(5 + k * 7, 27), Color("7f7a3a"), 1.0)
+	var wc := Color("ffd98a") if (night and ok) else body.darkened(0.45)
+	for k in lv:
+		draw_rect(Rect2(up.position.x + 4 + k * 7, up.position.y + 8, 3, 4), wc)
+	if not ok:
+		draw_string(ThemeDB.fallback_font, r.position + Vector2(12, 24), "!", HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color("b03a2e"))
+
+
+func _rain(area: Rect2, n: int) -> void:
+	var t := Time.get_ticks_msec() * 0.001
+	for i in n:
+		var x := area.position.x + fmod(i * 97.0 + 13.0, area.size.x)
+		var y := area.position.y + fmod(i * 53.0 + t * 380.0, area.size.y)
+		draw_line(Vector2(x, y), Vector2(x - 3, y + 10), Color(0.8, 0.85, 1.0, 0.5), 1.0)
+
+
+func _snow(area: Rect2) -> void:
+	var t := Time.get_ticks_msec() * 0.001
+	for i in 100:
+		var x := area.position.x + fmod(i * 97.0 + 13.0 + sin(t + i) * 12.0, area.size.x)
+		var y := area.position.y + fmod(i * 53.0 + t * 60.0, area.size.y)
+		draw_circle(Vector2(x, y), 1.6, Color(1, 1, 1, 0.8))
+
+
+func _zone(r: Rect2, t: int, i: int) -> void:
+	var d: Dictionary = Catalog.DEFS[t]
+	var zc: Color = d["col"]
+	var ok := city.connected[i] == 1
+	Art.zone(self, r, String(d.get("shape", "")), zc, ok)
+	if not ok:
+		draw_line(r.position + Vector2(4, 4), r.end - Vector2(4, 4), Color("b03a2e"), 2.0)
+		draw_line(r.position + Vector2(TILE - 4, 4), r.position + Vector2(4, TILE - 4), Color("b03a2e"), 2.0)
+	elif city.build[i] > 0.0:
+		draw_rect(Rect2(r.position + Vector2(3, 3), Vector2(TILE - 6, TILE - 6)), Color(1, 1, 1, 0.3))
+		draw_rect(Rect2(r.position + Vector2(3, TILE - 8), Vector2((TILE - 6) * city.build[i], 4)), Color("ffd166"))
+		draw_line(r.position + Vector2(8, 5), r.position + Vector2(8, 20), Color("5a4a3a"), 2.0)
+		draw_line(r.position + Vector2(8, 5), r.position + Vector2(24, 5), Color("5a4a3a"), 2.0)
+
+
+func _service(r: Rect2, d: Dictionary, ok: bool, night: bool, id := -1) -> void:
+	if id >= 0 and Art.service(self, r, id, ok, night):
+		if not ok:
+			draw_line(r.position + Vector2(4, 4), r.end - Vector2(4, 4), Color("b03a2e"), 2.0)
+		return
+	var col: Color = d["col"]
+	var sh: String = d.get("shape", "")
+	var c := r.get_center()
+	if sh == "park":
+		draw_rect(r.grow(-2), col)
+		draw_circle(r.position + Vector2(10, 11), 5.0, Color("3f6b3a"))
+		draw_circle(r.position + Vector2(21, 20), 6.0, Color("4a7a43"))
+		return
+	draw_rect(r.grow(-2), col.darkened(0.25))
+	draw_rect(r.grow(-4), col)
+	match sh:
+		"cross":
+			draw_rect(Rect2(r.position + Vector2(13, 7), Vector2(6, 18)), Color.WHITE)
+			draw_rect(Rect2(r.position + Vector2(7, 13), Vector2(18, 6)), Color.WHITE)
+		"dome":
+			draw_circle(c + Vector2(0, 2), 9.0, col.lightened(0.3))
+			draw_rect(Rect2(c + Vector2(-9, 2), Vector2(18, 7)), col.darkened(0.1))
+		"turbine":
+			var a := Time.get_ticks_msec() * 0.004
+			draw_line(c + Vector2(0, 10), c + Vector2(0, -2), Color.WHITE, 2.0)
+			for k in 3:
+				draw_line(c + Vector2(0, -2), c + Vector2(0, -2) + Vector2.from_angle(a + k * TAU / 3.0) * 11.0, Color.WHITE, 1.5)
+		"panels":
+			for k in 2:
+				draw_rect(Rect2(r.position + Vector2(6, 7 + k * 10), Vector2(20, 7)), Color("2c4a7a"))
+		"fort":
+			draw_rect(Rect2(r.position + Vector2(6, 10), Vector2(20, 14)), col.darkened(0.2))
+			for k in 3:
+				draw_rect(Rect2(r.position + Vector2(6 + k * 8, 7), Vector2(4, 4)), col.darkened(0.2))
+			draw_line(r.position + Vector2(16, 10), r.position + Vector2(16, 2), Color.WHITE, 1.0)
+			draw_rect(Rect2(r.position + Vector2(16, 2), Vector2(6, 4)), Color("c04030"))
+		"radar":
+			var ra := Time.get_ticks_msec() * 0.003
+			draw_line(c + Vector2(0, 10), c, Color.WHITE, 2.0)
+			draw_arc(c, 9.0, ra, ra + 2.2, 10, Color("9fe0a0"), 2.0)
+		"lamp":
+			draw_line(c + Vector2(0, 10), c + Vector2(0, -6), Color("555555"), 2.0)
+			draw_circle(c + Vector2(0, -8), 4.0, Color("ffe9a0"))
+		"chimney":
+			draw_rect(Rect2(r.position + Vector2(18, 4), Vector2(7, 20)), col.darkened(0.4))
+			draw_circle(r.position + Vector2(21, 2 - fmod(Time.get_ticks_msec() * 0.01, 6.0)), 3.0, Color(0.7, 0.7, 0.7, 0.5))
+		_:
+			draw_string(ThemeDB.fallback_font, r.position + Vector2(0, 23), d["g"], HORIZONTAL_ALIGNMENT_CENTER, TILE, 18, Color.WHITE if col.get_luminance() < 0.5 else Color("2a2a20"))
+	if not ok:
+		draw_line(r.position + Vector2(4, 4), r.end - Vector2(4, 4), Color("b03a2e"), 2.0)
+
+
+## Free water extent (up to 9 cells each way) through `w` along one axis, as (lo, hi) offsets.
+func _run(w: Vector2i, vert: bool) -> Vector2i:
+	var d := Vector2i(0, 1) if vert else Vector2i(1, 0)
+	var lo := 0
+	var hi := 0
+	while hi < 9 and _wet(w + d * (hi + 1)):
+		hi += 1
+	while lo > -9 and _wet(w + d * (lo - 1)):
+		lo -= 1
+	return Vector2i(lo, hi)
+
+
+func _wet(p: Vector2i) -> bool:
+	return city.inside(p.x, p.y) and city.water[p.y * City.W + p.x] == 1 and city.grid[p.y * City.W + p.x] == T.EMPTY
+
+
+## Cargo ships (ports) and warships (naval yards) patrol the river stretch beside their dock.
+func _boats() -> void:
+	var t := Time.get_ticks_msec() * 0.001
+	for id in [T.PORT, T.NAVYARD]:
+		for i in city.bt.get(id, []):
+			var x: int = i % City.W
+			var y: int = i / City.W
+			var w := Vector2i(-1, -1)
+			for d in City.DIRS:
+				if city.inside(x + d.x, y + d.y) and city.water[(y + d.y) * City.W + x + d.x] == 1:
+					w = Vector2i(x + d.x, y + d.y)
+					break
+			if w.x < 0:
+				continue
+			var rv := _run(w, true)
+			var rh := _run(w, false)
+			var vert: bool = rv.y - rv.x > rh.y - rh.x
+			var lo: int = (rv if vert else rh).x
+			var hi: int = (rv if vert else rh).y
+			var ph := t * 0.2 + float(i % 13)
+			var s := lo + (hi - lo) * (0.5 + 0.5 * sin(ph)) + 0.5
+			var dir := 1.0 if cos(ph) >= 0.0 else -1.0
+			var pos := (Vector2(w.x + 0.5, w.y + s) if vert else Vector2(w.x + s, w.y + 0.5)) * TILE
+			Art.boat(self, pos, vert, dir, id == T.NAVYARD)
+
+
+func _nets(x0: int, y0: int, x1: int, y1: int) -> void:
+	for y in range(y0, y1 + 1):
+		for x in range(x0, x1 + 1):
+			var i := y * City.W + x
+			var c := Vector2(x + 0.5, y + 0.5) * TILE
+			for k in 3:
+				var layer: PackedByteArray = [city.wire, city.pipe, city.sewer][k]
+				if layer[i] == 0:
+					continue
+				var m: String = City.NETS[k]
+				var live: bool = city.net_reach[m][i] == 1
+				var col: Color = [Color("f2cf4a"), Color("4fa3e0"), Color("a07a4a")][k]
+				if not live:
+					col = col.darkened(0.5)
+				var off: Vector2 = [Vector2(-5, -5), Vector2(5, 5), Vector2(5, -5)][k]
+				draw_circle(c + off, 2.0, col)
+				if x + 1 < City.W and layer[i + 1] == 1:
+					draw_line(c + off, c + off + Vector2(TILE, 0), col, 1.5)
+				if y + 1 < City.H and layer[i + City.W] == 1:
+					draw_line(c + off, c + off + Vector2(0, TILE), col, 1.5)

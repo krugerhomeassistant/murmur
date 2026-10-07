@@ -1,0 +1,52 @@
+# LESSONS_LEARNED
+
+Format: [Problem] -> [Root Cause] -> [Verified Solution]
+
+- [Instagram reel links could not be read] -> [instagram.com disallows automated access] -> [Ask user to describe reels or paste captions.]
+- [GitHub REST `/events` too slow for a live district] -> [Unauthenticated limit is 60 req/hour] -> [Use GH Archive hourly dumps (keyless) by default; optional token gives 5,000/hour for near-live.]
+- [OpenSky username/password auth fails] -> [Basic auth removed 2026-03-18; OAuth2 client credentials only] -> [Anonymous (400 credits/day) for now; OAuth2 client if user creates account.]
+- [Bluesky Jetstream endpoint names differ between sources] -> [Newer v2 path `/xrpc/network.bsky.jetstream.subscribeEvents` alongside older `jetstream{1,2}.../subscribe`] -> [Test both in Phase 4; keep whichever responds; log result here.]
+- [X/Twitter as a social feed] -> [Paid API] -> [Bluesky Jetstream instead; revisit only with budget.]
+- [godot-ai tools act on the wrong project] -> [Session is bound to the project open in the editor; only pebble-isles was open] -> [Check `session_manage list` project_path first; open Murmur via its own launcher.]
+- [Original design was data-first] -> [A pure data city is a dashboard, not a game] -> [Base game is playable offline; live data is an optional toggle behind the Signals seam.]
+- [Need to test GDScript without the PC] -> [Device shell is a Linux VM; cannot run Windows Godot] -> [Sandbox can download Linux Godot from GitHub releases (`4.7.2-stable/Godot_v4.7.2-stable_linux.x86_64.zip`). Run `--headless --path client --import` once, then `--headless --path client --fixed-fps 60 -s res://tests/smoke.gd`.]
+- [Launcher broke after moving project] -> [Used a relative path to tools (`%~dp0..\tools`)] -> [Use `%USERPROFILE%\workspace\tools\godot\...` absolute path.]
+
+- [Problem] godot-ai bound to wrong project / Windows exe launch -> [Cause] session binds to the open editor; device_bash is Linux VM, PC locked blocks computer use -> [Fix] editor_manage quit closes old editor; user double-clicks launcher.
+
+- [Problem] game too easy, cash floods -> [Cause] income linear, upkeep tiny, no failure state -> [Fix] superlinear upkeep, fires, demand gaps, bankruptcy.
+
+- [Problem] Edited .gd on E: via device_bash, editor still showed old parse error -> [Cause] editor doesn't rescan external edits unfocused -> [Fix] godot-ai filesystem_manage op=scan before project_run.
+- [Problem] var x := dict.get(...) < n fails to parse -> [Cause] Variant inference -> [Fix] explicit type (var ok: bool = ...).
+- [Problem] Selfcheck 'fire destroys zone' failed -> [Cause] empty zones regrow within 1s -> [Fix] count City.burned instead of reading lvl.
+- [Problem] game_eval aborts after 8s -> [Fix] set state, wait outside, read state in a second call.
+
+- [Variant inference on const Array elems (DIRS[i])] -> [untyped const Array yields Variant, `:=` fails] -> [declare `const DIRS: Array[Vector2i]`; use explicit types for Dictionary/Array reads]
+- [Control with set_anchors_preset(TOP_RIGHT) + position=960 went off-screen] -> [anchors move origin to right edge] -> [just set position, no preset, for fixed layouts]
+- [match arm inside a lambda in .connect(func...) = parse error] -> [multi-line match inside parenthesised lambda unsupported] -> [use named method]
+
+- [Bankrupt day 50 with auto-growth] -> [planner spent down to ~60 coins repeatedly, saved nothing for power plant (needs 285+), growth starved, need penalties cliff at pop 40 dropped mood <0.4 so immigration stopped; event coin losses could push below limit] -> [planner now checks upkeep sustainability, sets `saving_for` to pause other spending when a vital service is unaffordable, need penalties ramp in over 0.8*need_pop, immigration threshold 0.35, instant event losses clamped to -40]. Soak: day 52 pop 152 min coins -38.
+- [Soak test via game_eval gave bogus results] -> [made a new Signals() per call; city kept the old one so news never decayed] -> [always tick `c.sig`]
+- [Startup took 30s] -> [selfcheck + heavier _scan (per-cell crime/land loops)] -> [selfcheck opt-in via `--selfcheck`; crime/land computed once per sim second, only for non-empty/near cells]
+- [Split a for-body when patching with replace -> orphan indented line] -> [str.replace on partial blocks] -> [re-read the whole loop body before patching; run scan+run after every patch to catch it]
+
+## 2026-10-07 (v8)
+- [project_run autosave=true overwrote city.gd with the editor's stale buffer] -> editor saves open scripts before play -> commit file, `filesystem_manage scan`, then `project_run(autosave=false)`; verify md5 on device.
+- [selfcheck loop called _twister after the twister ended -> 'pos' on empty Dictionary] -> loop must break when `twister.is_empty()`.
+- [Soak "p0 forever"] -> soak City needs `seed_start()`; `City.new()` needs a Signals arg.
+- [Random-accept bot broke 9 promises -> voted out day 29] -> by design: accepting a petition you can't deliver costs approval. Passive play must stay >50%: approval base 0.35 + 0.5*mood.
+- [`func _set` in a RefCounted script] -> clashes with Object._set(StringName,Variant) -> rename (`_shift`).
+- [Blanket sed `for i in W * H` -> `cells`] -> also rewrote a loop inside static `selfcheck()` -> non-static var in static fn parse error; check statics.
+- [Editor overwrote freshly committed files from its stale buffer after stop/run] -> sequence: stop -> commit -> scan -> md5 check -> run(autosave=false).
+- [Soak after game over keeps calling Diplo.second] -> duplicate log lines; harmless, soak artifact.
+
+[Control added in _ready sits top-left with 0 size] -> [set_anchors_preset doesn't set offsets] -> [use set_anchors_and_offsets_preset(PRESET_FULL_RECT)]
+
+[Disk copy of a script reverted to stale version after device_commit+scan while editor had it open] -> [editor buffer wins] -> [stop game, edit via godot-ai script_patch (writes through editor), verify md5]
+[python str.replace silently missed match arms] -> [wrong tab depth] -> [grep for the inserted symbol afterwards]
+
+[Problem] script_patch reload_failed code 43 on art/hud after patch -> [Cause] transient editor reload ordering -> [Fix] ignore; run project and check game_status/logs.
+
+[Problem] game_eval calling start_game twice -> [Cause] _begin frees nodes (null queue_free), game freezes -> [Solution] one start_game per eval/run; stop+rerun if frozen.
+
+[Problem] input_mouse motion does not move the viewport cursor -> [Solution] test hover with get_viewport().warp_mouse(m.get_canvas_transform()*world_pos) in game_eval.
