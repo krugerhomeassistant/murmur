@@ -13,6 +13,7 @@ var o_auto: OptionButton
 var o_river: OptionButton
 var o_pol: CheckButton
 var o_exp: CheckButton
+var o_spec: CheckButton
 var o_guide: CheckButton
 var note: Label
 
@@ -75,6 +76,10 @@ func _ready() -> void:
 	o_exp.button_pressed = true
 	o_exp.focus_mode = Control.FOCUS_NONE
 	v.add_child(o_exp)
+	o_spec = CheckButton.new()
+	o_spec.text = "Spectator: no mayor, watch towns run themselves"
+	o_spec.focus_mode = Control.FOCUS_NONE
+	v.add_child(o_spec)
 	o_guide = CheckButton.new()
 	o_guide.text = "Show the new-player guide"
 	o_guide.button_pressed = not has_save
@@ -133,5 +138,6 @@ func _go() -> void:
 		"auto": o_auto.selected,
 		"policy": o_pol.button_pressed,
 		"expand": o_exp.button_pressed,
-		"guide": o_guide.button_pressed,
+		"guide": o_guide.button_pressed and not o_spec.button_pressed,
+		"spectate": o_spec.button_pressed,
 	})

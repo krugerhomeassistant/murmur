@@ -22,3 +22,4 @@ jobs:
         run: |
           godot --headless --path client -s tests/netcache.gd | tee n.txt && grep -q NETCACHE_OK n.txt
           godot --headless --path client -s tests/rivers.gd | tee r.txt && grep -q RIVERS_OK r.txt
+          godot --headless --path client -s tests/spectate.gd | tee s.txt && grep -q SPECTATE_OK s.txt

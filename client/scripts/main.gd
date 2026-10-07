@@ -25,6 +25,8 @@ var dacc := 0.0
 const FOUND_COST := 300.0
 var tool: int = INSPECT
 var speed := 1.0
+var follow := true  # spectator: auto-cycle the viewed town
+var follow_t := 0.0
 var acc := 0.0
 var headline := "Welcome to Murmur. Lay roads, zone homes, shops and jobs beside them. The city will grow on its own as needs arise."
 var sel: City.Citizen = null
@@ -138,6 +140,16 @@ func _fresh(o: Dictionary) -> void:
 	city.auto_mode = o.get("auto", 2)
 	city.auto_policy = o.get("policy", true)
 	city.auto_expand = o.get("expand", true)
+	if o.get("spectate", false):  # no mayor: every town runs on the planner alone
+		for t in towns:
+			t.human = false
+			t.coins = 400.0
+			t.auto_mode = 2
+			t.auto_policy = true
+			t.auto_expand = true
+	if o.get("spectate", false):
+		headline = "Spectating: no mayor. Tab or the Towns menu switches town, F toggles auto-follow, 8x speeds it up."
+		return
 	headline = "Welcome to %s. %s Lay roads and zone beside them; the city grows as needs arise." % [city.town_name, ("Your neighbour %s runs itself (Region tab)." % towns[1].town_name) if n > 1 else "You are on your own."]
 
 
@@ -286,6 +298,13 @@ func _unhandled_input(e: InputEvent) -> void:
 			KEY_R:
 				if city.over != "":
 					new_game()
+			KEY_TAB:
+				if spectating():
+					follow_t = 0.0
+					switch_town((towns.find(city) + 1) % towns.size())
+			KEY_F:
+				follow = not follow
+				headline = "Auto-follow %s." % ("on" if follow else "off")
 			KEY_F3:
 				perf_on = not perf_on
 			KEY_SPACE:
@@ -434,8 +453,17 @@ func _chunks() -> void:
 	chunk_kick = false
 
 
+func spectating() -> bool:
+	return towns.all(func(t: City) -> bool: return not t.human)
+
+
 func _process(delta: float) -> void:
 	delta = minf(delta, 0.25)
+	if started and follow and towns.size() > 1 and spectating():
+		follow_t += delta
+		if follow_t > 30.0:
+			follow_t = 0.0
+			switch_town((towns.find(city) + 1) % towns.size())
 	var p0 := Time.get_ticks_usec()
 	var v := Vector2(
 		float(Input.is_key_pressed(KEY_D) or Input.is_key_pressed(KEY_RIGHT)) - float(Input.is_key_pressed(KEY_A) or Input.is_key_pressed(KEY_LEFT)),
