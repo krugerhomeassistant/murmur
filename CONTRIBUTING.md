@@ -17,7 +17,7 @@ godot --headless --path client -s tests/smoke.gd   # prints SMOKE_OK
 1. `git switch -c feat/<short-name>` (or `fix/`, `chore/`, `docs/`).
 2. Commit with imperative, scoped messages (`feat: ports and ships`, `fix: bridge cost`).
 3. Note user-visible changes under `## [Unreleased]` in `CHANGELOG.md` as you go.
-4. Update `PLAN.md` (tick tasks), `WIKI.md` (rules and features) and `LESSONS_LEARNED.md` (problems and fixes).
+4. Update `docs/PLAN.md` (tick tasks), `docs/WIKI.md` (rules and features) and `docs/LESSONS_LEARNED.md` (problems and fixes).
 5. Open a PR into `main`; CI must pass; squash-merge.
 
 ## Releasing (maintainers)
