@@ -20,6 +20,7 @@ var draw := 0.0
 var n := 0
 var day0 := 0
 var steps0 := 0
+var slow := [0, 0.0, 0.0, 0.0, 0.0]  # frames over 25 ms: count, sum of frame, sim, chunk, draw ms
 @export var status := ""  # readable through the editor's remote inspector while running
 @export var result_json := ""
 var beat := -1
@@ -74,6 +75,12 @@ func _process(_d: float) -> void:
 		calls += c
 		calls_max = maxf(calls_max, c)
 		sim += m.sim_ms
+		if dt > 25.0:
+			slow[0] += 1
+			slow[1] += dt
+			slow[2] += m.last_sim
+			slow[3] += m.last_chunk
+			slow[4] += m.last_draw
 		draw += m.draw_ms
 		n += 1
 		if t >= SAMPLE:
@@ -105,7 +112,7 @@ func _report() -> void:
 		"ram_static_mb": Performance.get_monitor(Performance.MEMORY_STATIC) / 1048576.0,
 		"vram_mb": Performance.get_monitor(Performance.RENDER_VIDEO_MEM_USED) / 1048576.0,
 		"texture_mb": Performance.get_monitor(Performance.RENDER_TEXTURE_MEM_USED) / 1048576.0,
-		"effective_speed": (m.steps_done - steps0) * 0.1 / SAMPLE, "days_advanced": m.towns[0].day - day0, "total_pop": pop, "pop_each": m.towns.map(func(c): return c.pop),
+		"slow_frames": slow[0], "slow_avg_ms": slow[1] / maxf(slow[0], 1), "slow_sim_ms": slow[2] / maxf(slow[0], 1), "slow_chunk_ms": slow[3] / maxf(slow[0], 1), "slow_draw_ms": slow[4] / maxf(slow[0], 1), "effective_speed": (m.steps_done - steps0) * 0.1 / SAMPLE, "days_advanced": m.towns[0].day - day0, "total_pop": pop, "pop_each": m.towns.map(func(c): return c.pop),
 	}
 	result_json = JSON.stringify(r)
 	print("BENCHMARK_JSON " + result_json)

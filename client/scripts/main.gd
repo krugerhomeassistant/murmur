@@ -414,6 +414,9 @@ var ci: CanvasItem = self  # target of the tile-drawing helpers (a chunk while o
 var perf_on := false  # F3: fps / sim ms / draw ms overlay
 var sim_ms := 0.0
 var draw_ms := 0.0
+var last_sim := 0.0  # unsmoothed per-frame costs (ms) for spike analysis
+var last_chunk := 0.0
+var last_draw := 0.0
 
 
 ## Marks the chunks around a tile for an immediate re-bake (edits, painting) without refreshing the whole view.
@@ -520,11 +523,14 @@ func _process(delta: float) -> void:
 			last_day = city.day
 			if city.over == "":
 				save_game()
-	sim_ms = lerpf(sim_ms, (Time.get_ticks_usec() - p0) / 1000.0, 0.1)
+	last_sim = (Time.get_ticks_usec() - p0) / 1000.0
+	sim_ms = lerpf(sim_ms, last_sim, 0.1)
+	var c0 := Time.get_ticks_usec()
 	var b := 0.78 + 0.22 * cos((city.clock - 13.0) / 24.0 * TAU)
 	mod.color = Color(b, b, minf(1.0, b + 0.1))
 	city.flush()
 	_chunks()
+	last_chunk = (Time.get_ticks_usec() - c0) / 1000.0
 	queue_redraw()
 
 
@@ -683,7 +689,8 @@ func _draw() -> void:
 	if sel_cell >= 0 and sel == null:
 		var sc := City.cell(sel_cell)
 		draw_rect(Rect2(sc.x * TILE, sc.y * TILE, TILE, TILE), Color("ffd166"), false, 2.0)
-	draw_ms = lerpf(draw_ms, (Time.get_ticks_usec() - d0) / 1000.0, 0.1)
+	last_draw = (Time.get_ticks_usec() - d0) / 1000.0
+	draw_ms = lerpf(draw_ms, last_draw, 0.1)
 
 
 ## Static tile layer for one chunk (grass, ground, water, roads, buildings, wires). Re-recorded by _chunks(), not every frame.
