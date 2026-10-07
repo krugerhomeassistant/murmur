@@ -8,9 +8,9 @@ extends RefCounted
 const T = Catalog.Id
 const TILE := 32.0
 const KIND := {
-	"inf": {"n": "infantry", "hp": 30.0, "dmg": 6.0, "rng": 110.0, "spd": 9.0, "cost": 25.0, "upk": 0.02, "train": 8.0},
-	"tank": {"n": "tanks", "hp": 140.0, "dmg": 16.0, "rng": 240.0, "spd": 14.0, "cost": 140.0, "upk": 0.08, "train": 35.0},
-	"jet": {"n": "jets", "hp": 60.0, "dmg": 22.0, "rng": 200.0, "spd": 45.0, "cost": 220.0, "upk": 0.12, "train": 50.0},
+	"inf": {"n": "infantry", "hp": 30.0, "dmg": 2.4, "rng": 110.0, "spd": 9.0, "cost": 25.0, "upk": 0.02, "train": 8.0},
+	"tank": {"n": "tanks", "hp": 140.0, "dmg": 6.5, "rng": 240.0, "spd": 14.0, "cost": 140.0, "upk": 0.08, "train": 35.0},
+	"jet": {"n": "jets", "hp": 60.0, "dmg": 9.0, "rng": 200.0, "spd": 45.0, "cost": 220.0, "upk": 0.12, "train": 50.0},
 }
 const VS := {  # damage multiplier, attacker kind -> target kind
 	"inf": {"inf": 1.0, "tank": 0.25, "jet": 0.15},
