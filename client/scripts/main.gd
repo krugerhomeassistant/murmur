@@ -27,6 +27,8 @@ var tool: int = INSPECT
 var speed := 1.0
 var follow := true  # spectator: auto-cycle the viewed town
 var follow_t := 0.0
+var steps_done := 0  # sim steps run, for measuring the effective speed
+const SIM_BUDGET_MS := 6.0  # max sim work per frame; the game slows below the chosen speed instead of dropping frames
 var acc := 0.0
 var headline := "Welcome to Murmur. Lay roads, zone homes, shops and jobs beside them. The city will grow on its own as needs arise."
 var sel: City.Citizen = null
@@ -485,7 +487,11 @@ func _process(delta: float) -> void:
 	if started:
 		acc = minf(acc + delta * speed, STEP * 20.0)  # never owe more than 20 steps: slow down instead of freezing
 		while acc >= STEP:
+			if Time.get_ticks_usec() - p0 > SIM_BUDGET_MS * 1000.0:  # out of frame budget: run slower than asked rather than stutter
+				acc = minf(acc, STEP)
+				break
 			acc -= STEP
+			steps_done += 1
 			sig.tick(STEP)
 			dacc += STEP
 			if dacc >= 1.0:

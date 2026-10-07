@@ -19,6 +19,7 @@ var sim := 0.0
 var draw := 0.0
 var n := 0
 var day0 := 0
+var steps0 := 0
 @export var status := ""  # readable through the editor's remote inspector while running
 @export var result_json := ""
 var beat := -1
@@ -63,6 +64,7 @@ func _process(_d: float) -> void:
 		phase = 1
 		t = 0.0
 		day0 = m.towns[0].day
+		steps0 = m.steps_done
 	elif phase == 1:
 		var vp := get_viewport().get_viewport_rid()
 		ft.append(dt)
@@ -103,7 +105,7 @@ func _report() -> void:
 		"ram_static_mb": Performance.get_monitor(Performance.MEMORY_STATIC) / 1048576.0,
 		"vram_mb": Performance.get_monitor(Performance.RENDER_VIDEO_MEM_USED) / 1048576.0,
 		"texture_mb": Performance.get_monitor(Performance.RENDER_TEXTURE_MEM_USED) / 1048576.0,
-		"days_advanced": m.towns[0].day - day0, "total_pop": pop, "pop_each": m.towns.map(func(c): return c.pop),
+		"effective_speed": (m.steps_done - steps0) * 0.1 / SAMPLE, "days_advanced": m.towns[0].day - day0, "total_pop": pop, "pop_each": m.towns.map(func(c): return c.pop),
 	}
 	result_json = JSON.stringify(r)
 	print("BENCHMARK_JSON " + result_json)
