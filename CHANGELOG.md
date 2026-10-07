@@ -18,7 +18,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 - HUD updates skip no-op theme overrides and throttle the Build menu button refresh.
 
 ### Added
-- Real armies (`client/scripts/military.gd`): barracks and bases train infantry, tanks and jets (radar allows jets) that cost coins and upkeep, deploy to the front at war, fight with hit points, range and damage, die in explosions, and decide the war: a wiped army plus a held border means surrender. Replaces the old dice-roll battles; war visuals now draw the real units (`tests/war.gd`).
+- Real armies (`client/scripts/military.gd`): barracks and bases train infantry, tanks and jets (radar allows jets) that cost coins and upkeep, deploy to the front at war, fight with hit points, range and damage, die in explosions, and decide the war: a wiped army plus a held border means surrender. Replaces the old dice-roll battles; war visuals now draw the real units (`tests/war.gd`). **T** toggles auto-training.
 - War visuals: towns at war show infantry, tanks (military bases) and aircraft (radar) on the front between them, a front line that the last battle's winner pushes forward, and blasts after each battle.
 - Mining: ore deposits (dark flecks), Mine zone (deposits only), Foundry (ore to metal; metal boosts factory goods), ore/metal stock and exports; Orchard (+50% crops) and Ranch (food without a mill) farm variants (`tests/mining.gd`).
 - Farm variants: Orchard (50% more crops) and Ranch (food without a mill).
