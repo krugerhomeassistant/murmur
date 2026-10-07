@@ -99,3 +99,12 @@ Goal: Murmur, a cozy interactive city-builder (Godot) with an optional Live Data
 - [ ] Split animated tiles (water, fans) from static ones so baked chunks refresh only when changed
 - [ ] Citizen/car/boat draw culling; overlay passes via chunks; _plan_* candidate scans
 - [ ] Profile real late-game save (pop 500+) with bench2
+
+## Backlog added 2026-10-07 (user ideas, do not lose)
+- [ ] Spectator / no-mayor mode: setup option where every town runs on its planner (human=false), no bankruptcy for the viewed town, speed up to 8x, camera follow/cycle towns, event ticker, optional auto-save. Watch towns grow and interact.
+- [ ] Mining and materials: mines (ore/stone/coal by terrain), metals and materials (iron, copper, stone, timber), smelter and workshop/factory chain feeding construction cost, goods and exports; mine pollution and safety events; trade value with neighbours.
+- [ ] Farm variants: grain, orchard, livestock, greenhouse (winter), fish farm; each with different yield, season, water need and art.
+- [ ] README performance table with measured numbers (fps, CPU/GPU ms, memory) for old vs new builds, method and hardware stated.
+- [ ] README screenshots; tag v0.2.0 with portable zip release.
+- [ ] Ferries; split animated tiles from static baked chunks; hand-play tuning at 500+ pop.
+- [ ] Install notes: godot-claude-skills live in .claude/skills (done).
