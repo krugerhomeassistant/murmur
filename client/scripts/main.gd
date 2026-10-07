@@ -560,7 +560,7 @@ func spectating() -> bool:
 
 func _process(delta: float) -> void:
 	delta = minf(delta, 0.25)
-	if started and follow and towns.size() > 1 and spectating():
+	if started and follow and towns.size() > 1 and spectating() and _lod() < 3:  # not while looking at the whole world
 		follow_t += delta
 		if follow_t > 30.0:
 			follow_t = 0.0
@@ -710,8 +710,10 @@ func _links(t: City) -> void:
 		var ok := Diplo.linked(t, d)
 		var war := Diplo.treaty(t, d) == "war"
 		var lc := Color("d9382a") if war else (Color("9fd3a0") if ok else Color("8a8a7a"))
-		var p0 := Vector2(t.terr.get_center()) * TILE
-		var p1 := origin(d) - origin(t) + Vector2(d.terr.get_center()) * TILE
+		var c0 := Vector2(t.terr.get_center())
+		var c1 := Vector2(d.terr.get_center())
+		var p0 := (Vector2(t.terr.end.x, c0.y) if k == 1 else Vector2(c0.x, t.terr.end.y)) * TILE  # edge to edge: the line crosses the gap, not the towns
+		var p1 := origin(d) - origin(t) + (Vector2(d.terr.position.x, c1.y) if k == 1 else Vector2(c1.x, d.terr.position.y)) * TILE
 		ci.draw_line(p0, p1, lc, (4.0 if ok else 2.0) / z)
 		ci.draw_string(font, (p0 + p1) * 0.5 + Vector2(-30, -6) / z, "WAR" if war else ("road" if ok else "no road"), HORIZONTAL_ALIGNMENT_CENTER, 60.0 / z, int(12.0 / z), lc)
 
