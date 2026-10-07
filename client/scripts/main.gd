@@ -405,7 +405,7 @@ func _chunks() -> void:
 		far_mode = lv
 		chunk_kick = true
 	var vp := get_viewport_rect().size / cam.zoom
-	var view := Rect2(cam.position - vp * 0.5, vp).grow(TILE)
+	var view := Rect2(cam.position - vp * 0.5, vp).grow(TILE * CH * 0.5)  # half a chunk of prefetch so panning never shows an unbaked chunk
 	var now := Time.get_ticks_msec()
 	var budget := 999 if chunk_kick else maxi(1, int(CHUNK_MS / maxf(chunk_ms, 0.2)))
 	var n := chunks.size()

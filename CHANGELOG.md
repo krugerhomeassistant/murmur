@@ -16,6 +16,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 - F3 overlay: fps, sim ms, draw ms, towns. `tests/bench*.gd`, `tests/region.gd` (8 towns), `tests/netcache.gd`, `tests/place.gd` for headless profiling.
 
 ### Fixed
+- Map chunks prefetch half a chunk beyond the view so panning at full zoom never shows an unbaked tile.
 - Top bar clock clipped ("Day 33 04:21 S") and the RCIO/utility strip overlapping the menu row.
 
 ## [0.1.0] - 2026-10-07
