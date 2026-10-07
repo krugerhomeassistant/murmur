@@ -26,7 +26,7 @@ const KIND := {
 }
 const DEF_W := {"inf": 2, "gren": 1, "snip": 1, "medic": 1, "ltank": 1, "tank": 2, "htank": 1, "art": 1, "aa": 1, "jet": 1, "fighter": 1, "bomber": 1, "heli": 1}
 const RANKS := ["Recruit", "Veteran", "Elite", "Legend"]
-const RANK_XP := [150.0, 450.0, 1000.0]  # damage dealt (or healed) to reach rank 1, 2, 3
+const RANK_XP := [250.0, 800.0, 2000.0]  # damage dealt (or healed) to reach rank 1, 2, 3
 const RANK_DMG := 0.15  # per rank
 const RANK_HP := 0.10
 static var booms: Array = []  # runtime only: explosions for the war visuals
