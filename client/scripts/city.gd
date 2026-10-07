@@ -239,8 +239,15 @@ var hist_pop: Array[float] = []
 var hist_t := 0
 
 
+static var _seq := 0  # per-town counter: staggers periodic stages so towns don't spike on the same step
+
 func _init(s: Signals) -> void:
 	sig = s
+	var k := _seq
+	_seq += 1
+	plan_t = k % 8
+	crime_t = k % 3
+	land_t = (k * 3) % 10
 	_rebuild_cells()
 	grid.resize(W * H)
 	lvl.resize(W * H)

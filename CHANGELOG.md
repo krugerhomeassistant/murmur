@@ -6,6 +6,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 ## [Unreleased]
 
 ### Changed
+- Performance: each town staggers its planner/crime/land cadence so periodic stages no longer coincide across towns (headless p99 step 9.8 to 8.5 ms; planner and land-value passes are still the largest single spikes).
 - Performance: standard benchmark (8 towns, 8x, all overlays; F9 or `--benchmark`): 77 to 128 fps, p99 46.5 to 23.4 ms, slow frames 426 to 28. Per-frame sim budget, at most 2 off-screen town batches per step, unchanged cell/coverage scans skipped, growth zone list, net flood split from demand.
 - Repo layout: living docs moved to `docs/`, added LICENSE (MIT), SECURITY, CODE_OF_CONDUCT, CLAUDE.md; launcher honours `GODOT` and PATH; README no longer claims unmeasured performance.
 - README: measured performance table (hardware, fps, CPU/GPU ms, memory).
