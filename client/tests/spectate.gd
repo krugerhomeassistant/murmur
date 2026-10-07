@@ -1,5 +1,5 @@
 extends SceneTree
-# Spectator: 3 towns, all human=false, run 3000 sim-seconds; none may end, all must grow.
+# Spectator: 3 towns, all human=false, run 3000 sim-seconds; none may end, all must grow and link their borders by real roads.
 func _init() -> void:
 	var sig := Signals.new()
 	var ts: Array[City] = []
@@ -22,5 +22,6 @@ func _init() -> void:
 	for t in ts:
 		assert(t.over == "", "%s ended: %s" % [t.town_name, t.over])
 		assert(t.pop > 20, "%s did not grow (pop %d)" % [t.town_name, t.pop])
+	assert(Diplo.linked(ts[0], ts[1]) and Diplo.linked(ts[1], ts[2]), "planner towns never built border roads: gates %s %s" % [str(ts[0].gate), str(ts[1].gate)])
 	print("SPECTATE_OK pops=%s" % str(ts.map(func(t: City) -> int: return t.pop)))
 	quit()

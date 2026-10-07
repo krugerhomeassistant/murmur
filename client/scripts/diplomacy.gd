@@ -52,10 +52,10 @@ static func side(a: City, b: City) -> int:
 
 
 static func _open(c: City, d: int) -> bool:
-	return not c.human or int(c.gate[d]) > 0
+	return int(c.gate[d]) > 0
 
 
-## Trade flows only between adjacent towns that both have a road reaching their shared border (neighbours run by the planner always do).
+## Trade flows only between adjacent towns that both have a road reaching their shared border (planner towns lay that road themselves).
 static func linked(a: City, b: City) -> bool:
 	var d := side(a, b)
 	return d >= 0 and _open(a, d) and _open(b, (d + 2) % 4)

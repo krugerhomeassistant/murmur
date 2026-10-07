@@ -136,6 +136,7 @@ var saving_for := 0.0  # treasury target for a needed service; pauses other spen
 var burning := 0
 var burned := 0  # buildings lost to fire, lifetime
 var plaza := -1
+var road_comp := PackedByteArray()  # 1 on every road tile of the town's biggest connected road network
 # territory + diplomacy
 var terr := Rect2i(OX, OY, START_W, START_H)
 var cells := PackedInt32Array()  # indices of owned cells: every whole-map loop runs over these
@@ -746,16 +747,6 @@ func _scan() -> void:
 			var c := cell(i)
 			if kind == "road":
 				roads += 1
-				var gx := i % W
-				var gy := i / W
-				if gy < terr.position.y + 3:
-					gate[0] += 1
-				if gx >= terr.end.x - 3:
-					gate[1] += 1
-				if gy >= terr.end.y - 3:
-					gate[2] += 1
-				if gx < terr.position.x + 3:
-					gate[3] += 1
 				if t == T.AVENUE:
 					avenues += 1
 				var dist := center(i).distance_to(Vector2(W, H) * 0.5)
@@ -821,6 +812,7 @@ func _scan() -> void:
 				bt[T.LIGHT].append(i)
 				_add_prov("light", cell(i), 0.7, 4)
 				up_svc += 0.1
+		_road_net()
 		jobs = shop_jobs + fac_jobs + off_jobs + farm_jobs + orch_jobs + ranch_jobs + mine_jobs + svc_jobs
 		res_mult = tier_sum / maxf(housing, 1)
 		scan_sig = sg
@@ -1642,11 +1634,106 @@ func _grow() -> void:
 		starts += 1
 
 
+## Border links only count roads joined to the town's biggest road network, not stray tiles near the edge.
+func _road_net() -> void:
+	road_comp.resize(W * H)
+	road_comp.fill(0)
+	gate = [0, 0, 0, 0]
+	var seen := PackedByteArray()
+	seen.resize(W * H)
+	var best: Array[int] = []
+	for s in cells:
+		if seen[s] == 1 or not is_road(grid[s]):
+			continue
+		var comp: Array[int] = [s]
+		seen[s] = 1
+		var h := 0
+		while h < comp.size():
+			var i := comp[h]
+			h += 1
+			var x := i % W
+			var y := i / W
+			if x > 0 and seen[i - 1] == 0 and is_road(grid[i - 1]):
+				seen[i - 1] = 1
+				comp.append(i - 1)
+			if x < W - 1 and seen[i + 1] == 0 and is_road(grid[i + 1]):
+				seen[i + 1] = 1
+				comp.append(i + 1)
+			if y > 0 and seen[i - W] == 0 and is_road(grid[i - W]):
+				seen[i - W] = 1
+				comp.append(i - W)
+			if y < H - 1 and seen[i + W] == 0 and is_road(grid[i + W]):
+				seen[i + W] = 1
+				comp.append(i + W)
+		if comp.size() > best.size():
+			best = comp
+	for i in best:
+		road_comp[i] = 1
+		var gx := i % W
+		var gy := i / W
+		if gy < terr.position.y + 3:
+			gate[0] += 1
+		if gx >= terr.end.x - 3:
+			gate[1] += 1
+		if gy >= terr.end.y - 3:
+			gate[2] += 1
+		if gx < terr.position.x + 3:
+			gate[3] += 1
+
+
+## Planner towns lay a road from their network to the border facing each neighbour, so links exist for real.
+func _plan_gate() -> bool:
+	for p in partners:
+		var k := Diplo.side(self, p)
+		if k < 0 or int(gate[k]) > 0:
+			continue
+		var tx := terr.position.x + terr.size.x / 2
+		var ty := terr.position.y + terr.size.y / 2
+		match k:
+			0:
+				ty = terr.position.y + 1
+			1:
+				tx = terr.end.x - 2
+			2:
+				ty = terr.end.y - 2
+			_:
+				tx = terr.position.x + 1
+		var from := -1
+		var bd := 1 << 30
+		for i in cells:
+			if road_comp[i] == 1:
+				var d := absi(i % W - tx) + absi(i / W - ty)
+				if d < bd:
+					bd = d
+					from = i
+		if from < 0:
+			continue
+		var x := from % W
+		var y := from / W
+		var laid := 0
+		while (x != tx or y != ty) and laid < 12:
+			if x != tx and (k == 1 or k == 3 or y == ty):
+				x += signi(tx - x)
+			else:
+				y += signi(ty - y)
+			if is_road(grid[y * W + x]):
+				continue
+			if not place(x, y, T.ROAD):
+				break
+			laid += 1
+		if laid > 0:
+			msg = "Planners laid a road toward %s." % p.town_name
+			return true
+	return false
+
+
 ## City planners: when needs arise the city lays plots, and new streets, by itself.
 func _planner() -> void:
 	if auto_policy:
 		_plan_policy()
 	if auto_mode == 0 or coins < 60.0:
+		return
+	if not human and _plan_gate():
 		return
 	if _plan_net():
 		return

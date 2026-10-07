@@ -56,7 +56,8 @@ func _ready() -> void:
 	if "--selfcheck" in OS.get_cmdline_user_args():
 		print(City.selfcheck())  # slow: run from game_eval otherwise
 	cam = Camera2D.new()
-	cam.position = Vector2(City.W, City.H) * TILE * 0.5
+	cam.position = _center(city)
+	city_view = city
 	add_child(cam)
 	mod = CanvasModulate.new()
 	add_child(mod)
@@ -216,7 +217,10 @@ func _begin() -> void:
 	tool = INSPECT
 	sel = null
 	sel_cell = -1
-	cam.position = Vector2(City.W, City.H) * TILE * 0.5
+	city_view = city
+	fit_prev = 0.0
+	glide = Vector2.INF
+	cam.position = _center(city)
 	hud.reset()
 
 
@@ -277,18 +281,39 @@ func found_town() -> void:
 		switch_town(towns.size() - 1)
 
 
+## M: zoom out to see the whole region live, press again to come back.
 func toggle_map() -> void:
 	chunk_kick = true
-	hud.rmap.visible = not hud.rmap.visible
+	if fit_prev > 0.0:
+		cam.zoom = Vector2.ONE * fit_prev
+		fit_prev = 0.0
+		glide = _center(city)
+		return
+	fit_prev = cam.zoom.x
+	var lo := Vector2(1e9, 1e9)
+	var hi := Vector2(-1e9, -1e9)
+	for t in towns:
+		lo = lo.min(origin(t))
+		hi = hi.max(origin(t) + Vector2(City.W, City.H) * TILE)
+	cam.zoom = Vector2.ONE * clampf(minf(get_viewport_rect().size.x / (hi.x - lo.x), get_viewport_rect().size.y / (hi.y - lo.y)) * 0.9, 0.03, 2.5)
+	glide = (lo + hi) * 0.5
 
 
+func _center(t: City) -> Vector2:
+	return origin(t) + Vector2(City.W, City.H) * TILE * 0.5
+
+
+## Glide the camera to a town (the viewed town follows the camera).
 func switch_town(i: int) -> void:
+	glide = _center(towns[i])
+
+
+func _set_city(t: City) -> void:
 	pin_cell = -1
-	chunk_kick = true
-	city = towns[i]
+	city = t
+	city_view = t
 	sel = null
 	sel_cell = -1
-	cam.position = Vector2(City.W, City.H) * TILE * 0.5
 	if hud != null:
 		hud.sync_town()
 
@@ -304,12 +329,15 @@ func _unhandled_input(e: InputEvent) -> void:
 		if e.button_index == MOUSE_BUTTON_LEFT:
 			_paint(true)
 		elif e.button_index == MOUSE_BUTTON_WHEEL_UP:
-			cam.zoom = (cam.zoom * 1.1).clamp(Vector2(0.5, 0.5), Vector2(2.5, 2.5))
+			cam.zoom = (cam.zoom * 1.1).clamp(Vector2(0.03, 0.03), Vector2(2.5, 2.5))
+			fit_prev = 0.0
 		elif e.button_index == MOUSE_BUTTON_WHEEL_DOWN:
-			cam.zoom = (cam.zoom / 1.1).clamp(Vector2(0.5, 0.5), Vector2(2.5, 2.5))
+			cam.zoom = (cam.zoom / 1.1).clamp(Vector2(0.03, 0.03), Vector2(2.5, 2.5))
+			fit_prev = 0.0
 	elif e is InputEventMouseMotion:
 		if e.button_mask & (MOUSE_BUTTON_MASK_RIGHT | MOUSE_BUTTON_MASK_MIDDLE):
 			cam.position -= e.relative / cam.zoom.x
+			glide = Vector2.INF
 		elif e.button_mask & MOUSE_BUTTON_MASK_LEFT:
 			_paint(false)
 	elif e is InputEventKey and e.pressed and not e.echo:
@@ -349,14 +377,17 @@ func _unhandled_input(e: InputEvent) -> void:
 
 
 func cell() -> Vector2i:
-	var m := get_global_mouse_position()
-	return Vector2i(floori(m.x / TILE), floori(m.y / TILE))
+	var m := mouse_tile()
+	return Vector2i(floori(m.x), floori(m.y))
 
 
 func _paint(click: bool) -> void:
 	_dirty_cell(cell())
 	var c := cell()
 	if not city.inside(c.x, c.y):
+		var other := _town_at(get_global_mouse_position())
+		if click and other != null and other != city:
+			switch_town(towns.find(other))  # click another town: glide there
 		return
 	match tool:
 		INSPECT:
@@ -387,7 +418,7 @@ var pin_cell := -1  # tile whose info card is pinned (click with the Inspect too
 
 
 func _select(c: Vector2i) -> void:
-	var m := get_global_mouse_position() / TILE
+	var m := mouse_tile()
 	var best: City.Citizen = null
 	var bd := 0.7
 	for z in city.citizens:
@@ -410,9 +441,14 @@ const CH := 16  # chunk size in tiles
 var chunk_hz := 4.0  # re-record rate of a visible chunk (animation smoothness)
 const CHUNK_MS := 3.0  # recording budget per frame; under load chunks refresh slower instead of dropping fps
 var chunk_ms := 3.0  # smoothed cost of recording one chunk
-var chunks: Array[TileLayer] = []
+const WORLD_ZOOM := 0.25  # below this: live thumbnails and names instead of tiles (level of detail 3)
+var layers := {}  # City -> TownLayer (chunks, thumbnail, overlay)
+var city_view: City  # the town the camera is over
+var glide := Vector2.INF  # camera target while gliding to a town
+var vis := {}  # City -> on screen last frame
+var town_rr := 0
+var fit_prev := 0.0  # zoom before 'fit world'
 var chunk_kick := true  # set when the map changes: re-record visible chunks now
-var chunk_rr := 0
 var bake_debt := 0.0
 var far_mode := 0
 var ci: CanvasItem = self  # target of the tile-drawing helpers (a chunk while one is being recorded)
@@ -422,56 +458,99 @@ var draw_ms := 0.0
 var last_sim := 0.0  # unsmoothed per-frame costs (ms) for spike analysis
 var last_chunk := 0.0
 var last_draw := 0.0
+var draw_acc := 0.0
 
 
 ## Marks the chunks around a tile for an immediate re-bake (edits, painting) without refreshing the whole view.
 func _dirty_cell(c: Vector2i) -> void:
-	if chunks.is_empty():
+	var L: TownLayer = layers.get(city)
+	if L == null or L.chunks.is_empty():
 		return
 	var per_row := ceili(City.W / float(CH))
 	for dy in range(-1, 2):
 		for dx in range(-1, 2):
 			var cx := (c.x + dx) / CH
 			var cy := (c.y + dy) / CH
-			if c.x + dx >= 0 and c.y + dy >= 0 and cx < per_row and cy * per_row + cx < chunks.size():
-				chunks[cy * per_row + cx].stamp = -1
+			if c.x + dx >= 0 and c.y + dy >= 0 and cx < per_row and cy * per_row + cx < L.chunks.size():
+				L.chunks[cy * per_row + cx].stamp = -1
 
 
 func _lod() -> int:
-	return 2 if cam.zoom.x < FAR_ZOOM else (1 if cam.zoom.x < MID_ZOOM else 0)
+	return 3 if cam.zoom.x < WORLD_ZOOM else (2 if cam.zoom.x < FAR_ZOOM else (1 if cam.zoom.x < MID_ZOOM else 0))
+
+
+## World position of a town's top-left corner: towns sit edge to edge on the region grid.
+func origin(t: City) -> Vector2:
+	return Vector2(t.gpos) * Vector2(City.W, City.H) * TILE
+
+
+func mouse_tile() -> Vector2:  # mouse in the viewed town's tile coordinates
+	return (get_global_mouse_position() - origin(city)) / TILE
+
+
+func _town_at(p: Vector2) -> City:
+	var g := Vector2i((p / (Vector2(City.W, City.H) * TILE)).floor())
+	for t in towns:
+		if t.gpos == g:
+			return t
+	return null
 
 
 func _chunks() -> void:
-	if chunks.is_empty():
-		for cy in ceili(City.H / float(CH)):
-			for cx in ceili(City.W / float(CH)):
-				var l := TileLayer.new()
-				l.m = self
-				l.x0 = cx * CH
-				l.y0 = cy * CH
-				l.x1 = mini(City.W, cx * CH + CH) - 1
-				l.y1 = mini(City.H, cy * CH + CH) - 1
-				l.show_behind_parent = true
-				add_child(l)
-				chunks.append(l)
+	for t in towns:
+		if not layers.has(t):
+			var L := TownLayer.new()
+			L.m = self
+			L.town = t
+			L.position = origin(t)
+			add_child(L)
+			L.build()
+			layers[t] = L
+	for t in layers.keys():
+		if not towns.has(t):
+			(layers[t] as TownLayer).queue_free()
+			layers.erase(t)
+			vis.erase(t)
 	var lv := _lod()
 	if lv != far_mode:
 		far_mode = lv
 		chunk_kick = true
 	var vp := get_viewport_rect().size / cam.zoom
-	var view := Rect2(cam.position - vp * 0.5, vp).grow(TILE * CH * 0.5)  # half a chunk of prefetch so panning never shows an unbaked chunk
+	var view := Rect2(cam.position - vp * 0.5, vp)
+	var pre := view.grow(TILE * CH * 0.5)  # half a chunk of prefetch so panning never shows an unbaked chunk
 	var now := Time.get_ticks_msec()
 	bake_debt = maxf(bake_debt - CHUNK_MS, 0.0)  # leaky budget: average spend stays under CHUNK_MS per frame
-	var n := chunks.size()
-	for k in n:
-		var l: TileLayer = chunks[(k + chunk_rr) % n]
-		var seen := view.intersects(Rect2(l.x0 * TILE, l.y0 * TILE, (l.x1 - l.x0 + 1) * TILE, (l.y1 - l.y0 + 1) * TILE))
-		l.visible = seen
-		if seen and (chunk_kick or l.stamp < 0 or (bake_debt < CHUNK_MS and now - l.stamp >= 1000.0 / chunk_hz)):
-			l.stamp = now
-			l.refresh(far_mode)
-			bake_debt += chunk_ms
-	chunk_rr = (chunk_rr + 3) % n
+	var nt := towns.size()
+	var thumbs := 0
+	for ti in nt:
+		var t: City = towns[(ti + town_rr) % nt]
+		var L: TownLayer = layers[t]
+		var o := origin(t)
+		var on := view.intersects(Rect2(o, Vector2(City.W, City.H) * TILE))
+		vis[t] = on
+		L.visible = on
+		L.cr.visible = on and lv < 3
+		L.spr_thumb.visible = on and lv == 3
+		if not on:
+			continue
+		L.queue_redraw()
+		if lv == 3:
+			if thumbs < 1 and (now - L.thumb_stamp >= 700 or chunk_kick):
+				thumbs += 1
+				L.thumb_stamp = now
+				L.refresh_thumb()
+			continue
+		var n := L.chunks.size()
+		for k in n:
+			var l: TileLayer = L.chunks[(k + L.rr) % n]
+			var seen := pre.intersects(Rect2(o + Vector2(l.x0, l.y0) * TILE, Vector2(l.x1 - l.x0 + 1, l.y1 - l.y0 + 1) * TILE))
+			l.visible = seen
+			if seen and (chunk_kick or l.stamp < 0 or (bake_debt < CHUNK_MS and now - l.stamp >= 1000.0 / chunk_hz)):
+				l.stamp = now
+				l.refresh(far_mode)
+				bake_debt += chunk_ms
+		L.rr = (L.rr + 3) % n
+	town_rr += 1
 	chunk_kick = false
 
 
@@ -491,7 +570,21 @@ func _process(delta: float) -> void:
 		float(Input.is_key_pressed(KEY_D) or Input.is_key_pressed(KEY_RIGHT)) - float(Input.is_key_pressed(KEY_A) or Input.is_key_pressed(KEY_LEFT)),
 		float(Input.is_key_pressed(KEY_S) or Input.is_key_pressed(KEY_DOWN)) - float(Input.is_key_pressed(KEY_W) or Input.is_key_pressed(KEY_UP)))
 	cam.position += v * 700.0 * delta / cam.zoom.x
-	cam.position = cam.position.clamp(Vector2.ZERO, Vector2(City.W, City.H) * TILE)
+	if v != Vector2.ZERO:
+		glide = Vector2.INF
+	if glide != Vector2.INF:
+		cam.position = cam.position.lerp(glide, 1.0 - exp(-6.0 * delta))
+		if cam.position.distance_to(glide) < 2.0:
+			glide = Vector2.INF
+	var lo := Vector2(1e9, 1e9)
+	var hi := Vector2(-1e9, -1e9)
+	for t in towns:
+		lo = lo.min(origin(t))
+		hi = hi.max(origin(t) + Vector2(City.W, City.H) * TILE)
+	cam.position = cam.position.clamp(lo, hi)
+	var under := _town_at(cam.position)
+	if under != null and under != city and started:
+		_set_city(under)
 	if started:
 		acc = minf(acc + delta * speed, STEP * 20.0)  # never owe more than 20 steps: slow down instead of freezing
 		while acc >= STEP:
@@ -513,7 +606,7 @@ func _process(delta: float) -> void:
 				else:  # off-screen towns tick in 0.5s batches and refresh slow analyses less often
 					t.lod = 3
 					t.pend += STEP
-					if t.pend >= 0.5 and batched < MAX_BATCH:  # at most MAX_BATCH towns per step so batches never pile into one 30 ms frame
+					if t.pend >= (0.25 if vis.get(t, false) else 0.5) and batched < MAX_BATCH:  # towns in view tick faster so they look alive  # at most MAX_BATCH towns per step so batches never pile into one 30 ms frame
 						t.tick(t.pend)
 						t.pend = 0.0
 						batched += 1
@@ -536,6 +629,9 @@ func _process(delta: float) -> void:
 	var b := 0.78 + 0.22 * cos((city.clock - 13.0) / 24.0 * TAU)
 	mod.color = Color(b, b, minf(1.0, b + 0.1))
 	city.flush()
+	last_draw = draw_acc  # overlay cost of last frame, summed over the towns drawn
+	draw_acc = 0.0
+	draw_ms = lerpf(draw_ms, last_draw, 0.1)
 	_chunks()
 	last_chunk = (Time.get_ticks_usec() - c0) / 1000.0
 	queue_redraw()
@@ -558,9 +654,9 @@ func _draw_borders(tr: Rect2i) -> void:
 		var txt := "%s %s  %s" % [arrows[k], p.town_name, "WAR" if war else ("linked" if linked else "needs a road to this border")]
 		var pos: Vector2 = mids[k] * TILE
 		var off: Vector2 = [Vector2(-170, -14), Vector2(10, 5), Vector2(-170, 28), Vector2(-350, 5)][k]
-		draw_string(font, pos + off, txt, HORIZONTAL_ALIGNMENT_LEFT, -1, 16, col)
+		ci.draw_string(font, pos + off, txt, HORIZONTAL_ALIGNMENT_LEFT, -1, 16, col)
 		if linked or war:
-			draw_rect(Rect2(pos - Vector2(4, 4) * 2, Vector2(16, 16)), col, false, 2.0)
+			ci.draw_rect(Rect2(pos - Vector2(4, 4) * 2, Vector2(16, 16)), col, false, 2.0)
 		if war:
 			# soldiers pacing along the front: yours in blue, theirs in red
 			var horiz := k == 0 or k == 2
@@ -574,16 +670,80 @@ func _draw_borders(tr: Rect2i) -> void:
 				var mine := s % 2 == 0
 				var adv := (sin(tm * 2.0 + s) * 0.5 + 0.5) * 22.0
 				var sp := base + n * (-(10.0 + adv) if mine else (10.0 + adv * 0.6))
-				draw_circle(sp, 6.0, Color("5b8de0") if mine else Color("d9382a"))
-				draw_line(sp, sp + n * (-8.0 if mine else 8.0), Color.WHITE, 1.5)
+				ci.draw_circle(sp, 6.0, Color("5b8de0") if mine else Color("d9382a"))
+				ci.draw_line(sp, sp + n * (-8.0 if mine else 8.0), Color.WHITE, 1.5)
 	for k in 4:
 		if int(city.gate[k]) > 0:
-			draw_circle(mids[k] * TILE, 6.0, Color("f2cf4a"))
+			ci.draw_circle(mids[k] * TILE, 6.0, Color("f2cf4a"))
 
-func _draw() -> void:
-	var d0 := Time.get_ticks_usec()
+func _draw() -> void:  # world level: weather and the links between towns; every town draws itself in its TownLayer
+	ci = self
 	var vp := get_viewport_rect().size / cam.zoom
-	var tl := cam.position - vp * 0.5
+	var view := Rect2(cam.position - vp * 0.5, vp)
+	if _lod() < 3:
+		match sig.weather():
+			"rain":
+				ci.draw_rect(view, Color(0.2, 0.25, 0.35, 0.22))
+				_rain(view, 120)
+			"storm":
+				ci.draw_rect(view, Color(0.1, 0.12, 0.2, 0.4))
+				_rain(view, 220)
+			"heatwave":
+				ci.draw_rect(view, Color(0.9, 0.55, 0.15, 0.14))
+			"snow":
+				ci.draw_rect(view, Color(0.85, 0.9, 1.0, 0.16))
+				_snow(view)
+			"fog":
+				ci.draw_rect(view, Color(0.8, 0.82, 0.85, 0.3))
+			"cold_snap":
+				ci.draw_rect(view, Color(0.6, 0.75, 1.0, 0.12))
+	_links()
+
+
+## Line between each pair of neighbouring towns: green = a road reaches the shared border, grey = not yet, red = war.
+func _links() -> void:
+	var font := ThemeDB.fallback_font
+	var z := cam.zoom.x
+	for c in towns:
+		for d in c.partners:
+			var k: int = Diplo.side(c, d)
+			if k != 1 and k != 2:
+				continue  # each pair once, from its west/north member
+			var ok := Diplo.linked(c, d)
+			var war := Diplo.treaty(c, d) == "war"
+			var lc := Color("d9382a") if war else (Color("9fd3a0") if ok else Color("6a6a60"))
+			var p0 := origin(c) + Vector2(c.terr.get_center()) * TILE
+			var p1 := origin(d) + Vector2(d.terr.get_center()) * TILE
+			ci.draw_line(p0, p1, lc, (4.0 if ok else 2.0) / z)
+			ci.draw_string(font, (p0 + p1) * 0.5 + Vector2(-30, -6) / z, "WAR" if war else ("road" if ok else "no road"), HORIZONTAL_ALIGNMENT_CENTER, 60.0 / z, int(12.0 / z), lc)
+
+
+func _town_col(c: City) -> Color:
+	if c == city:
+		return Color("f2cf4a")
+	match Diplo.treaty(city, c):
+		"war":
+			return Color("d9382a")
+		"alliance":
+			return Color("6fd0e8")
+		"pact":
+			return Color("9fd3a0")
+		"embargo":
+			return Color("e08a3a")
+	var r := Diplo.avg(city, c)
+	return Color("9fd3a0") if r > 0.2 else (Color("e07a5f") if r < -0.2 else Color("9aa88f"))
+
+
+## Everything live in one town that is not baked into its chunks: overlays, fire, lights, traffic, people, rim, cursor.
+func draw_overlay(node: CanvasItem, t: City) -> void:
+	var d0 := Time.get_ticks_usec()
+	var keep := city
+	city = t
+	ci = node
+	var o := origin(t)
+	var lod := _lod()
+	var vp := get_viewport_rect().size / cam.zoom
+	var tl := cam.position - vp * 0.5 - o
 	var x0 := maxi(0, floori(tl.x / TILE))
 	var y0 := maxi(0, floori(tl.y / TILE))
 	var x1 := mini(City.W - 1, floori((tl.x + vp.x) / TILE))
@@ -591,12 +751,25 @@ func _draw() -> void:
 	var night := city.clock >= 19.0 or city.clock < 6.0
 	var tr := city.terr
 	var dim := Color(0.05, 0.08, 0.04, 0.42)
-	draw_rect(Rect2(0, 0, City.W * TILE, tr.position.y * TILE), dim)
-	draw_rect(Rect2(0, tr.end.y * TILE, City.W * TILE, (City.H - tr.end.y) * TILE), dim)
-	draw_rect(Rect2(0, tr.position.y * TILE, tr.position.x * TILE, tr.size.y * TILE), dim)
-	draw_rect(Rect2(tr.end.x * TILE, tr.position.y * TILE, (City.W - tr.end.x) * TILE, tr.size.y * TILE), dim)
-	draw_rect(Rect2(Vector2(tr.position) * TILE, Vector2(tr.size) * TILE), Color(1.0, 0.82, 0.4, 0.5), false, 3.0)
-	_draw_borders(tr)
+	ci.draw_rect(Rect2(0, 0, City.W * TILE, tr.position.y * TILE), dim)
+	ci.draw_rect(Rect2(0, tr.end.y * TILE, City.W * TILE, (City.H - tr.end.y) * TILE), dim)
+	ci.draw_rect(Rect2(0, tr.position.y * TILE, tr.position.x * TILE, tr.size.y * TILE), dim)
+	ci.draw_rect(Rect2(tr.end.x * TILE, tr.position.y * TILE, (City.W - tr.end.x) * TILE, tr.size.y * TILE), dim)
+	var rim := Rect2(Vector2(tr.position) * TILE, Vector2(tr.size) * TILE)
+	ci.draw_rect(rim, _town_col(t) if lod == 3 else Color(1.0, 0.82, 0.4, 0.5), false, 3.0 / cam.zoom.x if lod == 3 else 3.0)
+	if lod == 3:  # world view: just the name and the rim
+		var fs := int(22.0 / cam.zoom.x)
+		var lab := "%s  pop %d" % [t.town_name, t.pop]
+		var font0 := ThemeDB.fallback_font
+		var lp := rim.get_center() - Vector2(font0.get_string_size(lab, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x * 0.5, 0)
+		ci.draw_string(font0, lp + Vector2(2, 2) / cam.zoom.x, lab, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Color(0, 0, 0, 0.8))
+		ci.draw_string(font0, lp, lab, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Color("f3e7cf"))
+		city = keep
+		ci = self
+		draw_acc += (Time.get_ticks_usec() - d0) / 1000.0
+		return
+	if t == city_view:
+		_draw_borders(tr)
 	_boats()
 	if overlay != "":
 		_overlay(x0, y0, x1, y1)
@@ -604,105 +777,91 @@ func _draw() -> void:
 	for i in city.flames:
 		if city.burn[i] > 0.0:
 			var fr := Rect2((i % City.W) * TILE, floori(i / float(City.W)) * TILE, TILE, TILE).grow(-3)
-			draw_rect(fr, Color(1.0, 0.45, 0.1, 0.6 + 0.25 * sin(tt * 14.0 + i)))
-			draw_circle(fr.get_center() + Vector2(sin(tt * 9.0 + i) * 3.0, -6), 4.0, Color(1, 0.85, 0.2, 0.8))
+			ci.draw_rect(fr, Color(1.0, 0.45, 0.1, 0.6 + 0.25 * sin(tt * 14.0 + i)))
+			ci.draw_circle(fr.get_center() + Vector2(sin(tt * 9.0 + i) * 3.0, -6), 4.0, Color(1, 0.85, 0.2, 0.8))
 
 	for k in city.offline:
 		var oc := City.cell(k)
-		draw_rect(Rect2(oc.x * TILE, oc.y * TILE, TILE, TILE), Color(0, 0, 0, 0.5))
-		draw_string(ThemeDB.fallback_font, Vector2(oc.x * TILE, oc.y * TILE + 20), "OFF", HORIZONTAL_ALIGNMENT_CENTER, TILE, 11, Color("f2cf4a"))
-	if night:
-		for li in city.bt.get(T.LIGHT, []):
-			draw_circle(City.center(li) * TILE, TILE * 1.6, Color(1.0, 0.9, 0.5, 0.12))
-	for li in city.bt.get(T.LIGHT, []):
-		var lc := City.center(li) * TILE + Vector2(9, -9)
-		draw_line(lc + Vector2(0, 8), lc, Color("555555"), 2.0)
-		draw_circle(lc, 3.0, Color("ffe9a0") if night else Color("d8c88a"))
-	for b in city.buses:
-		var bp: Vector2 = b["pos"]
-		var bd: Vector2 = b["dir"]
-		draw_set_transform(bp * TILE, bd.angle())
-		draw_rect(Rect2(-9, -4, 18, 8), Color("f2c14e"))
-		for k in 3:
-			draw_rect(Rect2(-6 + k * 5, -3, 3, 2), Color("3a4a5a"))
+		ci.draw_rect(Rect2(oc.x * TILE, oc.y * TILE, TILE, TILE), Color(0, 0, 0, 0.5))
+		ci.draw_string(ThemeDB.fallback_font, Vector2(oc.x * TILE, oc.y * TILE + 20), "OFF", HORIZONTAL_ALIGNMENT_CENTER, TILE, 11, Color("f2cf4a"))
+	if lod < 2:  # cars, people and lamps are sub-pixel when zoomed out
 		if night:
-			draw_circle(Vector2(9, -2), 1.5, Color("fff3b0"))
-			draw_circle(Vector2(9, 2), 1.5, Color("fff3b0"))
-		draw_set_transform(Vector2.ZERO, 0.0)
-	for c in city.citizens:
-		if c.car and c.path.size() > 0 and c != sel:
-			var dv := c.path[mini(c.pi, c.path.size() - 1)] - c.pos
-			draw_set_transform(c.pos * TILE, dv.angle() if dv.length() > 0.01 else 0.0)
-			draw_rect(Rect2(-5, -3, 10, 6), CAR_COLS[c.id % CAR_COLS.size()])
-			draw_rect(Rect2(0, -2, 3, 4), Color(0.6, 0.75, 0.85))
+			for li in city.bt.get(T.LIGHT, []):
+				ci.draw_circle(City.center(li) * TILE, TILE * 1.6, Color(1.0, 0.9, 0.5, 0.12))
+		for li in city.bt.get(T.LIGHT, []):
+			var lc := City.center(li) * TILE + Vector2(9, -9)
+			ci.draw_line(lc + Vector2(0, 8), lc, Color("555555"), 2.0)
+			ci.draw_circle(lc, 3.0, Color("ffe9a0") if night else Color("d8c88a"))
+		for b in city.buses:
+			var bp: Vector2 = b["pos"]
+			var bd: Vector2 = b["dir"]
+			ci.draw_set_transform(bp * TILE, bd.angle())
+			ci.draw_rect(Rect2(-9, -4, 18, 8), Color("f2c14e"))
+			for k in 3:
+				ci.draw_rect(Rect2(-6 + k * 5, -3, 3, 2), Color("3a4a5a"))
 			if night:
-				draw_circle(Vector2(6, -2), 1.2, Color("fff3b0"))
-				draw_circle(Vector2(6, 2), 1.2, Color("fff3b0"))
-			draw_set_transform(Vector2.ZERO, 0.0)
-			continue
-		if c.path.size() == 0 and c != sel:
-			continue
-		var p := c.pos * TILE
-		draw_circle(p + Vector2(0, 1.5), 4.2, Color(0, 0, 0, 0.3))
-		var col := Color("f3e7cf") if c.mood > 0.6 else (Color("e0a458") if c.mood > 0.35 else Color("c0392b"))
-		if c.sick > 0.0:
-			col = Color("8fc46a")
-		draw_circle(p, 3.4, col)
-		if c.protesting and city.protest:
-			draw_line(p, p + Vector2(0, -9), Color.WHITE, 1.0)
-			draw_rect(Rect2(p + Vector2(-4, -14), Vector2(8, 5)), Color("f3e7cf"))
-		if c == sel:
-			draw_arc(p, 8.0, 0.0, TAU, 20, Color.WHITE, 1.5)
-	var font := ThemeDB.fallback_font
-	for c in city.citizens:
-		if c.bubble_t <= 0.0:
-			continue
-		var p := c.pos * TILE + Vector2(0, -14)
-		var sz := font.get_string_size(c.bubble, HORIZONTAL_ALIGNMENT_LEFT, -1, 11)
-		draw_rect(Rect2(p + Vector2(-sz.x * 0.5 - 4, -sz.y), sz + Vector2(8, 4)), Color(0.08, 0.1, 0.09, 0.85))
-		draw_string(font, p + Vector2(-sz.x * 0.5, -2), c.bubble, HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color("f3e7cf"))
+				ci.draw_circle(Vector2(9, -2), 1.5, Color("fff3b0"))
+				ci.draw_circle(Vector2(9, 2), 1.5, Color("fff3b0"))
+			ci.draw_set_transform(Vector2.ZERO, 0.0)
+		for c in city.citizens:
+			if c.car and c.path.size() > 0 and c != sel:
+				var dv := c.path[mini(c.pi, c.path.size() - 1)] - c.pos
+				ci.draw_set_transform(c.pos * TILE, dv.angle() if dv.length() > 0.01 else 0.0)
+				ci.draw_rect(Rect2(-5, -3, 10, 6), CAR_COLS[c.id % CAR_COLS.size()])
+				ci.draw_rect(Rect2(0, -2, 3, 4), Color(0.6, 0.75, 0.85))
+				if night:
+					ci.draw_circle(Vector2(6, -2), 1.2, Color("fff3b0"))
+					ci.draw_circle(Vector2(6, 2), 1.2, Color("fff3b0"))
+				ci.draw_set_transform(Vector2.ZERO, 0.0)
+				continue
+			if c.path.size() == 0 and c != sel:
+				continue
+			var p := c.pos * TILE
+			ci.draw_circle(p + Vector2(0, 1.5), 4.2, Color(0, 0, 0, 0.3))
+			var col := Color("f3e7cf") if c.mood > 0.6 else (Color("e0a458") if c.mood > 0.35 else Color("c0392b"))
+			if c.sick > 0.0:
+				col = Color("8fc46a")
+			ci.draw_circle(p, 3.4, col)
+			if c.protesting and city.protest:
+				ci.draw_line(p, p + Vector2(0, -9), Color.WHITE, 1.0)
+				ci.draw_rect(Rect2(p + Vector2(-4, -14), Vector2(8, 5)), Color("f3e7cf"))
+			if c == sel:
+				ci.draw_arc(p, 8.0, 0.0, TAU, 20, Color.WHITE, 1.5)
+		var font := ThemeDB.fallback_font
+		for c in city.citizens:
+			if c.bubble_t <= 0.0:
+				continue
+			var p := c.pos * TILE + Vector2(0, -14)
+			var sz := font.get_string_size(c.bubble, HORIZONTAL_ALIGNMENT_LEFT, -1, 11)
+			ci.draw_rect(Rect2(p + Vector2(-sz.x * 0.5 - 4, -sz.y), sz + Vector2(8, 4)), Color(0.08, 0.1, 0.09, 0.85))
+			ci.draw_string(font, p + Vector2(-sz.x * 0.5, -2), c.bubble, HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color("f3e7cf"))
 
-	var view := Rect2(tl, vp)
-	match sig.weather():
-		"rain":
-			draw_rect(view, Color(0.2, 0.25, 0.35, 0.22))
-			_rain(view, 120)
-		"storm":
-			draw_rect(view, Color(0.1, 0.12, 0.2, 0.4))
-			_rain(view, 220)
-		"heatwave":
-			draw_rect(view, Color(0.9, 0.55, 0.15, 0.14))
-		"snow":
-			draw_rect(view, Color(0.85, 0.9, 1.0, 0.16))
-			_snow(view)
-		"fog":
-			draw_rect(view, Color(0.8, 0.82, 0.85, 0.3))
-		"cold_snap":
-			draw_rect(view, Color(0.6, 0.75, 1.0, 0.12))
 	if not city.twister.is_empty():
 		var tp: Vector2 = city.twister["pos"] * TILE
 		for k in 6:
 			var a := tt * 9.0 + k * 1.05
-			draw_arc(tp + Vector2(sin(tt * 3.0 + k) * 3.0, -k * 7.0), 8.0 + k * 4.0, a, a + 4.0, 12, Color(0.35, 0.35, 0.38, 0.75), 3.0)
-	var rim := Rect2(Vector2(tr.position) * TILE, Vector2(tr.size) * TILE)
+			ci.draw_arc(tp + Vector2(sin(tt * 3.0 + k) * 3.0, -k * 7.0), 8.0 + k * 4.0, a, a + 4.0, 12, Color(0.35, 0.35, 0.38, 0.75), 3.0)
 	if city.protest:
-		draw_rect(rim, Color("b03a2e"), false, 4.0)
+		ci.draw_rect(rim, Color("b03a2e"), false, 4.0)
 
-	var hc := cell()
-	if city.inside(hc.x, hc.y):
-		draw_rect(Rect2(hc.x * TILE, hc.y * TILE, TILE, TILE), Color(1, 1, 1, 0.9), false, 2.0)
-		if tool < INSPECT and Catalog.DEFS.has(tool) and Catalog.DEFS[tool].has("r"):
-			draw_circle(City.center(hc.y * City.W + hc.x) * TILE, float(Catalog.DEFS[tool]["r"]) * TILE * 0.9, Color(1, 1, 1, 0.12))
-	if sel_cell >= 0 and sel == null:
-		var sc := City.cell(sel_cell)
-		draw_rect(Rect2(sc.x * TILE, sc.y * TILE, TILE, TILE), Color("ffd166"), false, 2.0)
-	last_draw = (Time.get_ticks_usec() - d0) / 1000.0
-	draw_ms = lerpf(draw_ms, last_draw, 0.1)
-
+	if t == city_view:
+		var hc := cell()
+		if city.inside(hc.x, hc.y):
+			ci.draw_rect(Rect2(hc.x * TILE, hc.y * TILE, TILE, TILE), Color(1, 1, 1, 0.9), false, 2.0)
+			if tool < INSPECT and Catalog.DEFS.has(tool) and Catalog.DEFS[tool].has("r"):
+				ci.draw_circle(City.center(hc.y * City.W + hc.x) * TILE, float(Catalog.DEFS[tool]["r"]) * TILE * 0.9, Color(1, 1, 1, 0.12))
+		if sel_cell >= 0 and sel == null:
+			var sc := City.cell(sel_cell)
+			ci.draw_rect(Rect2(sc.x * TILE, sc.y * TILE, TILE, TILE), Color("ffd166"), false, 2.0)
+	city = keep
+	ci = self
+	draw_acc += (Time.get_ticks_usec() - d0) / 1000.0
 
 ## Static tile layer for one chunk (grass, ground, water, roads, buildings, wires). Re-recorded by _chunks(), not every frame.
-func draw_chunk(c_item: CanvasItem, x0: int, y0: int, x1: int, y1: int) -> void:
+func draw_chunk(c_item: CanvasItem, t_: City, x0: int, y0: int, x1: int, y1: int) -> void:
 	var c0 := Time.get_ticks_usec()
+	var keep := city
+	city = t_  # the helpers below read `city`: point it at the town being drawn
 	ci = c_item
 	var grass: Color = Civics.SEASONS[city.season]["grass"]
 	var grass_b := grass.darkened(0.05)
@@ -772,6 +931,7 @@ func draw_chunk(c_item: CanvasItem, x0: int, y0: int, x1: int, y1: int) -> void:
 	if lod == 0:
 		_nets(x0, y0, x1, y1)
 	ci = self
+	city = keep
 	chunk_ms = lerpf(chunk_ms, (Time.get_ticks_usec() - c0) / 1000.0, 0.1)
 
 
@@ -784,35 +944,35 @@ func _overlay(x0: int, y0: int, x1: int, y1: int) -> void:
 			if overlay == "pollution":
 				var p := clampf(city.poll_at(Vector2i(x, y)) * 2.0, 0.0, 1.0)
 				if p > 0.02:
-					draw_rect(r, Color(0.45, 0.3, 0.1, p * 0.6))
+					ci.draw_rect(r, Color(0.45, 0.3, 0.1, p * 0.6))
 			elif overlay == "land":
 				var lv: float = city.land_val[i]
-				draw_rect(r, Color(1.0 - lv, lv, 0.2, 0.5))
+				ci.draw_rect(r, Color(1.0 - lv, lv, 0.2, 0.5))
 			elif overlay == "traffic":
 				if city.is_road(city.grid[i]):
 					var tv := clampf(city.traffic[i] / (8.0 if city.grid[i] == T.AVENUE else 3.0), 0.0, 1.5)
-					draw_rect(r, Color(tv, 1.0 - minf(tv, 1.0), 0.1, 0.55))
+					ci.draw_rect(r, Color(tv, 1.0 - minf(tv, 1.0), 0.1, 0.55))
 			elif overlay == "crime":
 				if city.crime_val[i] > 0.0:
-					draw_rect(r, Color(0.85, 0.1, 0.1, city.crime_val[i] * 0.7))
+					ci.draw_rect(r, Color(0.85, 0.1, 0.1, city.crime_val[i] * 0.7))
 			elif overlay == "all":
 				var p := clampf(city.poll_at(Vector2i(x, y)) * 2.0, 0.0, 1.0)
 				if p > 0.05:
-					draw_rect(r, Color(0.45, 0.3, 0.1, p * 0.4))
+					ci.draw_rect(r, Color(0.45, 0.3, 0.1, p * 0.4))
 				if city.crime_val[i] > 0.0:
-					draw_rect(r, Color(0.85, 0.1, 0.1, city.crime_val[i] * 0.4))
+					ci.draw_rect(r, Color(0.85, 0.1, 0.1, city.crime_val[i] * 0.4))
 				var t: int = city.grid[i]
 				if t != T.EMPTY and not city.is_road(t):
 					var k := 0
 					for mk in ALL_DOTS:
 						var ok := city.raw_cov(Vector2i(x, y), mk) > 0.3
-						draw_rect(Rect2(x * TILE + 2 + (k % 3) * 9, y * TILE + 2 + (k / 3) * 5, 7, 4), Color("5fbf6a") if ok else Color("d9534f"))
+						ci.draw_rect(Rect2(x * TILE + 2 + (k % 3) * 9, y * TILE + 2 + (k / 3) * 5, 7, 4), Color("5fbf6a") if ok else Color("d9534f"))
 						k += 1
 					if city.burn[i] > 0.0:
-						draw_string(font, r.position + Vector2(0, 30), "FIRE", HORIZONTAL_ALIGNMENT_CENTER, TILE, 9, Color.WHITE)
+						ci.draw_string(font, r.position + Vector2(0, 30), "FIRE", HORIZONTAL_ALIGNMENT_CENTER, TILE, 9, Color.WHITE)
 			else:
 				var c := clampf(city.raw_cov(Vector2i(x, y), overlay), 0.0, 1.0)
-				draw_rect(r, Color(0.2, 0.8, 0.4, c * 0.45) if c > 0.0 else Color(0.8, 0.2, 0.2, 0.18))
+				ci.draw_rect(r, Color(0.2, 0.8, 0.4, c * 0.45) if c > 0.0 else Color(0.8, 0.2, 0.2, 0.18))
 
 
 func _building(r: Rect2, d: Dictionary, lv: int, ok: bool, night: bool) -> void:
@@ -866,7 +1026,7 @@ func _rain(area: Rect2, n: int) -> void:
 	for i in n:
 		var x := area.position.x + fmod(i * 97.0 + 13.0, area.size.x)
 		var y := area.position.y + fmod(i * 53.0 + t * 380.0, area.size.y)
-		draw_line(Vector2(x, y), Vector2(x - 3, y + 10), Color(0.8, 0.85, 1.0, 0.5), 1.0)
+		ci.draw_line(Vector2(x, y), Vector2(x - 3, y + 10), Color(0.8, 0.85, 1.0, 0.5), 1.0)
 
 
 func _snow(area: Rect2) -> void:
@@ -874,7 +1034,7 @@ func _snow(area: Rect2) -> void:
 	for i in 100:
 		var x := area.position.x + fmod(i * 97.0 + 13.0 + sin(t + i) * 12.0, area.size.x)
 		var y := area.position.y + fmod(i * 53.0 + t * 60.0, area.size.y)
-		draw_circle(Vector2(x, y), 1.6, Color(1, 1, 1, 0.8))
+		ci.draw_circle(Vector2(x, y), 1.6, Color(1, 1, 1, 0.8))
 
 
 func _zone(r: Rect2, t: int, i: int) -> void:
@@ -983,7 +1143,7 @@ func _boats() -> void:
 			var s := lo + (hi - lo) * (0.5 + 0.5 * sin(ph)) + 0.5
 			var dir := 1.0 if cos(ph) >= 0.0 else -1.0
 			var pos := (Vector2(w.x + 0.5, w.y + s) if vert else Vector2(w.x + s, w.y + 0.5)) * TILE
-			Art.boat(self, pos, vert, dir, id == T.NAVYARD)
+			Art.boat(ci, pos, vert, dir, id == T.NAVYARD)
 
 
 func _nets(x0: int, y0: int, x1: int, y1: int) -> void:

@@ -116,6 +116,8 @@ Goal: Murmur, a cozy interactive city-builder (Godot) with an optional Live Data
 - [ ] Far-zoom LOD 3: per-town live thumbnail textures + town name labels (cheap at 8 towns)
 - [ ] Visible off-screen towns tick faster (0.25 s batches) so they look alive
 - [ ] M = fit-the-whole-world toggle; update README controls, WIKI, benchmark second scenario (world view)
+- [ ] Links must be real: a border link needs a road in the town's biggest connected road network reaching the border; planner towns lay that road themselves (`_plan_gate`); no more "linked" without roads (user screenshot, spectator mode).
+- [ ] WAR VISUALS (user asked "no armies, tanks, planes, boats fighting?"): war is currently abstract (Diplo._battle every 20-35 s, soldier dots only at your border). Add visible armies marching across the shared border in the world view, tanks/planes by military tier, naval units on shared rivers (navy yards exist), battle effects and damage to buildings, so a declared war is something you see.
 - Do NOT drop the other backlog above (mining planner, v0.2.0, screenshots, lint in CI, spike work, threading, ferries, farm variants); this sits alongside it.
 
 ## Priority notes (user, 2026-10-07)

@@ -71,7 +71,6 @@ var loans_l: Label
 var dipl_box: VBoxContainer
 var dipl_key := ""
 var guide: Guide
-var rmap: RegionMap
 var dipl_ui := {}
 var terr_l: Label
 var exp_btns: Array = []
@@ -114,9 +113,6 @@ func _ready() -> void:
     perf_l.visible = false
     perf_l.mouse_filter = Control.MOUSE_FILTER_IGNORE
     add_child(perf_l)
-    rmap = RegionMap.new()
-    rmap.m = m
-    add_child(rmap)
     guide = Guide.new()
     guide.m = m
     guide.visible = false
@@ -286,7 +282,7 @@ func _top() -> void:
         for k in m.towns.size():
             tp.add_item("%s%s  (pop %d)" % ["> " if m.towns[k] == m.city else "", m.towns[k].town_name, m.towns[k].pop], k)
         tp.add_separator()
-        tp.add_item("Region map (M)", 98)
+        tp.add_item("Whole world (M)", 98)
         tp.add_item("Found a new town ($%d)" % int(m.FOUND_COST), 99))
     tp.id_pressed.connect(func(id: int) -> void:
         if id == 99:
@@ -749,7 +745,7 @@ func _insp_text() -> String:
 ## Card pinned by clicking a tile (Inspect tool); stays put and updates live until you click elsewhere.
 func _update_pin() -> void:
     var txt := ""
-    if m.pin_cell >= 0 and m.started and not rmap.visible:
+    if m.pin_cell >= 0 and m.started:
         txt = _maptip_text(m.pin_cell % City.W, m.pin_cell / City.W)
     pintip.visible = txt != ""
     if txt == "":
@@ -769,8 +765,8 @@ func _update_maptip() -> void:
     _update_pin()
     var h := get_viewport().gui_get_hovered_control()
     var txt := ""
-    if (h == null or h == self) and m.started and not rmap.visible:
-        var mp: Vector2 = m.get_global_mouse_position() / m.TILE
+    if (h == null or h == self) and m.started:
+        var mp: Vector2 = m.mouse_tile()
         if m.pin_cell != int(floorf(mp.y)) * City.W + int(floorf(mp.x)):
             txt = _maptip_text(int(floorf(mp.x)), int(floorf(mp.y)))
     maptip.visible = txt != ""
