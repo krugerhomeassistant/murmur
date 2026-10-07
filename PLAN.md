@@ -108,3 +108,4 @@ Goal: Murmur, a cozy interactive city-builder (Godot) with an optional Live Data
 - [ ] README screenshots; tag v0.2.0 with portable zip release.
 - [ ] Ferries; split animated tiles from static baked chunks; hand-play tuning at 500+ pop.
 - [ ] Install notes: godot-claude-skills live in .claude/skills (done).
+- [ ] Threading (perf): no threads today. Tick off-screen towns on WorkerThreadPool with a start-of-tick snapshot of partner net_own/net_dem/treaty state (the only cross-town reads); join before Diplo.second. Keep only if the 6-8 town benchmark improves.
