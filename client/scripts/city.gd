@@ -1310,6 +1310,34 @@ func _destroy(n: int) -> void:
 	_scan()
 
 
+## Raid or bomb damage: the n buildings nearest the attacker's border are destroyed, each leaving a blast and smoke in the world view.
+func strike(n: int, from: City) -> void:
+	var d := Diplo.side(self, from)
+	var opts := _burnables()
+	opts.shuffle()
+	opts.sort_custom(func(i: int, j: int) -> bool: return _edge_dist(i, d) < _edge_dist(j, d))
+	for k in mini(n, opts.size()):
+		var i: int = opts[mini(k + rng.randi_range(0, 2), opts.size() - 1)]
+		Military.blasts.append({"t": town_name, "p": center(i), "ts": Time.get_ticks_msec()})
+		_ruin(i)
+	_scan()
+
+
+func _edge_dist(i: int, d: int) -> int:
+	var x := i % W
+	var y := i / W
+	match d:
+		0:
+			return y - terr.position.y
+		1:
+			return terr.end.x - x
+		2:
+			return terr.end.y - y
+		3:
+			return x - terr.position.x
+	return 0
+
+
 ## Destroys a building. rec: remember it for a recovery decision. Insurance pays out either way.
 func _ruin(i: int, rec := true) -> void:
 	if rec:
