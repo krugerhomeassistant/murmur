@@ -2199,22 +2199,42 @@ func _land() -> void:
 	var tot := 0.0
 	var n := 0
 	land_val.fill(0.45)
-	var cm := {}  # per-metric coverage modifier, looked up once instead of per cell
-	for k in ["leisure", "edu", "health", "culture", "transit", "power", "water"]:
-		cm[k] = mod("cov_" + k)
+	var ks := ["leisure", "edu", "health", "culture", "transit", "power", "water"]
+	var wt := [0.12, 0.08, 0.08, 0.06, 0.06, 0.04, 0.04]
+	var cm: Array[float] = []
+	var covs: Array = []  # per-metric coverage field: net_val array, else baked once from prov
+	for k in ks:
+		cm.append(mod("cov_" + k))
+		if net_val.has(k):
+			covs.append(net_val[k])
+		else:
+			var a := PackedFloat32Array()
+			a.resize(W * H)
+			for p in prov.get(k, []):
+				for y in range(maxi(p[1] - p[3], 0), mini(p[1] + p[3], H - 1) + 1):
+					var r: int = p[3] - absi(p[1] - y)
+					for x in range(maxi(p[0] - r, 0), mini(p[0] + r, W - 1) + 1):
+						a[y * W + x] += p[2]
+			covs.append(a)
+	var pol := PackedFloat32Array()  # pollution field, splatted once instead of per cell x polluter
+	pol.resize(W * H)
+	for p in polluters:
+		for y in range(maxi(p[1] - p[3], 0), mini(p[1] + p[3], H - 1) + 1):
+			var r: int = p[3] - absi(p[1] - y)
+			for x in range(maxi(p[0] - r, 0), mini(p[0] + r, W - 1) + 1):
+				pol[y * W + x] += p[2] * (1.0 - float(absi(p[0] - x) + absi(p[1] - y)) / (p[3] + 1.0))
 	var base := mood * 0.1 - 0.2 * crime
 	for i in cells:
-		if grid[i] == T.EMPTY and not _touch(i):
+		var g: int = grid[i]
+		if g == T.EMPTY and not _touch(i):
 			continue
-		var c := cell(i)
-		var v := 0.5 + base
-		v += 0.12 * clampf(raw_cov(c, "leisure") + cm["leisure"], 0.0, 1.0) + 0.08 * clampf(raw_cov(c, "edu") + cm["edu"], 0.0, 1.0) + 0.08 * clampf(raw_cov(c, "health") + cm["health"], 0.0, 1.0)
-		v += 0.06 * clampf(raw_cov(c, "culture") + cm["culture"], 0.0, 1.0) + 0.06 * clampf(raw_cov(c, "transit") + cm["transit"], 0.0, 1.0)
-		v += 0.04 * clampf(raw_cov(c, "power") + cm["power"], 0.0, 1.0) + 0.04 * clampf(raw_cov(c, "water") + cm["water"], 0.0, 1.0) - 0.6 * poll_at(c)
-		if grid[i] != T.EMPTY and not is_road(grid[i]):
-			v -= float(Catalog.DEFS[grid[i]].get("crime", 0.0)) * 0.5
+		var v := 0.5 + base - 0.6 * pol[i]
+		for j in 7:
+			v += wt[j] * clampf(minf(covs[j][i], 1.0) + cm[j], 0.0, 1.0)
+		if g != T.EMPTY and not is_road(g):
+			v -= float(Catalog.DEFS[g].get("crime", 0.0)) * 0.5
 		land_val[i] = clampf(v, 0.0, 1.0)
-		if is_zone(grid[i]) and lvl[i] > 0 and int(Catalog.DEFS[grid[i]]["home"]) > 0:
+		if is_zone(g) and lvl[i] > 0 and int(Catalog.DEFS[g]["home"]) > 0:
 			tot += land_val[i]
 			n += 1
 	land_avg = tot / n if n > 0 else 0.5
