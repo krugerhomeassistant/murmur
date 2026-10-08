@@ -20,7 +20,7 @@ Goal: Murmur, a cozy interactive city-builder (Godot) with an optional Live Data
 - [ ] User plays 3 sessions; note what feels off in ACTIVE_CONTEXT.md
 
 ## Phase 2: Depth and feel
-- [ ] Tune economy from playtest; difficulty curve table in WIKI.md
+- [ ] Tune economy from playtest; difficulty curve table in the wiki (docs/wiki/economy.md)
 - [ ] Day/night tint, rain/heat/storm visuals polish, sound (WebAudio-style generated tones or Godot AudioStreamGenerator)
 - [x] Save/load city (`user://murmur_save.bin`, autosave daily)
 - [ ] More verbs: police/subsidy response to protests, building upgrades
@@ -40,7 +40,7 @@ Goal: Murmur, a cozy interactive city-builder (Godot) with an optional Live Data
 ## Phase 5: Firehose feeds via server
 - [ ] `server/` Node 24 LTS + `ws`: Wikipedia SSE, Coinbase WS, Bluesky Jetstream, GH Archive hourly
 - [ ] Signals computed with EMA decay, broadcast to client over WebSocket
-- [ ] Measure events/sec per feed in WIKI.md
+- [ ] Measure events/sec per feed in docs/wiki/performance.md
 
 ## Phase 6: Art pass
 - [ ] 2D vs isometric vs 3D decision (ARCHITECTURE.md)
@@ -152,6 +152,11 @@ Today: armies fight on one abstract line between two towns; unopposed units at t
 - [ ] Sieges: units attack and capture/destroy buildings; capture points, rally, retreat; production queues and a command UI.
 - [ ] Battle footage for the README (second GIF) once the above exists.
 Rules: keep `Military` deterministic enough for `tests/war.gd`; the host simulates wars (multiplayer); perf must not regress (`--benchmark --war`).
+
+## Wiki follow-ups (found while writing docs/wiki; details in each page's Open questions)
+- [ ] Code vs text: avenue upkeep 0.2 in the catalog but 0.12 charged; line tiles 0.03 vs 0.015; sewage text says it makes people ill but `_sickness` ignores it; policing text says -12% mood but the weight is 0.06; transit text vs code; rally tooltip "+7% approval" is +0.07 rep; "Declare WAR" tooltip still describes removed abstract battles; mode 1 "zones only" planner still lays roads and the auto-annex checkbox does nothing there.
+- [ ] Bugs: Empire sort headers are off by one column; founded towns skip `set_start`/difficulty and turn spectating off; dedicated server takes 7 clients not 8; clients never get the host's world seed (land between towns may differ); weather not in snapshots; "Balance" on a client does nothing; WASD pans while typing in a text field; F9/`--benchmark` overwrite the save; `leave` clears a war for free; `_hit` on non-zone buildings has no effect; recovery offer "no" still counts as survived; minimized window state saved but not restored; world chunk cache is FIFO not LRU.
+- [ ] Wiki process: the generated pages cover data tables; keep mechanics pages in step with rule changes (PR template).
 
 ## Known issues
 - [x] Planner stall fixed (`City._plan_service(force)`, lower gate for pop < 40).

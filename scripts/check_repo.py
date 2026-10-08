@@ -3,7 +3,7 @@
 import re, sys, pathlib
 root = pathlib.Path(__file__).resolve().parent.parent
 errs = []
-for md in [*root.glob("*.md"), *root.glob("docs/*.md"), *root.glob(".github/*.md")]:
+for md in [*root.glob("*.md"), *root.glob("docs/*.md"), *root.glob("docs/wiki/*.md"), *root.glob(".github/*.md")]:
     t = md.read_text(encoding="utf-8")
     for m in re.finditer(r"\]\(([^)#\s]+)\)", t):
         l = m.group(1)
@@ -18,6 +18,10 @@ idx = (root / "docs/README.md").read_text(encoding="utf-8")
 for d in root.glob("docs/*.md"):
     if d.name != "README.md" and f"]({d.name})" not in idx:
         errs.append(f"docs/README.md does not list {d.name}")
+widx = (root / "docs/wiki/README.md").read_text(encoding="utf-8")
+for d in root.glob("docs/wiki/*.md"):
+    if d.name != "README.md" and f"]({d.name})" not in widx:
+        errs.append(f"docs/wiki/README.md does not list {d.name}")
 ver = (root / "VERSION").read_text().strip()
 if f"## [{ver}]" not in (root / "CHANGELOG.md").read_text():
     errs.append(f"VERSION {ver} has no CHANGELOG section")

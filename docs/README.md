@@ -2,7 +2,7 @@
 
 | File | What |
 |---|---|
-| [WIKI.md](WIKI.md) | Rules, features, glossary, performance notes (source of truth) |
+| [wiki/](wiki/README.md) | The wiki: reference for every building, unit, policy, event and the rules and formulas behind them (source of truth) |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | Tech stack, data layout, invariants |
 | [GAME_DESIGN.md](GAME_DESIGN.md) | Vision and design |
 | [PLAN.md](PLAN.md) | Roadmap with checkboxes |
