@@ -3232,7 +3232,8 @@ func _bus_route(b: Dictionary) -> void:
 # ---------- economy: crops -> food, goods, storage, trade ----------
 
 ## Returns [export income, import cost] per second.
-func _trade(market: float) -> Array:
+func _trade(_market: float) -> Array:
+	var mk: Market = sig.mk
 	var emp := float(employed) / maxf(jobs, 1)
 	var mills := (bt.get(T.MILL, []) as Array).size()
 	var deps := (bt.get(T.DEPOT, []) as Array).size() + 2 * (bt.get(T.PORT, []) as Array).size()
@@ -3240,12 +3241,35 @@ func _trade(market: float) -> Array:
 	for k in ["ore", "metal"]:  # saves from before mining
 		if not stock.has(k):
 			stock[k] = 0.0
+	var want := {}  # units this town wants from the market this second
+	var bought := {}  # units it actually bought (production inputs are limited by what the market has on offer)
+	var spent := 0.0
 	var crops := (farm_jobs + 1.5 * orch_jobs) * emp * 0.12 * float(Civics.SEASONS[season]["harvest"]) + green_jobs * emp * 0.12 * 0.85  # greenhouses ignore the season
 	var mined := mine_yield * emp * 0.05
 	var foundries := (bt.get(T.FOUNDRY, []) as Array).size()
+	# Inputs: a mill with idle capacity buys crops, a foundry ore, factories metal, when the treasury can afford it and the market has any.
+	var rich := coins > 120.0
+	var w_crops := maxf(0.0, mills * 3.0 - (float(stock["crops"]) + crops))
+	var w_ore := maxf(0.0, foundries * 2.0 - (float(stock["ore"]) + mined))
+	for pair in [["crops", w_crops], ["ore", w_ore]]:
+		var k: String = pair[0]
+		var w: float = pair[1]
+		want[k] = w
+		if w > 0.0 and rich:
+			var got := mk.take(k, minf(w, coins * 0.05 / (float(mk.price[k]) * RATE)))
+			stock[k] = float(stock[k]) + got
+			bought[k] = got
+			spent += got * float(mk.price[k]) * RATE
 	var smelt := minf(float(stock["ore"]) + mined, foundries * 2.0)
 	stock["ore"] = float(stock["ore"]) + mined - smelt
 	stock["metal"] = float(stock["metal"]) + smelt * 0.5
+	var w_metal := maxf(0.0, fac_jobs * emp * 0.02 - float(stock["metal"]))
+	want["metal"] = w_metal
+	if w_metal > 0.0 and rich:
+		var gm := mk.take("metal", minf(w_metal, coins * 0.05 / (float(mk.price["metal"]) * RATE)))
+		stock["metal"] = float(stock["metal"]) + gm
+		bought["metal"] = gm
+		spent += gm * float(mk.price["metal"]) * RATE
 	var mused := minf(float(stock["metal"]), fac_jobs * emp * 0.02)
 	stock["metal"] = float(stock["metal"]) - mused
 	var milled := minf(float(stock["crops"]) + crops, mills * 3.0)
@@ -3260,23 +3284,29 @@ func _trade(market: float) -> Array:
 	var gl := minf(float(stock["goods"]), gneed)
 	stock["food"] = float(stock["food"]) - fl
 	stock["goods"] = float(stock["goods"]) - gl
-	var price := 1.0 + 0.3 * market
-	var imp := ((fneed - fl) * 1.5 + (gneed - gl) * 2.0) * RATE * price
+	# Basic needs are always met from the market, at whatever it costs: that is what drives prices up in a famine.
+	want["food"] = fneed - fl
+	want["goods"] = gneed - gl
+	var imp := ((fneed - fl) * float(mk.price["food"]) + (gneed - gl) * float(mk.price["goods"])) * RATE + spent
 	var ex := 0.0
 	var sold := 0.0
-	var xp := price * 0.8 * (1.0 + 0.25 * deps)
+	var offered := {}
+	var xp := 0.8 * (1.0 + 0.25 * deps)
 	for k in stock:
 		var lim := cap * (0.2 if deps > 0 else 0.8)
 		if float(stock[k]) > lim:
-			var sell := (float(stock[k]) - lim) * (0.25 if deps > 0 else 0.5)
-			ex += sell * float({"crops": 0.6, "food": 1.5, "goods": 2.0, "ore": 0.8, "metal": 3.0}[k]) * RATE * xp
+			# Cheap goods are held back, dear goods are pushed out.
+			var sell := (float(stock[k]) - lim) * (0.25 if deps > 0 else 0.5) * clampf(mk.ratio(k), 0.4, 1.5)
+			ex += sell * float(mk.price[k]) * RATE * xp
 			stock[k] = float(stock[k]) - sell
 			sold += sell
+			offered[k] = sell
 		stock[k] = minf(float(stock[k]), cap)
+	mk.report(offered, want)
 	exported += sold
 	flow = {"crops": crops, "food": milled + fish + ranch_jobs * emp * 0.1 + fish_jobs * emp * 0.12 * river_health, "goods": goods, "ore": mined, "metal": smelt * 0.5, "food_need": fneed, "goods_need": gneed,
 		"food_local": fl / fneed if fneed > 0.0 else 1.0, "goods_local": gl / gneed if gneed > 0.0 else 1.0,
-		"export": sold, "price": price, "imp": imp, "ex": ex}
+		"export": sold, "price": 1.0 + 0.3 * sig.get_f("market"), "imp": imp, "ex": ex, "sold": offered, "bought": bought, "want": want}
 	return [ex, imp]
 
 
@@ -3292,7 +3322,7 @@ func to_dict() -> Dictionary:
 	var cs: Array = []
 	for c in citizens:
 		cs.append([c.id, c.home, c.work, c.tribe, c.nm, c.bias, c.shift, c.spd, c.commute, c.sick])
-	var d := {"v": 1, "cit": cs}
+	var d := {"v": 1, "cit": cs, "mk": sig.mk.brief()}
 	for k in SAVE_KEYS:
 		d[k] = get(k)
 	d["army"] = army.map(func(u: Dictionary) -> Dictionary:
@@ -3308,6 +3338,8 @@ func from_dict(d: Dictionary) -> void:
 	Military.terrain_changed()
 	if not d.has("water"):
 		water.fill(0)  # saves from before rivers
+	if d.get("mk") is Dictionary:
+		sig.mk.apply_brief(d["mk"])
 	for k in d:
 		if k == "cit" or k == "v" or not (k in SAVE_KEYS or k == "army"):
 			continue

@@ -244,6 +244,7 @@ func _new_town(nm := "", g := Vector2i(1 << 30, 0)) -> City:
 ## Build a fresh region from setup options (empty dict = defaults).
 func _fresh(o: Dictionary) -> void:
 	towns.clear()
+	sig.mk = Market.new()
 	var diff: int = o.get("diff", 1)
 	var land: int = o.get("land", 1)
 	var lw: int = [40, 48, 64][land]
@@ -440,7 +441,7 @@ func save_game() -> void:
 	var ts: Array = []
 	for t in towns:
 		ts.append(t.to_dict())
-	f.store_var({"v": 2, "cur": towns.find(city), "towns": ts, "sig": sig.v.duplicate(), "world": {"seed": world.seed, "rivers": world_rivers} if world != null else {}})
+	f.store_var({"v": 2, "cur": towns.find(city), "towns": ts, "sig": sig.v.duplicate(), "mk": sig.mk.to_dict(), "world": {"seed": world.seed, "rivers": world_rivers} if world != null else {}})
 
 
 func load_game() -> bool:
@@ -464,6 +465,8 @@ func load_game() -> bool:
 			t.gpos = spiral(towns.size())
 		towns.append(t)
 	sig.v = d.get("sig", sig.v)
+	if d.get("mk") is Dictionary:
+		sig.mk.from_dict(d["mk"])
 	city = towns[clampi(int(d.get("cur", 0)), 0, towns.size() - 1)]
 	return true
 
