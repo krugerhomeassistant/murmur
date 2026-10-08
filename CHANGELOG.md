@@ -5,6 +5,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-10-08
+
 ### Changed
 - Planner towns keep tax at 10% or more; `--watch` benchmark flag follows the action; cheaper coverage and shop-distance lookups in the per-second sim.
 
