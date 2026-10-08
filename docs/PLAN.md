@@ -133,3 +133,13 @@ Goal: Murmur, a cozy interactive city-builder (Godot) with an optional Live Data
 - [x] BENCHMARK STANDARD: real windowed run (not headless), 8 towns, 8x speed, ALL overlays on; report fps/p99/CPU/GPU/RAM/VRAM for that. README table must use it. Headless sim numbers are secondary only.
 - [ ] REPO PROFESSIONALISM pass: screenshots/GIF in README, consistent docs structure, docs/ folder, CONTRIBUTING/CODE_OF_CONDUCT/SECURITY, release notes, badges accurate, remove dev clutter, LICENSE check, tidy PLAN/WIKI/LESSONS layout.
 - STANDING RULE: README/docs must never claim anything untrue or stale; scripts/check_repo.py runs in CI (hygiene job).
+
+## War rework (user, 2026-10-08): "full Age of Empires / Empire Earth style war" - NEXT MAJOR FEATURE (v0.3)
+Today: armies fight on one abstract line between two towns; unopposed units at the edge raid and shell from a distance (`Military.fight/_occupy`, `Main.draw_fx`). User feedback from watching it:
+- [ ] Armies march INTO the enemy town and fight among the buildings (battle view in the town, not an empty border strip).
+- [ ] Ground units (tanks, infantry, artillery) cannot cross water: bridges or transports only.
+- [ ] Boats and ships sail on the rivers (patrol, destroyer, transport exist as units; draw and route them along the river).
+- [ ] Air: heli, fighter, jet, bomber exist in `Military.KIND` but are drawn as small icons; give them flight paths, dogfights, bombing runs and AA fire.
+- [ ] Sieges: units attack and capture/destroy buildings; capture points, rally, retreat; production queues and a command UI.
+- [ ] Battle footage for the README (second GIF) once the above exists.
+Rules: keep `Military` deterministic enough for `tests/war.gd`; the host simulates wars (multiplayer); perf must not regress (`--benchmark --war`).

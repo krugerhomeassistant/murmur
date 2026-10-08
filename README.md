@@ -9,13 +9,13 @@
 
 Everything is drawn with code (no art assets), the whole game is data-driven.
 
-![Six towns growing side by side, then a close-up of one street](docs/media/murmur.gif)
+![A river city in time-lapse: pull-in from the region map, street level at 8x with day and night, land-value and crime overlays, pull-out](docs/media/murmur.gif)
 
-| A town up close | The whole region | Coverage overlay, by a river |
+| Up close | Street level | Land-value overlay |
 |---|---|---|
-| ![A town street with homes, shops and traffic](docs/media/town.png) | ![Six towns joined by roads along one river](docs/media/world.png) | ![Service coverage overlay on a riverside town](docs/media/overlay.png) |
+| ![Homes, shops, towers, water towers and a river, with people on the pavements](docs/media/town.png) | ![A busy street in daylight](docs/media/street.png) | ![Land-value overlay across a dense district](docs/media/overlay.png) |
 
-*Captured from the game itself: a 6-town spectator world (planners only), fast-forwarded to day 150. Retake with `scripts/MEDIA.md`.*
+*Captured from the game itself: a hand-built showcase town (`client/tests/showcase.gd`, about 700 residents) with the camera moved by `client/tests/reel.gd`. Planner (AI) towns stay much smaller. Retake with `scripts/MEDIA.md`.*
 
 ## What you get
 
