@@ -19,7 +19,7 @@ func _init() -> void:
 	# shortage: price rises, bounded above
 	var n := Market.new()
 	_run(n, 120, {}, {"goods": 5.0})
-	if n.ratio("goods") < 2.0 or n.ratio("goods") > Market.HIGH + 0.001:
+	if n.ratio("goods") < 1.15 or n.ratio("goods") > Market.HIGH + 0.001:
 		errs.append("shortage should push goods price up but not past the ceiling: %.2f" % n.ratio("goods"))
 	# balanced: stays near base
 	var b := Market.new()

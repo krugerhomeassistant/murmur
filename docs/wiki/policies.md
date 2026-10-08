@@ -19,6 +19,7 @@ Toggle in the Policy tab. `upkeep` is coins per second (negative = saves coins).
 | [Community policing](#community-policing) | 1.2 | `cov_police` 0.15, `mood` 0.01, `crime_mult` 0.9 |
 | [Garrison](#garrison) | 1.5 | `cov_defence` 0.3, `mood` -0.01 |
 | [Disaster insurance](#disaster-insurance) | 1 | `insured` 1 |
+| [Cost-of-living payments](#cost-of-living-payments) | 2 | `stipend` 0.12 |
 | [Fast-track permits](#fast-track-permits) | 1 | `build_mult` 1.6 |
 
 ## Free public transport
@@ -111,6 +112,13 @@ Key `insurance`. Premiums every second. When fire, storms, quakes or tornadoes d
 
 - Upkeep: 1 per second
 - Modifiers: `insured` 1
+
+## Cost-of-living payments
+
+Key `cost_support`. The council tops up households that have run out of savings: they receive a small payment every second so rent and food stay covered. Eases unrest during price surges and slumps, but it costs upkeep and does not create jobs.
+
+- Upkeep: 2 per second
+- Modifiers: `stipend` 0.12
 
 ## Fast-track permits
 

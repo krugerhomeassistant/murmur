@@ -1247,6 +1247,8 @@ func _mayor_tick(c: City) -> void:
     et += "Per second: crops +%.1f  food milled +%.1f  goods +%.1f  ore +%.1f  metal +%.1f\n" % [f.get("crops", 0.0), f.get("food", 0.0), f.get("goods", 0.0), f.get("ore", 0.0), f.get("metal", 0.0)]
     et += "Needs: food %.1f (%d%% local)  goods %.1f (%d%% local)\n" % [f.get("food_need", 0.0), int(float(f.get("food_local", 1.0)) * 100.0), f.get("goods_need", 0.0), int(float(f.get("goods_local", 1.0)) * 100.0)]
     et += "Imports -$%.2f/s   Exports +$%.2f/s   Market price x%.2f\n" % [f.get("imp", 0.0), f.get("ex", 0.0), f.get("price", 1.0)]
+    var h: Dictionary = c.hh
+    et += "Households: average savings $%d (median $%d), %d%% broke, %d%% comfortable. Prices x%.2f, wages x%.2f (real wage %d%%)\n" % [int(h["avg"]), int(h["median"]), int(float(h["broke"]) * 100.0), int(float(h["rich"]) * 100.0), c.cpi, c.wage_ix, int(float(h["real"]) * 100.0)]
     et += "[color=#9aa88f]Food mills turn crops into food; mines dig ore and foundries smelt it into metal that boosts factories; warehouses add storage; trade depots sell surplus abroad.[/color]"
     econ_l.text = et
     var lt := ""

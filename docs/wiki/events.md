@@ -2,7 +2,7 @@
 
 # World events
 
-66 events in 5 categories. A random event fires every so often, weighted by `weight` and by the season ([Seasons](civics.md)); you can also trigger them from the World events menu. `min pop` is the population needed; `duration` is how long the modifiers last; `mods` merge like policy modifiers.
+68 events in 5 categories. A random event fires every so often, weighted by `weight` and by the season ([Seasons](civics.md)); you can also trigger them from the World events menu. `min pop` is the population needed; `duration` is how long the modifiers last; `mods` merge like policy modifiers.
 
 ## Weather
 
@@ -115,6 +115,8 @@ News line: "The city is in full bloom."
 | Event | Weight | Min pop | Duration | Modifiers |
 |---|---|---|---|---|
 | [Market boom](#market-boom) | 5 | 0 | 0 s | none |
+| [Supply crisis](#supply-crisis) | 2 | 40 | 0 s | none |
+| [Price slump](#price-slump) | 2 | 40 | 0 s | none |
 | [Market crash](#market-crash) | 4 | 0 | 0 s | none |
 | [Inflation](#inflation) | 3 | 50 | 90 s | `upkeep_mult` 1.25 |
 | [Tech boom](#tech-boom) | 2 | 80 | 80 s | `office_mult` 1.5, `immig_mult` 1.5, `dem_off` 0.4 |
@@ -134,6 +136,22 @@ Key `boom`. The market signal jumps +0.7 and decays slowly. All incomes get +35%
 - Instant effect: `market` 0.7
 
 News line: "Markets surge. Shops report record sales."
+
+### Supply crisis
+
+Key `supply_crisis`. Food, goods and crop prices jump (x1.7, x1.5, x1.4) and ease back over a few minutes. Wages lag behind, so poor households run out of savings; a long squeeze means unrest. Cost-of-living payments help.
+
+- Instant effect: `shock` {'food': 1.7, 'goods': 1.5, 'crops': 1.4}
+
+News line: "Supply lines break down. Prices are climbing."
+
+### Price slump
+
+Key `price_slump`. Food, goods, ore and metal prices fall about 25-30% and recover over a few minutes. Households save more; producers earn less.
+
+- Instant effect: `shock` {'food': 0.7, 'goods': 0.75, 'ore': 0.7, 'metal': 0.75}
+
+News line: "A glut pushes prices down."
 
 ### Market crash
 

@@ -53,6 +53,7 @@ class Citizen:
 	var nm := ""
 	var sick := 0.0  # seconds of illness left
 	var car := false  # drives (long commute, no transit)
+	var wealth := 40.0  # household savings (coins); pays for housing upgrades, drains when prices outrun wages
 
 
 var sig: Signals
@@ -106,6 +107,12 @@ var pend := 0.0  # sim time owed to an off-screen town (it ticks in 0.5s batches
 var net_cache := {}  # metric -> {sig, live, sup, dem, sat}: skips the whole-grid pass when nothing changed
 var net_reach := {}  # "power"/"water" -> PackedByteArray of live line cells
 var net_val := {}  # metric -> PackedFloat32Array per cell: satisfaction 0..1 where served
+const WAGE := 0.30  # base wage per employed citizen per sim second, before tax
+const WAGE_LAG := 0.003  # wages chase the cost of living at this rate per second (about 5 minutes)
+const RENT := 0.04  # rent per resident per second at tier 1
+const BROKE := 8.0  # savings under this: the household cannot make ends meet
+const UPGRADE_WEALTH := 20.0  # average savings per resident needed per current building level to upgrade a home
+const WAGE_TIER := {"office": 1.8, "mine": 1.2, "ind": 1.1, "com": 1.0, "farm": 0.8, "orchard": 0.9, "ranch": 0.9, "green": 0.9, "fishfarm": 0.9}
 const NETS := ["power", "water", "sewage"]
 var sewer := PackedByteArray()
 var river_health := 1.0  # 1 = clean; falls when sewage goes untreated, kills fish
@@ -176,6 +183,11 @@ var rally_used := false
 var last_vote := 0.0
 var season := 0
 # economy
+var wage_ix := 1.0  # wage level; follows the cost of living with a lag
+var cpi := 1.0  # cost-of-living index: market price of the food and goods basket against its base (smoothed)
+var hh := {"avg": 0.0, "median": 0.0, "broke": 0.0, "rich": 0.0, "real": 1.0}  # household statistics, recomputed every second
+var hardship := 0.0  # share of households that cannot make ends meet
+var home_w := {}  # runtime: home cell -> [wealth sum, residents]
 var stock := {"crops": 0.0, "food": 0.0, "goods": 0.0, "ore": 0.0, "metal": 0.0}
 var flow := {}
 var cap := 60.0
@@ -1029,7 +1041,7 @@ func _live(i: int, reach: PackedByteArray) -> bool:
 
 ## Crime per block: unemployment, density and weak police drive it; lights and courts cut it.
 func _crime() -> void:
-	var base := 0.08 + 0.5 * unemp + mod("crime_add")
+	var base := 0.08 + 0.5 * unemp + mod("crime_add") + 0.25 * hardship
 	var sz := clampf(pop / 50.0, 0.1, 1.0)  # small towns have little crime
 	var tot := 0.0
 	crime_val.fill(0.0)
@@ -1133,6 +1145,7 @@ func _spawn() -> bool:
 	c.tribe = _roll_tribe()
 	c.shift = rng.randf_range(-1.2, 1.2)
 	c.spd = rng.randf_range(0.8, 1.25)
+	c.wealth = rng.randf_range(30.0, 60.0)  # savings they bring
 	home_load[c.home] = home_load.get(c.home, 0) + 1
 	citizens.append(c)
 	return true
@@ -1306,6 +1319,8 @@ func trigger(id: String) -> bool:
 	if e.has("weather"):
 		sig.set_weather(String(e["weather"]), dur)
 	var inst: Dictionary = e.get("inst", {})
+	if inst.has("shock"):
+		sig.mk.shock_by(inst["shock"])
 	if inst.has("coins"):
 		coins = maxf(coins + float(inst["coins"]) * k, minf(coins, -40.0))
 	if inst.has("coins_pop"):
@@ -1585,10 +1600,12 @@ func _second() -> void:
 	target -= 0.08 * congestion + 0.25 * float(sick_n) / maxf(pop, 1)
 	if pop >= 40 and float(flow.get("food_local", 1.0)) < 0.3:
 		target -= 0.03
+	if pop >= 20:
+		target -= 0.15 * float(hh["broke"])  # households that cannot pay their bills
 	target -= 0.15 * pollution + 0.25 * maxf(crime - 0.1, 0.0) + 0.1 * clampf((avg_commute - 12.0) / 30.0, 0.0, 1.0) + 0.04 * clampf((avg_shop - 8.0) / 20.0, 0.0, 1.0)
 	target += mod("mood")
 	mood = move_toward(mood, clampf(target, 0.0, 1.0), 0.05)
-	protest = mood < 0.2
+	protest = mood < 0.2 or (pop >= 30 and hardship > 0.5)  # riots over the cost of living
 	for c in citizens:
 		c.mood = clampf(mood + c.bias - (0.15 if c.work < 0 else 0.0) - (0.08 if c.commute > 28 else 0.0), 0.0, 1.0)
 		c.protesting = protest and c.mood < 0.35
@@ -1639,6 +1656,7 @@ func _second() -> void:
 
 
 func _money(market: float) -> void:
+	_households()
 	var econ := 1.0 + 0.5 * market
 	var prodm := (1.0 - 0.2 * _need("health")) * (1.0 - 0.25 * _need("power")) * (1.0 - 0.15 * _need("water")) * mod("prod_mult")
 	var wise := 1.0 + 0.3 * float(cov["edu"])
@@ -1647,7 +1665,7 @@ func _money(market: float) -> void:
 	var emp := float(employed) / maxf(jobs, 1)
 	var laf_c := (tax_c / 0.10) * (1.0 - maxf(0.0, tax_c - 0.10) * 3.0)
 	var laf_i := (tax_i / 0.10) * (1.0 - maxf(0.0, tax_i - 0.10) * 3.0)
-	var r_tax := employed * tax_r * 12.0 * econ * prodm * wise * fin * f * res_mult * (0.75 + 0.5 * land_avg)
+	var r_tax := employed * tax_r * 12.0 * econ * prodm * wise * fin * f * res_mult * (0.75 + 0.5 * land_avg) * clampf(wage_ix, 0.7, 1.6) * (1.0 - 0.4 * float(hh["broke"]))  # wages carry the tax base; broke households pay less
 	var sales := minf(pop * 0.6, shop_jobs * 2.0) * (1.0 + 0.25 * float(cov["commerce"])) * mod("sales_mult") * (1.0 - 0.3 * clampf((avg_shop - 8.0) / 20.0, 0.0, 1.0))
 	var r_com := sales * 0.8 * econ * prodm * laf_c * fin * f
 	var goods := (fac_jobs * 0.6 * emp + (farm_jobs + orch_jobs + ranch_jobs + green_jobs + fish_jobs) * 0.3 + mine_jobs * 0.4 * emp) * mod("goods_mult")
@@ -1735,7 +1753,7 @@ func _grow() -> void:
 					msg = "A new %s opened." % String(Catalog.DEFS[t]["n"]).to_lower().replace(" zone", "")
 			else:
 				empties.append(i)
-		elif lvl[i] < int(Catalog.DEFS[t]["max"]) and mood > 0.45 and dem_for(t) > 0.15 and coins > GROW_COST * scale * 4.0 + saving_for and rng.randf() < 0.08:
+		elif lvl[i] < int(Catalog.DEFS[t]["max"]) and mood > 0.45 and dem_for(t) > 0.15 and coins > GROW_COST * scale * 4.0 + saving_for and rng.randf() < 0.08 and _can_upgrade(i):
 			lvl[i] += 1
 			coins -= GROW_COST * scale * 1.6
 			msg = "A building was upgraded."
@@ -1749,6 +1767,66 @@ func _grow() -> void:
 		coins -= cost
 		build[i] = 0.01
 		starts += 1
+
+
+## Housing upgrades are paid for by the people who live there; businesses upgrade when customers have money to spend.
+func _can_upgrade(i: int) -> bool:
+	var need := UPGRADE_WEALTH * lvl[i]
+	if int(Catalog.DEFS[grid[i]].get("home", 0)) > 0:
+		var w: Array = home_w.get(i, [])
+		if w.is_empty() or float(w[1]) <= 0.0:
+			return true  # empty homes upgrade like before
+		if float(w[0]) / float(w[1]) < need:
+			return false
+		var share := need * 0.5  # residents invest half of the threshold each
+		for c in citizens:
+			if c.home == i:
+				c.wealth = maxf(0.0, c.wealth - share)
+		return true
+	return float(hh["avg"]) >= need * 0.5
+
+
+## Wages, bills and savings of every household, once per sim second (see docs/wiki/households.md).
+func _households() -> void:
+	var mk: Market = sig.mk
+	var pf: float = mk.price["food"]
+	var pg: float = mk.price["goods"]
+	var basket := 0.6 * mk.ratio("food") + 0.4 * mk.ratio("goods")
+	cpi += (basket - cpi) * 0.02
+	wage_ix += (cpi - wage_ix) * WAGE_LAG
+	var edu := 1.0 + 0.3 * float(cov["edu"])
+	var net := (1.0 - tax_r) * WAGE * wage_ix * edu
+	var stipend := mod("stipend")
+	home_w.clear()
+	var ws: Array[float] = []
+	var broke := 0
+	var rich := 0
+	var tot := 0.0
+	for c in citizens:
+		var wage := 0.0
+		if c.work >= 0:
+			wage = net * float(WAGE_TIER.get(String(Catalog.DEFS[grid[c.work]].get("sector", "")), 1.0)) if grid[c.work] != T.EMPTY else net
+		var bills := 0.05 * pf + 0.03 * pg + RENT * float(Catalog.DEFS[grid[c.home]].get("tier", 1.0)) if grid[c.home] != T.EMPTY else 0.0
+		c.wealth += wage - bills
+		if c.wealth < BROKE:
+			c.wealth = maxf(c.wealth, 0.0)
+			c.wealth += stipend  # cost-of-living payments reach the ones who ran out
+		elif c.wealth > 150.0:
+			c.wealth -= (c.wealth - 150.0) * 0.004  # the well-off spend and invest elsewhere
+		if c.wealth < BROKE:
+			broke += 1
+		elif c.wealth > 120.0:
+			rich += 1
+		tot += c.wealth
+		ws.append(c.wealth)
+		var hw: Array = home_w.get(c.home, [0.0, 0])
+		hw[0] = float(hw[0]) + c.wealth
+		hw[1] = int(hw[1]) + 1
+		home_w[c.home] = hw
+	var n := citizens.size()
+	hardship = float(broke) / maxf(n, 1.0)
+	ws.sort()
+	hh = {"avg": tot / maxf(n, 1.0), "median": ws[n / 2] if n > 0 else 0.0, "broke": hardship, "rich": float(rich) / maxf(n, 1.0), "real": wage_ix / maxf(cpi, 0.01)}
 
 
 ## Border links only count roads joined to the town's biggest road network, not stray tiles near the edge.
@@ -2269,6 +2347,7 @@ func _plan_policy() -> void:
 		"clean_air": [pollution > 0.35 and mood < 0.55, pollution < 0.15],
 		"austerity": [coins < 60.0 and income < 0.0, coins > 250.0],
 		"curfew": [protest and float(c["police"]) < 0.5, not protest],
+		"cost_support": [hardship > 0.3 and coins > 250.0 and income > 1.0, hardship < 0.1 or income < 0.2],
 		"fast_track": [res_dem > 0.5 and coins > 300.0, res_dem < 0.1 or coins < 100.0],
 		"stop_search": [crime > 0.5 and float(c["police"]) > 0.5 and mood > 0.45, crime < 0.25 or mood < 0.35],
 		"community_police": [pop >= 60 and crime > 0.3 and coins > 300.0 and income > 1.0, crime < 0.15 or income < 0.2],
@@ -3316,12 +3395,12 @@ func _trade(_market: float) -> Array:
 const SAVE_KEYS := ["town_name", "grid", "lvl", "build", "wire", "pipe", "sewer", "lamp", "water", "ore", "ground", "coins", "mood", "tax_r", "tax_c", "tax_i", "clock", "day",
 	"policies", "auto_mode", "auto_policy", "peak", "announced", "next_id", "recent", "active", "approval", "rep", "favor",
 	"petitions", "promises", "pet_recent", "kept", "broken", "next_election", "elections_won", "rally_used", "last_vote",
-	"season", "stock", "exported", "loans", "done_ms", "disasters_survived", "burned", "hist_coins", "hist_pop", "ruins", "offline", "lamp", "terr", "expansions", "auto_expand", "human", "owner", "temper", "rel", "treaty", "ev_scale", "gpos", "war_n", "war_sc", "occ", "train_on", "train_t", "train_w"]
+	"season", "wage_ix", "stock", "exported", "loans", "done_ms", "disasters_survived", "burned", "hist_coins", "hist_pop", "ruins", "offline", "lamp", "terr", "expansions", "auto_expand", "human", "owner", "temper", "rel", "treaty", "ev_scale", "gpos", "war_n", "war_sc", "occ", "train_on", "train_t", "train_w"]
 
 func to_dict() -> Dictionary:
 	var cs: Array = []
 	for c in citizens:
-		cs.append([c.id, c.home, c.work, c.tribe, c.nm, c.bias, c.shift, c.spd, c.commute, c.sick])
+		cs.append([c.id, c.home, c.work, c.tribe, c.nm, c.bias, c.shift, c.spd, c.commute, c.sick, snappedf(c.wealth, 0.1)])
 	var d := {"v": 1, "cit": cs, "mk": sig.mk.brief()}
 	for k in SAVE_KEYS:
 		d[k] = get(k)
@@ -3361,6 +3440,7 @@ func from_dict(d: Dictionary) -> void:
 		c.spd = a[7]
 		c.commute = a[8]
 		c.sick = a[9]
+		c.wealth = clampf(float(a[10]), 0.0, 100000.0) if a.size() > 10 else 40.0
 		c.at = c.home
 		c.pos = center(c.home)
 		c.off = Vector2(rng.randf_range(-0.14, 0.14), rng.randf_range(-0.14, 0.14))

@@ -17,6 +17,7 @@ The complete reference for how Murmur works: what every building, unit, policy a
 | Page | Contents |
 |---|---|
 | [Economy](economy.md) | Income, taxes, upkeep, demand, trade, goods chains, loans |
+| [Households](households.md) | Savings, wages, inflation, upgrades gated by wealth, riots |
 | [Market](market.md) | Goods prices, supply and demand, input purchases |
 | [Citizens](citizens.md) | Citizens, tribes, mood, crime, health, immigration, walking and traffic |
 | [Networks and building](networks.md) | Roads, power, water, sewage, coverage, building lifecycle, fires, territory |
