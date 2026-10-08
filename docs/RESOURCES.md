@@ -27,5 +27,6 @@ None yet. Future: `GITHUB_TOKEN` (optional), `OPENSKY_CLIENT_ID` / `OPENSKY_CLIE
 
 ## v8 files
 - client/scripts/civics.gd: seasons, petitions, milestones, ranks, loans (data)
+- client/scripts/world.gd: endless procedural terrain generator (class World)
 - client/scripts/sfx.gd: generated audio (AudioStreamGenerator)
 - user://murmur_save.bin: autosave (store_var of {towns:[City.to_dict()], cur, sig})

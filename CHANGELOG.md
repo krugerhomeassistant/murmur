@@ -5,6 +5,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+### Added
+- `World` (`scripts/world.gd`): deterministic endless terrain generator (sea, rivers, sand, plains, forest, hills, rock, ore) for the upcoming endless map; `tests/world.gd`. Not used by towns yet.
+
 ### Changed
 - Docs: README roadmap and docs index brought up to date; `scripts/check_repo.py` now fails when a `docs/*.md` file is missing from the docs index.
 - War rework, phase 1 (docs/WAR_DESIGN.md): units at war have real map positions, march through the terrain on flow fields, and fight in 2D. Ground units cannot enter rivers (a road bridge opens the way), ships stay on river water, aircraft fly straight; armies advance on the enemy town and fight there instead of on a line between the towns. New `tests/warmap.gd`.
