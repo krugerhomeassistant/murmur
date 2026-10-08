@@ -34,7 +34,7 @@ Provided by: Fire station.
 
 ## Policing
 
-Key `police`. Uncovered homes lower mood (up to -12%) and let crime drain your treasury (theft costs roughly 0.12 coin per citizen per second before scaling). Riots and crime waves hit uncovered cities much harder.
+Key `police`. Uncovered homes lower mood (up to -6%) and let crime drain your treasury (theft costs roughly 0.12 coin per citizen per second before scaling). Riots and crime waves hit uncovered cities much harder.
 
 > "I don't feel safe here. Where are the police?"
 
@@ -98,7 +98,7 @@ Provided by: Water tower.
 
 ## Sewage
 
-Key `sewage`. Uncovered homes lower mood (up to -10%) and make people sick more often. Sewers must reach a treatment plant; demand above plant capacity overloads the whole network.
+Key `sewage`. Uncovered homes lower mood (up to -10%) and untreated waste fouls the river. Sewers must reach a treatment plant; demand above plant capacity overloads the whole network.
 
 > "The drains are backing up and the smell is awful."
 

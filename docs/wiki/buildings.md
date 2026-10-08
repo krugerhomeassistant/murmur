@@ -11,7 +11,7 @@ How to read an entry: **Radius** is the service reach in tiles (Manhattan diamon
 | Building | Cost | Upkeep | Unlock | Kind |
 |---|---|---|---|---|
 | [Road](#road) | 5 | 0.08 | 0 | road |
-| [Avenue](#avenue) | 12 | 0.2 | 25 | road |
+| [Avenue](#avenue) | 12 | 0.12 | 25 | road |
 
 ### Road
 
@@ -34,7 +34,7 @@ A wide, fast road. Works like a normal road for connecting buildings, but citize
 | | |
 |---|---|
 | Id | `AVENUE` |
-| Cost / upkeep | 12 / 0.2 per s |
+| Cost / upkeep | 12 / 0.12 per s |
 | Unlocks at | 25 population |
 | Kind | road |
 | Map colour / letter | `#5c5c5a` / `-` |
@@ -735,10 +735,10 @@ Rail across 14 tiles. Full transit coverage, a boost to nearby shops, 8 jobs and
 | [Solar farm](#solar-farm) | 300 | 0.6 | 60 | svc |
 | [Coal power plant](#coal-power-plant) | 400 | 3 | 40 | svc |
 | [Water tower](#water-tower) | 120 | 0.8 | 25 | svc |
-| [Power line](#power-line) | 2 | 0.03 | 15 | net |
-| [Water pipe](#water-pipe) | 2 | 0.03 | 15 | net |
+| [Power line](#power-line) | 2 | 0.015 | 15 | net |
+| [Water pipe](#water-pipe) | 2 | 0.015 | 15 | net |
 | [Sewage plant](#sewage-plant) | 160 | 1 | 40 | svc |
-| [Sewer pipe](#sewer-pipe) | 2 | 0.03 | 30 | net |
+| [Sewer pipe](#sewer-pipe) | 2 | 0.015 | 30 | net |
 | [Landfill](#landfill) | 100 | 0.6 | 35 | svc |
 | [Recycling centre](#recycling-centre) | 220 | 1.5 | 80 | svc |
 
@@ -814,7 +814,7 @@ Carries electricity. Power plants feed any connected line; a building is powered
 | | |
 |---|---|
 | Id | `WIRE` |
-| Cost / upkeep | 2 / 0.03 per s |
+| Cost / upkeep | 2 / 0.015 per s |
 | Unlocks at | 15 population |
 | Kind | net |
 | Network layer | wire |
@@ -829,7 +829,7 @@ Carries water from towers to buildings, same rules as power lines. Total demand 
 | | |
 |---|---|
 | Id | `PIPE` |
-| Cost / upkeep | 2 / 0.03 per s |
+| Cost / upkeep | 2 / 0.015 per s |
 | Unlocks at | 15 population |
 | Kind | net |
 | Network layer | pipe |
@@ -861,7 +861,7 @@ Carries sewage from buildings to a treatment plant, same rules as water pipes. C
 | | |
 |---|---|
 | Id | `SEWER` |
-| Cost / upkeep | 2 / 0.03 per s |
+| Cost / upkeep | 2 / 0.015 per s |
 | Unlocks at | 30 population |
 | Kind | net |
 | Network layer | sewer |

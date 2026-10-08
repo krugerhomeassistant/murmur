@@ -2995,8 +2995,8 @@ func answer(idx: int, yes: bool) -> void:
 		Diplo.resolve(self, p, yes)
 		return
 	if p["kind"] == "recover":
-		disasters_survived += 1
 		if yes and coins >= float(p["cost"]):
+			disasters_survived += 1
 			coins -= float(p["cost"])
 			_rebuild()
 			rep += 0.04
@@ -3459,7 +3459,7 @@ func to_dict() -> Dictionary:
 	var cs: Array = []
 	for c in citizens:
 		cs.append([c.id, c.home, c.work, c.tribe, c.nm, c.bias, c.shift, c.spd, c.commute, c.sick, snappedf(c.wealth, 0.1)])
-	var d := {"v": 1, "cit": cs, "mk": sig.mk.brief()}
+	var d := {"v": 1, "cit": cs, "mk": sig.mk.brief(), "wx": [sig.weather(), sig._weather_left]}
 	for k in SAVE_KEYS:
 		d[k] = get(k)
 	d["army"] = army.map(func(u: Dictionary) -> Dictionary:
@@ -3477,6 +3477,8 @@ func from_dict(d: Dictionary) -> void:
 		water.fill(0)  # saves from before rivers
 	if d.get("mk") is Dictionary:
 		sig.mk.apply_brief(d["mk"])
+	if d.get("wx") is Array and (d["wx"] as Array).size() == 2 and d["wx"][0] is String:
+		sig.set_weather(d["wx"][0], clampf(float(d["wx"][1]), 0.0, 1000.0))  # clients see the host's weather
 	for k in d:
 		if k == "cit" or k == "v" or not (k in SAVE_KEYS or k == "army"):
 			continue

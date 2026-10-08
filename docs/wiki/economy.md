@@ -456,7 +456,7 @@ Each item follows directly from the formulas above.
 
 ## Open questions
 
-- `Catalog.DEFS` gives power, water and sewer line tiles an `up` of 0.03, but the code never reads it: line upkeep is `nets * 0.015` in `City._net`. Either the catalogue number or the code constant is stale.
+- Line tile `up` in `Catalog.DEFS` is now 0.015, matching `nets * 0.015` in `City._net`; avenue `up` is 0.12, matching the budget.
 - The generated Buildings page says a grant is paid "per day"; the code pays `grant * RATE` per second.
 - `mod("build_cost_mult")` is read in `_grow` but no data file sets it.
 - The old design notes said protests cut income by 30%; the code uses `f = 0.5 * RATE`, so the tax and tourism lines halve (trade, exports, imports and expenses are unaffected).

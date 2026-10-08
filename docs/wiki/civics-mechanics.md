@@ -166,7 +166,7 @@ One candidate is chosen uniformly at random. It gets `kind = "petition"` and `ex
 
 - For petitions: yes sets `deadline = day + days`, records `have`, appends the entry to `promises` and gives +0.05 favour. No gives -0.12 favour and -0.02 reputation.
 - For kinds `offer` and `demand` it forwards to `Diplo.resolve` (see [war.md](war.md)).
-- For kind `recover` yes pays the rebuild cost and calls `_rebuild`; both answers increase `disasters_survived`.
+- For kind `recover` yes pays the rebuild cost, calls `_rebuild` and counts as a survived disaster; no clears the ruins and does not.
 
 A petition that sits unanswered past `expires` (`day > expires`) is auto-declined with `answer(idx, false)` inside `_civics`, which costs the same -0.12 favour and -0.02 reputation as a refusal.
 
@@ -233,7 +233,7 @@ Advisors can disagree with each other; they only describe one dimension each.
 | `exported` | `exported` | cumulative units sold abroad |
 | `avenues` | `avenues` | current avenue tile count |
 | `land_avg` | `land_avg` | average land value, 0 to 1 |
-| `disasters_survived` | `disasters_survived` | incremented on any answer to a recovery offer |
+| `disasters_survived` | `disasters_survived` | incremented when a recovery offer is accepted and paid |
 | `coins` | `coins` | the "Fat treasury" milestone pays 0 |
 
 The full table with rewards is in [civics.md](civics.md#milestones). Each milestone fires once and `done_ms` is saved. A milestone whose stat is already high when the game loads is only collected if it is not in `done_ms`.
@@ -449,5 +449,5 @@ Not saved, recomputed or reset on load: the countdowns `pet_t`, `ev_t`, `next_fi
 - The event descriptions in `events.gd` state mood effects such as "Mood -10%" for the heatwave that come from `WEATHER_PENALTY`, not from the event `mods`. The descriptions for `power_outage` ("40 seconds") and its `dur` (30.0) differ; the code uses the 40 s `offline` timer.
 - `prison_break` can be drawn by `WorldEvents.pick` in a town with no prison and then does nothing (wasted cycle). It is unclear whether a `needs`-style check was meant for it.
 - The rally tooltip promises "+7% approval", but the code adds 0.07 to `rep`, which only raises the target that `approval` then approaches at 0.004 per second.
-- `answer(idx, false)` on a `recover` offer still increments `disasters_survived`, so ignoring a recovery decision counts as surviving a disaster for the "Survivor" milestone.
+- Fixed: declining a `recover` offer no longer counts toward the "Survivor" milestone.
 - Weather is a single global value shared by every town of a region, but each town rolls its own events, so several towns can overwrite each other's weather. Whether this is intended for multi-town regions is not documented.
