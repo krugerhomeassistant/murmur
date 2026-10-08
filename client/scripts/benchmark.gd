@@ -36,13 +36,6 @@ func _ready() -> void:
 	m.bench_seed = 20261007
 	m.open_setup()
 	m.start_game({"name": "Bench", "towns": 8, "mood": 1, "diff": 1, "land": 1, "river": 3, "auto": 2, "policy": true, "expand": true, "guide": false, "spectate": true})
-	if war:  # four wars (0v1, 2v3, 4v5, 6v7), each side with a mixed army, so combat is in the sample
-		for k in range(0, 8, 2):
-			for t in [m.towns[k], m.towns[k + 1]]:
-				t.coins = 5000.0
-				for u in ["inf", "inf", "tank", "art", "inf", "gren", "tank", "art"]:
-					t.army.append(Military._unit(u))
-			Diplo.act(m.towns[k], m.towns[k + 1], "war")
 	for _i in FAST_FORWARD:  # same cadence as the main loop: viewed town every step, others in 0.5 s batches
 		m.sig.tick(0.1)
 		if _i % 10 == 0:
@@ -55,6 +48,13 @@ func _ready() -> void:
 				if c.pend >= 0.5:
 					c.tick(c.pend)
 					c.pend = 0.0
+	if war:  # four wars (0v1, 2v3, 4v5, 6v7) declared once the towns have grown, each side with a mixed army, so the marches and battles fall inside the sample
+		for k in range(0, 8, 2):
+			for t in [m.towns[k], m.towns[k + 1]]:
+				t.coins = 5000.0
+				for u in ["inf", "inf", "tank", "art", "inf", "gren", "tank", "art"]:
+					t.army.append(Military._unit(u))
+			Diplo.act(m.towns[k], m.towns[k + 1], "war")
 	m.speed = 8.0
 	m.overlay = "all"
 	m.follow = watch
@@ -119,7 +119,7 @@ func _report() -> void:
 		"build": "Godot %s, %s build, %s, window %s" % [Engine.get_version_info().string, "debug (editor/debugger)" if OS.is_debug_build() else "release", RenderingServer.get_current_rendering_method(), str(DisplayServer.window_get_size())],
 		"war": war,
 		"watch": watch,
-		"scenario": ("war: four pairs at war, " if war else "") + "8 towns grown by %d sim-s fast-forward, then 8x speed, all overlays, zoom 1.0, vsync off, %ds warm-up, %ds sample" % [FAST_FORWARD / 10, int(WARM), int(SAMPLE)],
+		"scenario": ("war: four pairs declared war after the growth fast-forward, " if war else "") + "8 towns grown by %d sim-s fast-forward, then 8x speed, all overlays, zoom 1.0, vsync off, %ds warm-up, %ds sample" % [FAST_FORWARD / 10, int(WARM), int(SAMPLE)],
 		"fps_avg": 1000.0 / avg, "frame_ms_avg": avg, "frame_ms_p50": _pct(s, 0.5), "frame_ms_p95": _pct(s, 0.95), "frame_ms_p99": _pct(s, 0.99), "frame_ms_max": s[-1],
 		"render_cpu_ms": cpu / n, "render_gpu_ms": gpu / n, "draw_calls_avg": calls / n, "draw_calls_max": calls_max,
 		"sim_ms_avg": sim / n, "draw_ms_avg": draw / n,
