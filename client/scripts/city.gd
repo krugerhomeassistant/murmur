@@ -1938,7 +1938,8 @@ func _planner() -> void:
 		return
 	if coins < saving_for:
 		return
-	if mood < 0.38:
+	if mood < (0.38 if pop >= 40 else 0.25):  # tiny towns must be allowed to bootstrap
+		_plan_service(true)  # raise mood first, otherwise a low-mood town never zones again
 		return
 	var open := 0
 	for i in cells:
@@ -2054,13 +2055,13 @@ func naval_threat() -> bool:
 	return false
 
 
-func _plan_service() -> bool:
+func _plan_service(force := false) -> bool:
 	if homes.is_empty():
 		return false
 	var thr := 0.0 if human else threat()
 	var nav := thr > 0.0 and naval_threat()
 	var best := -1
-	var bsc := 0.2
+	var bsc := 0.02 if force else 0.2  # force: mood gate is blocking growth, take any useful service
 	for id in Catalog.DEFS:
 		var d: Dictionary = Catalog.DEFS[id]
 		if String(d["kind"]) != "svc" or not unlocked(id):
@@ -3434,7 +3435,7 @@ static func selfcheck() -> String:
 	if ev.sig.get_f("market") < 0.5:
 		errs.append("boom must raise market")
 
-	# A low-mood start can sit under the planner's mood gate (known stall, docs/PLAN.md), so allow 3 fresh towns.
+	# A low-mood start can sit under the planner's mood gate (known stall, docs/PLAN.md), so allow 3 fresh towns (stall fixed; the retries are a safety net).
 	var pl: City
 	var grown := 0
 	for attempt in 3:
