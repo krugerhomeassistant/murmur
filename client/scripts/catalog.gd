@@ -101,6 +101,8 @@ const POLICIES := {
         "desc": "Soldiers man the borders. +30% defence coverage: raids do less damage and your side wins more battles. Costs upkeep, mood -1%."},
     "insurance": {"n": "Disaster insurance", "up": 1.0, "mods": {"insured": 1.0},
         "desc": "Premiums every second. When fire, storms, quakes or tornadoes destroy a building, the insurer pays the city $30 for it."},
+    "cost_support": {"n": "Cost-of-living payments", "up": 2.0, "mods": {"stipend": 0.12},
+        "desc": "The council tops up households that have run out of savings: they receive a small payment every second so rent and food stay covered. Eases unrest during price surges and slumps, but it costs upkeep and does not create jobs."},
     "fast_track": {"n": "Fast-track permits", "up": 1.0, "mods": {"build_mult": 1.6},
         "desc": "Planning approvals in days. New buildings finish 60% faster."},
 }

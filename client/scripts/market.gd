@@ -10,6 +10,7 @@ const BASE := {"crops": 0.6, "food": 1.5, "goods": 2.0, "ore": 0.8, "metal": 3.0
 const LOW := 0.35  # price floor and ceiling as multiples of the base price
 const HIGH := 3.0
 const WORLD := 1.5  # outside-world offer and demand, units per second per reporting town
+const ELASTIC := 0.6  # on top of that the outside world sells this share of any shortfall, at a rising price
 const SENS := 0.6  # price = base * (demand / supply) ^ SENS
 const FOLLOW := 0.12  # how fast the price chases its target, per second
 const HIST := 90  # price samples kept (one per HIST_EVERY seconds)
@@ -27,6 +28,7 @@ var last_reporters := 0
 var t := 0.0
 var th := 0.0
 var _rec := 0
+var shock := {}  # good -> price multiplier from events, fading back to 1
 
 
 func _init() -> void:
@@ -45,6 +47,13 @@ func report(offered: Dictionary, wanted: Dictionary) -> void:
 	for k in GOODS:
 		sup[k] += float(offered.get(k, 0.0))
 		dem[k] += float(wanted.get(k, 0.0))
+
+
+## An event pushes prices: `mults` maps good -> multiplier (it fades over a few minutes).
+func shock_by(mults: Dictionary) -> void:
+	for k in mults:
+		if k in GOODS:
+			shock[k] = clampf(float(shock.get(k, 1.0)) * float(mults[k]), 0.5, 2.5)
 
 
 ## Production inputs (crops for a mill, ore for a foundry, metal for a factory) can only be bought from what is on offer.
@@ -70,7 +79,9 @@ func tick(dt: float, mult := 1.0) -> void:
 		var d: float = float(dem[k]) / t
 		last_sup[k] = s
 		last_dem[k] = d
-		var target: float = float(BASE[k]) * mult * clampf(pow((d + w) / (s + w), SENS), LOW, HIGH)
+		var sh: float = float(shock.get(k, 1.0))
+		shock[k] = move_toward(sh, 1.0, 0.004 * t)
+		var target: float = float(BASE[k]) * mult * sh * clampf(pow((d + w) / (s + w + ELASTIC * maxf(d - s, 0.0)), SENS), LOW, HIGH)
 		price[k] = float(price[k]) + (target - float(price[k])) * minf(FOLLOW * t, 1.0)
 		pool[k] = s + w
 		sup[k] = 0.0
