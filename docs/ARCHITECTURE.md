@@ -52,3 +52,6 @@ Signals (seam) <- City (engine, generic over defs) <- Catalog (buildings/metrics
 - `diplomacy.gd` (class_name Diplo): static `rel/avg/treaty/stance/mil/tmult/act/resolve/second`. City fields: `rel`, `treaty`, `temper`, `human`, `dipl_t`; petitions kinds now petition | recover | offer | demand.
 - City: map `W=96,H=64`, `terr` Rect2i + `cells` (owned indices; all whole-map loops use `for i in cells`), `expand(dir)`, `_expand_auto()`, `owns()`, `sidx(x,y)` (seed-relative index), `lamp` layer.
 - main: two towns at start; `Diplo.second(towns)` every sim second; save format v2.
+
+## Multiplayer transport (phase 0)
+`NetPlay` (scripts/netplay.gd) is a Node named "Net" under the root so RPC paths match on all peers. Godot high-level multiplayer over `ENetMultiplayerPeer`; the host owns the player table and mirrors it to clients at 1 Hz and on change. Host-authoritative design and phases: docs/MULTIPLAYER.md.

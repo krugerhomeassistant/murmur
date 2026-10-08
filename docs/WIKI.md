@@ -111,3 +111,6 @@ Farm-sector zones (sector -> effect): `farm` grain, seasonal crops; `orchard` 1.
 
 ## Planner mining
 Planner towns (City._planner) lay a road to the nearest ore deposit when none touches a road (City._plan_ore_road: BFS from the main road network over empty owned land), zone mines on roadside ore once pop >= 60 (at most 8 + 12 per foundry mine jobs, weight 0.5 regardless of industrial demand), and build a foundry as soon as a mine works and then 1 per 12 mine jobs.
+
+## Multiplayer (in progress, see MULTIPLAYER.md)
+Phase 0 only: transport and lobby table. `--server [--port N]` starts a dedicated host (UDP, default 7777), `--join host[:port]` joins. Host is peer 1, max 8 players, names are trimmed to 20 characters and made unique. No game state travels yet.

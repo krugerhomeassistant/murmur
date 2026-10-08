@@ -17,7 +17,7 @@ Decided with the owner, 2026-10-08: **competitive towns** in one shared world (e
 4. **UI**: lobby/host/join screens (direct IP field, server list later), player list with town colours, chat, "waiting for host" states. Pause is host-only; speed is host-set.
 
 ## Phases (each = branch, tests, CHANGELOG, PR)
-- [ ] P0 transport: `Net` autoload, `--server` / `--join ip:port`, host + client connect, player table, ping. Headless two-process test.
+- [x] P0 transport: `NetPlay` (scripts/netplay.gd), `--server` / `--join host[:port]`, roster + ping, two-process test `tests/net.gd` (NET_OK).
 - [ ] P1 ownership: `City.owner`, per-peer "my town" (main's `city` is the local player's), spectator for extra peers.
 - [ ] P2 commands: route all mutators through one command function; host validation; rejection feedback.
 - [ ] P3 snapshot join + mirror + 1 Hz sync + grid diffs; a client sees a live world.
