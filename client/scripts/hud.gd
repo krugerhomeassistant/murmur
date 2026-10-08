@@ -56,6 +56,10 @@ const UI_FILE := "user://ui.cfg"
 var wins := {}
 var win_open := {}
 var win_home := {}
+var win_bar := {}  # key -> title bar (hidden while the window is popped out)
+var win_title := {}
+var win_prev := {}
+var pop_wins := {}  # key -> native OS Window holding the panel (the player can drag it to another screen)
 var win_min := {}
 var lbl_appr: Label
 var appr_bar: ProgressBar
@@ -957,7 +961,7 @@ func _set_prio(k: String, d: int) -> void:
 
 
 func _army_refresh(c: City) -> void:
-    if not (wins["army"] as PanelContainer).visible:
+    if not bool(win_open["army"]):
         return
     army_chk.set_pressed_no_signal(c.train_on)
     var n := Military.counts(c)
@@ -1050,7 +1054,7 @@ func _empire_sort(col: int) -> void:
 
 
 func _empire_refresh(c: City) -> void:
-    if not (wins["empire"] as PanelContainer).visible:
+    if not bool(win_open["empire"]):
         return
     var mine := Empire.mine(m.towns, c)
     var tt := Empire.totals(mine)
@@ -1350,6 +1354,11 @@ func _win(key: String, title: String, pos: Vector2, body_min: Vector2) -> VBoxCo
     body.custom_minimum_size = body_min
     body.size_flags_vertical = Control.SIZE_EXPAND_FILL
     v.add_child(body)
+    win_bar[key] = bar
+    win_title[key] = title
+    if key != "detail":  # the hover card shows and hides itself, so it stays in the main window
+        var po := _btn(bar, "Out", func() -> void: _popout(key))
+        po.tooltip_text = "Move this window into its own OS window (drag it to another screen). Close that window to dock it back."
     var mn := _btn(bar, "-", func() -> void: _minimize(key, body))
     mn.tooltip_text = "Minimize / restore"
     var cl := _btn(bar, "x", func() -> void: _set_open(key, false))
@@ -1367,6 +1376,61 @@ func _win(key: String, title: String, pos: Vector2, body_min: Vector2) -> VBoxCo
     return body
 
 
+## Move a window's panel into its own native OS window. Closing that window docks it back. Headless or without
+## sub-window support Godot falls back to an embedded window, which behaves the same.
+func _popout(key: String, at := Vector2i(-1, -1), sz := Vector2i.ZERO) -> void:
+    if pop_wins.has(key) or not wins.has(key):
+        return
+    var p: PanelContainer = wins[key]
+    var w := Window.new()
+    w.visible = false  # force_native can only change while hidden
+    w.title = "Murmur: %s" % win_title[key]
+    w.force_native = true
+    w.theme = theme
+    w.wrap_controls = true  # never smaller than the panel needs
+    w.size = sz if sz != Vector2i.ZERO else Vector2i(maxi(int(p.size.x), 320), maxi(int(p.size.y), 200))
+    var win0 := get_window()
+    w.position = at if at.x >= 0 else win0.position + Vector2i(p.global_position) + Vector2i(40, 40)
+    w.close_requested.connect(func() -> void: _dock(key))
+    w.focus_exited.connect(_save_ui)
+    w.window_input.connect(func(e: InputEvent) -> void:  # keep the game's hotkeys (Space, Tab, ...) working from here
+        if e is InputEventKey and not (w.gui_get_focus_owner() is LineEdit):
+            m._unhandled_input(e))
+    add_child(w)
+    pop_wins[key] = w
+    win_prev[key] = p.position
+    p.get_parent().remove_child(p)
+    w.add_child(p)
+    p.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+    p.visible = true
+    (win_bar[key] as Control).visible = false
+    w.visible = bool(win_open.get(key, true))
+    _save_ui()
+
+
+func _dock(key: String) -> void:
+    if not pop_wins.has(key):
+        return
+    var w: Window = pop_wins[key]
+    var p: PanelContainer = wins[key]
+    pop_wins.erase(key)
+    w.remove_child(p)
+    add_child(p)
+    p.set_anchors_preset(Control.PRESET_TOP_LEFT)
+    p.position = win_prev.get(key, win_home[key])
+    p.set_deferred("size", Vector2.ZERO)
+    (win_bar[key] as Control).visible = true
+    p.visible = bool(win_open.get(key, true))
+    w.queue_free()
+    _clamp.call_deferred(p)
+    _save_ui()
+
+
+func _notification(what: int) -> void:
+    if what == NOTIFICATION_WM_CLOSE_REQUEST and not pop_wins.is_empty():
+        _save_ui()  # remember where the pop-out windows were
+
+
 func tk_front() -> void:
     ticker.get_parent().move_to_front()
 
@@ -1381,7 +1445,9 @@ func _minimize(key: String, body: Control) -> void:
 
 func _set_open(key: String, on: bool) -> void:
     win_open[key] = on
-    if key != "detail":
+    if pop_wins.has(key):
+        (pop_wins[key] as Window).visible = on
+    elif key != "detail":
         (wins[key] as PanelContainer).visible = on
         if on:
             (wins[key] as PanelContainer).move_to_front()
@@ -1397,10 +1463,13 @@ func _clamp(p: Control) -> void:
 
 func _clamp_all() -> void:
     for k in wins:
-        _clamp(wins[k])
+        if not pop_wins.has(k):
+            _clamp(wins[k])
 
 
 func _reset_wins() -> void:
+    for k in pop_wins.keys():
+        _dock(k)
     var vs := get_viewport_rect().size
     for k in wins:
         var p: PanelContainer = wins[k]
@@ -1424,6 +1493,10 @@ func _save_ui() -> void:
         cf.set_value(k, "pos", p.position)
         cf.set_value(k, "open", bool(win_open[k]))
         cf.set_value(k, "min", bool(win_min[k]))
+        cf.set_value(k, "popped", pop_wins.has(k))
+        if pop_wins.has(k):
+            cf.set_value(k, "wpos", (pop_wins[k] as Window).position)
+            cf.set_value(k, "wsize", (pop_wins[k] as Window).size)
     cf.save(UI_FILE)
 
 
@@ -1439,4 +1512,6 @@ func _load_ui() -> void:
         win_open[k] = bool(cf.get_value(k, "open", k != "army"))
         if k != "detail":
             p.visible = bool(win_open[k])
+        if bool(cf.get_value(k, "popped", false)) and k != "detail":
+            _popout.call_deferred(k, cf.get_value(k, "wpos", Vector2i(-1, -1)), cf.get_value(k, "wsize", Vector2i.ZERO))
     _clamp_all.call_deferred()
