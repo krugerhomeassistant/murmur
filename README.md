@@ -9,6 +9,14 @@
 
 Everything is drawn with code (no art assets), the whole game is data-driven.
 
+![Six towns growing side by side, then a close-up of one street](docs/media/murmur.gif)
+
+| A town up close | The whole region | Coverage overlay, by a river |
+|---|---|---|
+| ![A town street with homes, shops and traffic](docs/media/town.png) | ![Six towns joined by roads along one river](docs/media/world.png) | ![Service coverage overlay on a riverside town](docs/media/overlay.png) |
+
+*Captured from the game itself: a 6-town spectator world (planners only), fast-forwarded to day 150. Retake with `scripts/MEDIA.md`.*
+
 ## What you get
 
 | | |
