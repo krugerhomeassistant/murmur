@@ -896,6 +896,7 @@ func _process(delta: float) -> void:
 			if dacc >= 1.0:
 				dacc -= 1.0
 				Diplo.second(towns, city.rng)
+				Market.link_trade(towns)
 				net.broadcast()
 			var batched := 0
 			for t in towns:

@@ -51,6 +51,42 @@ func _init() -> void:
 	r.from_dict({"price": {"food": 1e9, "goods": -5.0}})
 	if float(r.price["food"]) > Market.BASE["food"] * Market.HIGH * 1.5 + 0.01 or float(r.price["goods"]) < Market.BASE["goods"] * Market.LOW - 0.01:
 		errs.append("hostile prices must be clamped")
+	# trade between linked towns: goods flow from cheap to dear, blocked by embargo or a missing road
+	var sg := Signals.new()
+	var ta := City.new(sg)
+	var tb := City.new(sg)
+	ta.town_name = "A"
+	tb.town_name = "B"
+	ta.gpos = Vector2i(0, 0)
+	tb.gpos = Vector2i(1, 0)
+	ta.partners.append(tb)
+	tb.partners.append(ta)
+	ta.stock["food"] = 300.0
+	ta.need_rate["food"] = 1.0
+	ta.price_loc["food"] = 1.2
+	tb.stock["food"] = 0.0
+	tb.need_rate["food"] = 3.0
+	tb.price_loc["food"] = 1.8
+	Market.link_trade([ta, tb])
+	if float(tb.stock["food"]) > 0.0:
+		errs.append("unlinked towns must not trade")
+	ta.gate[1] = 1
+	tb.gate[3] = 1
+	var ca := ta.coins
+	var cb := tb.coins
+	Market.link_trade([ta, tb])
+	var moved := float(tb.stock["food"])
+	if moved <= 0.0 or absf(float(ta.stock["food"]) - (300.0 - moved)) > 0.001:
+		errs.append("linked towns should move food to the dear side (%.2f)" % moved)
+	if ta.coins <= ca or tb.coins >= cb:
+		errs.append("the buyer pays, the seller earns")
+	if (tb.coins - cb) + (ta.coins - ca) >= 0.0:
+		errs.append("freight must be lost")
+	Diplo.sign_treaty(ta, tb, "embargo")
+	var before := float(tb.stock["food"])
+	Market.link_trade([ta, tb])
+	if float(tb.stock["food"]) != before:
+		errs.append("an embargo must stop trade")
 	# towns: a food-less region pays more for food than the base, and a mill buys crops from a farm town
 	var sig := Signals.new()
 	var ts: Array[City] = []

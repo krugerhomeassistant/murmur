@@ -183,6 +183,10 @@ var rally_used := false
 var last_vote := 0.0
 var season := 0
 # economy
+var price_loc := Market.BASE.duplicate()  # this town's price per good: scarcity inside the band between export and import parity
+var need_rate := {}  # units per second the town uses of each good
+var prod_rate := {}  # units per second it makes
+var traded := {}  # units moved to (+) or from (-) linked towns since the last _trade
 var wage_ix := 1.0  # wage level; follows the cost of living with a lag
 var cpi := 1.0  # cost-of-living index: market price of the food and goods basket against its base (smoothed)
 var hh := {"avg": 0.0, "median": 0.0, "broke": 0.0, "rich": 0.0, "real": 1.0}  # household statistics, recomputed every second
@@ -1786,12 +1790,22 @@ func _can_upgrade(i: int) -> bool:
 	return float(hh["avg"]) >= need * 0.5
 
 
+## What this town could send to linked towns now (stock above a minute and a half of its own use) and what it would take.
+func trade_offer(k: String) -> float:
+	return maxf(0.0, float(stock.get(k, 0.0)) - maxf(float(need_rate.get(k, 0.0)) * 90.0, cap * 0.1))
+
+
+func trade_want(k: String) -> float:
+	var nr: float = float(need_rate.get(k, 0.0))
+	return maxf(0.0, nr * 45.0 - float(stock.get(k, 0.0))) if nr > 0.02 else 0.0
+
+
 ## Wages, bills and savings of every household, once per sim second (see docs/wiki/households.md).
 func _households() -> void:
 	var mk: Market = sig.mk
-	var pf: float = mk.price["food"]
-	var pg: float = mk.price["goods"]
-	var basket := 0.6 * mk.ratio("food") + 0.4 * mk.ratio("goods")
+	var pf: float = price_loc["food"]  # what households pay is this town's price, not the world's
+	var pg: float = price_loc["goods"]
+	var basket := 0.6 * pf / float(Market.BASE["food"]) + 0.4 * pg / float(Market.BASE["goods"])
 	cpi += (basket - cpi) * 0.02
 	wage_ix += (cpi - wage_ix) * WAGE_LAG
 	var edu := 1.0 + 0.3 * float(cov["edu"])
@@ -3366,7 +3380,7 @@ func _trade(_market: float) -> Array:
 	# Basic needs are always met from the market, at whatever it costs: that is what drives prices up in a famine.
 	want["food"] = fneed - fl
 	want["goods"] = gneed - gl
-	var imp := ((fneed - fl) * float(mk.price["food"]) + (gneed - gl) * float(mk.price["goods"])) * RATE + spent
+	var imp := ((fneed - fl) * float(mk.price["food"]) + (gneed - gl) * float(mk.price["goods"])) * Market.IMPORT * RATE + spent
 	var ex := 0.0
 	var sold := 0.0
 	var offered := {}
@@ -3382,10 +3396,21 @@ func _trade(_market: float) -> Array:
 			offered[k] = sell
 		stock[k] = minf(float(stock[k]), cap)
 	mk.report(offered, want)
+	need_rate = {"crops": mills * 3.0, "food": fneed, "goods": gneed, "ore": foundries * 2.0, "metal": fac_jobs * emp * 0.02}
+	prod_rate = {"crops": crops, "food": milled + fish + ranch_jobs * emp * 0.1 + fish_jobs * emp * 0.12 * river_health, "goods": goods, "ore": mined, "metal": smelt * 0.5}
+	for k in Market.GOODS:  # local scarcity: days of cover (stock plus a minute of production) against use, between export and import parity
+		var nr: float = maxf(float(need_rate[k]), 0.0)
+		var lf := 0.8
+		if nr > 0.02:
+			lf = lerpf(Market.IMPORT, 0.8, clampf(((float(stock[k]) + 60.0 * float(prod_rate[k])) / nr - 10.0) / 190.0, 0.0, 1.0))
+		elif float(stock[k]) <= 0.5 and float(prod_rate[k]) <= 0.0:
+			lf = 1.0
+		price_loc[k] = float(mk.price[k]) * lf
 	exported += sold
 	flow = {"crops": crops, "food": milled + fish + ranch_jobs * emp * 0.1 + fish_jobs * emp * 0.12 * river_health, "goods": goods, "ore": mined, "metal": smelt * 0.5, "food_need": fneed, "goods_need": gneed,
 		"food_local": fl / fneed if fneed > 0.0 else 1.0, "goods_local": gl / gneed if gneed > 0.0 else 1.0,
-		"export": sold, "price": 1.0 + 0.3 * sig.get_f("market"), "imp": imp, "ex": ex, "sold": offered, "bought": bought, "want": want}
+		"export": sold, "price": 1.0 + 0.3 * sig.get_f("market"), "imp": imp, "ex": ex, "sold": offered, "bought": bought, "want": want, "traded": traded.duplicate()}
+	traded.clear()
 	return [ex, imp]
 
 
@@ -3395,7 +3420,7 @@ func _trade(_market: float) -> Array:
 const SAVE_KEYS := ["town_name", "grid", "lvl", "build", "wire", "pipe", "sewer", "lamp", "water", "ore", "ground", "coins", "mood", "tax_r", "tax_c", "tax_i", "clock", "day",
 	"policies", "auto_mode", "auto_policy", "peak", "announced", "next_id", "recent", "active", "approval", "rep", "favor",
 	"petitions", "promises", "pet_recent", "kept", "broken", "next_election", "elections_won", "rally_used", "last_vote",
-	"season", "wage_ix", "stock", "exported", "loans", "done_ms", "disasters_survived", "burned", "hist_coins", "hist_pop", "ruins", "offline", "lamp", "terr", "expansions", "auto_expand", "human", "owner", "temper", "rel", "treaty", "ev_scale", "gpos", "war_n", "war_sc", "occ", "train_on", "train_t", "train_w"]
+	"season", "wage_ix", "price_loc", "stock", "exported", "loans", "done_ms", "disasters_survived", "burned", "hist_coins", "hist_pop", "ruins", "offline", "lamp", "terr", "expansions", "auto_expand", "human", "owner", "temper", "rel", "treaty", "ev_scale", "gpos", "war_n", "war_sc", "occ", "train_on", "train_t", "train_w"]
 
 func to_dict() -> Dictionary:
 	var cs: Array = []

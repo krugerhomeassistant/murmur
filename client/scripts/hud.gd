@@ -1052,7 +1052,7 @@ func _market_win() -> void:
     mk_grid.columns = 7
     mk_grid.add_theme_constant_override("h_separation", 10)
     body.add_child(mk_grid)
-    for h in ["Good", "Price", "vs base", "Offered/s", "Wanted/s", "Last 15 min", "Your town"]:
+    for h in ["Good", "World", "Here", "Offered/s", "Wanted/s", "Last 15 min", "Your town"]:
         _hdr(mk_grid, h)
     for k in Market.GOODS:
         var cell := {"nm": _lbl(mk_grid, 56), "price": _lbl(mk_grid, 52), "vs": _lbl(mk_grid, 56), "sup": _lbl(mk_grid, 66), "dem": _lbl(mk_grid, 66)}
@@ -1065,7 +1065,7 @@ func _market_win() -> void:
         cell["line"] = line
         cell["you"] = _lbl(mk_grid, 150)
         mk_cells[k] = cell
-    _hdr(body, "One price per good, set by everyone's offers and needs (towns only trade through this market). Dear goods are worth making; cheap goods are held back.")
+    _hdr(body, "World = the outside market, set by all towns together. Here = your town's price: low when you have plenty, high when you are short, always between selling abroad (80%) and buying abroad (120%). Linked towns (road to the shared border) trade goods when the price gap pays the freight.")
     win_open["market"] = false
     (wins["market"] as PanelContainer).visible = false
 
@@ -1096,14 +1096,15 @@ func _market_refresh(c: City) -> void:
         var cell: Dictionary = mk_cells[k]
         var rt := mk.ratio(k)
         (cell["price"] as Label).text = "$%.2f" % float(mk.price[k])
-        (cell["vs"] as Label).text = "%s %d%%" % ["+" if rt >= 1.0 else "-", absi(roundi((rt - 1.0) * 100.0))]
+        (cell["vs"] as Label).text = "$%.2f" % float(c.price_loc[k])
         (cell["sup"] as Label).text = "%.1f" % float(mk.last_sup[k])
         (cell["dem"] as Label).text = "%.1f" % float(mk.last_dem[k])
         (cell["line"] as Control).queue_redraw()
         var sold := float((c.flow.get("sold", {}) as Dictionary).get(k, 0.0))
         var bought := float((c.flow.get("bought", {}) as Dictionary).get(k, 0.0))
         var wanted := float((c.flow.get("want", {}) as Dictionary).get(k, 0.0))
-        (cell["you"] as Label).text = "stock %d, sell %.1f, buy %.1f" % [int(c.stock.get(k, 0.0)), sold, maxf(bought, wanted if k in ["food", "goods"] else bought)]
+        var tr := float((c.flow.get("traded", {}) as Dictionary).get(k, 0.0))
+        (cell["you"] as Label).text = "stock %d, sell %.1f, buy %.1f%s" % [int(c.stock.get(k, 0.0)), sold, maxf(bought, wanted if k in ["food", "goods"] else bought), ("  linked %+.1f" % tr) if absf(tr) > 0.05 else ""]
         if rt > 1.25 and float(c.flow.get(k, 0.0)) > 0.0:
             sell.append(MK_NAMES[k])
         if rt < 0.8:

@@ -1,6 +1,6 @@
 # Market
 
-One shared exchange sets the price of the five tradable goods: crops, food, goods, ore and metal. Towns do not trade pairwise; each town reports what it offers and needs every sim second and the price of each good follows the balance. Implementation: `client/scripts/market.gd` (class `Market`), owned by `Signals` (`sig.mk`), used by `City._trade`. Test: `client/tests/market.gd`.
+Five goods are traded: crops, food, goods, ore and metal. Each good has its own price with its own base (crops 0.6, food 1.5, goods 2.0, ore 0.8, metal 3.0) and moves on its own supply and demand; the five never share a price. There are two levels: the **world price** of each good (the outside market, set by all towns together) and each town's **local price** (scarcity inside the town, between selling abroad at 80% and buying abroad at 120% of the world price). Linked towns also trade goods with each other when the price gap pays for freight. Implementation: `client/scripts/market.gd` (class `Market`), owned by `Signals` (`sig.mk`), used by `City._trade`. Test: `client/tests/market.gd`.
 
 ## Price formation
 Every sim second `Market.tick` closes a window. For each good:
@@ -15,6 +15,25 @@ price += (target - price) * min(0.12 * window, 1)
 `signal` is `1 + 0.3 * market` from `Signals` (the world market signal, -1..1). Base prices: crops 0.6, food 1.5, goods 2.0, ore 0.8, metal 3.0. The outside world keeps prices bounded and stops one idle town from moving a price alone. A good nobody trades stays at base.
 
 The price is sampled into a history every 10 s (90 samples, 15 minutes) for the Market window. Clients of a multiplayer game receive prices and last-window supply and demand inside every town snapshot (`City.to_dict` key `mk`) and keep their own history.
+
+## Local prices
+`City._trade` sets `price_loc[good]` every second:
+
+```
+cover = (stock + 60 * production) / use                  (seconds of cover; use = need_rate)
+local = world price * lerp(IMPORT 1.2, 0.8, clamp((cover - 10) / 190, 0, 1))
+```
+A town with plenty of a good (a mining town's ore, a farming town's food) pays near 80% of the world price; a town short of it pays up to 120%. A good the town neither uses nor stocks sits at 80% (export parity). Households pay the local food and goods prices, so inflation is local (see [Households](households.md)). `IMPORT` is also the price multiplier for basic needs bought abroad.
+
+## Trade between linked towns
+`Market.link_trade(towns)` runs once per sim second (`Main._process`, after `Diplo.second`). For each good, a town offers stock above `max(use * 90 s, 10% of storage)` and wants up to `use * 45 s` minus stock. Sellers are sorted cheap first, buyers dear first; a pair trades when both borders have a road (`Diplo.tmult > 0`; embargo and war block it) and
+
+```
+gap = buyer local price - seller local price - freight        freight = base * 0.06 * plot distance
+trade if gap >= base * 0.05;  quantity <= min(offer, want, 2.0 * tmult) per second
+seller price = seller local + gap / 2;   buyer pays seller price + freight (the freight is lost)
+```
+So a town sitting on ore sells it cheaply to a linked town with a foundry, and a blockade or embargo shows up as shortages. Trade only reaches adjacent plots today (multi-hop routes and ports are planned).
 
 ## What towns do with it
 `City._trade` (once per sim second per town):
@@ -38,11 +57,13 @@ Windows > Market (`Hud._market_win`). Columns: price, change against base, units
 | Topic | Code |
 |---|---|
 | Price formation, pool, history | `Market.tick`, `Market.take`, `Market.report` (`market.gd`) |
-| Town trade | `City._trade` (`city.gd`) |
+| Town trade, local prices | `City._trade`, `City.trade_offer`, `City.trade_want` (`city.gd`) |
+| Trade between towns | `Market.link_trade` (`market.gd`) |
 | Snapshot and save | `Market.brief`, `Market.apply_brief`, `Market.to_dict`, `City.to_dict`, `Main.save_game` |
 | Window | `Hud._market_win`, `Hud._market_refresh`, `Hud._spark` |
 
 ## Open questions
-- The market has no distance: prices are the same in every town and trade needs no road. Regional prices and trade routes are planned (E4 in [PLAN](../PLAN.md)).
+- Link trade covers adjacent plots only; multi-hop routes, ports and shipping capacity are planned (E4 in [PLAN](../PLAN.md)).
+- Local prices are not part of the multiplayer snapshot's price band check beyond `price_loc` itself, and the Market window on a client shows host values only after the first snapshot.
 - Basic-need imports are unlimited and unaffected by the input-purchase pool; only demand is recorded.
 - Only five goods exist; wood, fuel and tools are planned.
