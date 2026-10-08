@@ -24,7 +24,7 @@ Decided with the owner, 2026-10-08: **competitive towns** in one shared world (e
 - [x] P3b game integration: `Main.host_game` (lobby "Host": a normal world, you own town 1, friends take the free towns), `Main.join_game` (client runs a no-sim mirror, `remote = true`, viewed town = yours, snapshots via `from_dict`), `Main.cmd` routes every action through the host, a networked world never touches the single-player save; lobby screen (scripts/lobby.gd) from the start menu; `--server [--port N] [--towns N]` dedicated mode. `tests/mp.gd` (MP_OK) runs a real server process and a real client process.
 - [x] P4 chat and reconnects: Enter opens chat (140 chars, `NetPlay.say`, relayed by the host, `ChatBox`), a player who leaves hands the town back to the planner and gets the same town when they rejoin under the same name (`claims`), a lost host connection returns the client to the start menu, leaving a networked game stops the network.
 - [x] P5 player-vs-player diplomacy: when the other town belongs to another player (`b.owner != 0`), pacts, alliances, ceasefires and tribute demands become proposals in that player's petitions (`Diplo._ask`), the proposer's price is held and refunded on refusal or expiry; war, embargo, gifts and cancelling stay unilateral. Planner towns answer instantly as before. `tests/pvp.gd` (PVP_OK).
-- [ ] P6 dedicated server polish: CLI flags, config, logging, docs, optional Docker image.
+- [x] P6 dedicated server polish: `--server --port --towns --speed`, join/leave/chat logging, run instructions below. Not done: world persistence, password, Docker image.
 - [ ] P7 hosted options beyond direct IP (relay, server list) only if wanted.
 
 ## Risks
@@ -34,3 +34,8 @@ Decided with the owner, 2026-10-08: **competitive towns** in one shared world (e
 
 ## Measurements
 - Town snapshot at pop 70 (day ~400): 5.3 KB gzip, pack 1.1 ms on the host, apply 1.3 ms on a client (headless, one town). 8 towns once a second is about 40 KB/s per client. Re-measure with large towns (500+ pop) before release; if it grows, add diffs or send non-viewed towns less often.
+
+## Running a server
+- **From the game:** start menu > Multiplayer > Host. Friends on the same network join with your LAN address; over the internet forward UDP 7777 on your router (or use a VPN/overlay network such as Tailscale or ZeroTier, no port forwarding needed).
+- **Dedicated (headless):** `godot --headless --path client -- --server [--port 7777] [--towns 6] [--speed 1]`. It prints joins, leaves and chat. Players take free towns; empty towns run on the planner. The server world is not saved yet (a restart makes a new world).
+- Open the port in the server's firewall (UDP). There is no password yet: anyone who can reach the port can join, up to 8 players.

@@ -23,6 +23,7 @@ Everything is drawn with code (no art assets), the whole game is data-driven.
 |---|---|
 | **Towns that grow themselves** | Zone beside roads and the planner builds homes, shops, farms, factories and services as needs arise. Or take the wheel and place everything. |
 | **A living region** | Up to eight neighbouring towns trade power, water and commuters over border roads. Each runs on its own planner and has a temper. |
+| **Multiplayer** | Host or join from the start menu (LAN or direct IP, up to 8 players, or a dedicated `--server`). Each player runs a town; treaties and war between players are proposals and declarations. See [docs/MULTIPLAYER.md](docs/MULTIPLAYER.md). |
 | **Diplomacy and war** | Pacts, alliances, embargoes, tribute, raids and full battles with garrisons, naval yards and war weariness. |
 | **Rivers that matter** | One shared river through neighbouring towns, or paint your own in the world editor. Bridges cost 4x. Fish swim; sewage kills them. |
 | **Ports and fishing** | Docks need water. Cargo ships raise export income, warships guard the coast, fishing docks feed the town while the river is healthy. |
