@@ -36,3 +36,4 @@ jobs:
           godot --headless --path client -s tests/pmine.gd | tee p.txt && grep -q PMINE_OK p.txt
           godot --headless --path client -s tests/net.gd | tee nn.txt && grep -q NET_OK nn.txt
           godot --headless --path client -s tests/cmd.gd | tee cc.txt && grep -q CMD_OK cc.txt
+          godot --headless --path client -s tests/netsync.gd | tee ns.txt && grep -q NETSYNC_OK ns.txt

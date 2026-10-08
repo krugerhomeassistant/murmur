@@ -11,10 +11,14 @@ const NAME_MAX := 20
 signal roster_changed
 signal joined  ## client: accepted by the host
 signal failed(reason: String)
+signal world(meta: Dictionary)  ## client: the world layout and which town is yours
+signal state(idx: int, d: Dictionary)  ## client: a town snapshot arrived
+signal reply(cmd: String, result: Variant)  ## client: the host's answer to a command
 
 var players := {}  ## peer id -> {"name": String, "ping": int ms}; host-owned, mirrored to clients
 var dedicated := false
 var active := false
+var towns: Array[City] = []  ## host: the simulated towns (set with serve)
 var _acc := 0.0
 
 
@@ -82,8 +86,64 @@ func _on_peer(_id: int) -> void:
 
 
 func _on_gone(id: int) -> void:
+	NetWorld.release(towns, id)
 	if players.erase(id):
 		_push()
+
+
+## Host: the towns clients mirror and command.
+func serve(ts: Array[City]) -> void:
+	towns = ts
+
+
+## Host, about once a second: every town's snapshot to every client.
+func broadcast() -> void:
+	if not is_host() or players.size() <= (0 if dedicated else 1):
+		return
+	for i in towns.size():
+		_state.rpc(i, NetWorld.pack(towns[i]))
+
+
+## A player action. Clients ask the host; the host runs it for its own town directly.
+func command(idx: int, cname: String, args: Array) -> Variant:
+	if not active:
+		return null
+	if is_host():
+		return _run(1, idx, cname, args)
+	_cmd.rpc_id(1, idx, cname, args)
+	return null  # the answer arrives as the `reply` signal
+
+
+func _run(sender: int, idx: int, cname: String, args: Array) -> Variant:
+	if idx < 0 or idx >= towns.size() or towns[idx].owner != sender:
+		return null  # not your town
+	return Cmd.run(towns, towns[idx], cname, args)
+
+
+@rpc("any_peer", "reliable")
+func _cmd(idx: int, cname: String, args: Array) -> void:
+	if not multiplayer.is_server():
+		return
+	var sender := multiplayer.get_remote_sender_id()
+	var r: Variant = _run(sender, idx, cname, args)
+	_reply.rpc_id(sender, cname, r if (r == null or r is bool or r is String or r is int) else true)
+
+
+@rpc("authority", "reliable")
+func _reply(cname: String, r: Variant) -> void:
+	reply.emit(cname, r)
+
+
+@rpc("authority", "reliable")
+func _world(meta: Dictionary) -> void:
+	world.emit(meta)
+
+
+@rpc("authority", "reliable")
+func _state(idx: int, b: PackedByteArray) -> void:
+	var d := NetWorld.unpack(b)
+	if not d.is_empty():
+		state.emit(idx, d)
 
 
 @rpc("any_peer", "reliable")
@@ -96,6 +156,8 @@ func _hello(pname: String) -> void:
 	players[id] = {"name": _unique(_clean(pname)), "ping": 0}
 	_push()
 	_welcome.rpc_id(id)
+	if not towns.is_empty():
+		_world.rpc_id(id, NetWorld.meta(towns, NetWorld.assign(towns, id)))
 
 
 func _unique(n: String) -> String:
