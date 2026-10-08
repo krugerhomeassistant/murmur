@@ -134,6 +134,14 @@ Goal: Murmur, a cozy interactive city-builder (Godot) with an optional Live Data
 - [ ] REPO PROFESSIONALISM pass: screenshots/GIF in README, consistent docs structure, docs/ folder, CONTRIBUTING/CODE_OF_CONDUCT/SECURITY, release notes, badges accurate, remove dev clutter, LICENSE check, tidy PLAN/WIKI/LESSONS layout.
 - STANDING RULE: README/docs must never claim anything untrue or stale; scripts/check_repo.py runs in CI (hygiene job).
 
+## Empire / endless world (user, 2026-10-08): NEXT MAJOR FEATURE, design in docs/EMPIRE_DESIGN.md
+- [ ] E1 Endless procedural world: `world.gd` generator + chunk cache, plots anchored by world position (replace `gpos`), fog of war, found-a-town on the map with distance cost (replaces flat $300), claim adjacent land, save v2 + migration, `tests/world.gd`.
+- [ ] E2 Empire mode (upgraded spectator): dashboard, bulk policies, planner delegate with approve/veto queue, empire treasury, sim level of detail.
+- [ ] E3 Group multiplayer: owner + group per town, shared group economy, group diplomacy/war, join mid-game. Prereqs: rejoin token, snapshot backpressure.
+- [ ] E4 Economy depth: goods chains, regional prices, trade routes, upkeep, loans.
+- [ ] E5 Infrastructure: rail, highways, ports, airports, power and water tiers.
+- [ ] E6 Military variety: war phases 2-4 plus new buildings/units, research, logistics.
+
 ## War rework (user, 2026-10-08): "full Age of Empires / Empire Earth style war" - NEXT MAJOR FEATURE (v0.3)
 Today: armies fight on one abstract line between two towns; unopposed units at the edge raid and shell from a distance (`Military.fight/_occupy`, `Main.draw_fx`). User feedback from watching it:
 - [x] Armies march INTO the enemy town (world positions, phase 1). [ ] Fight among the buildings: buildings take damage (phase 2).
