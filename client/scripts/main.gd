@@ -30,6 +30,10 @@ var follow_t := 0.0
 var bench_seed := 0
 var world: World  # shared terrain every town plot is cut from; null for saves from before the endless world
 var world_rivers := true
+var wl: WorldLayer  # the endless land around and between the towns
+var found_mode := false  # choosing a spot on the map for a new town
+const FOUND_STEP := 120.0  # extra cost per plot of distance from the nearest town
+const EXPLORE := 10  # how many plots past the outermost town the camera may roam
 var steps_done := 0  # sim steps run, for measuring the effective speed
 const MAX_BATCH := 2
 const SIM_BUDGET_MS := 6.0  # max sim work per frame; the game slows below the chosen speed instead of dropping frames
@@ -219,14 +223,14 @@ func _free_name() -> String:
 	return "Town %d" % (towns.size() + 1)
 
 
-func _new_town(nm := "") -> City:
+func _new_town(nm := "", g := Vector2i(1 << 30, 0)) -> City:
 	var t := City.new(sig)
 	if bench_seed != 0:  # reproducible worlds for the benchmark
 		t.rng.seed = bench_seed + towns.size()
 		t._gen_ore()
 	t.town_name = nm if nm != "" else _free_name()
 	t.temper = TEMPERS[towns.size() % TEMPERS.size()]
-	t.gpos = spiral(towns.size())
+	t.gpos = spiral(towns.size()) if g.x == 1 << 30 else g
 	t.seed_start()
 	if world != null:
 		t.apply_world(world, City.plot_origin(t.gpos), world_rivers)
@@ -413,7 +417,18 @@ func _begin() -> void:
 	fit_prev = 0.0
 	glide = Vector2.INF
 	cam.position = _center(city)
+	found_mode = false
+	_sync_world_layer()
 	hud.reset()
+
+
+func _sync_world_layer() -> void:
+	if wl == null:
+		wl = WorldLayer.new()
+		add_child(wl)
+		move_child(wl, 0)
+	wl.setup(world, cam)
+	wl.visible = world != null
 
 
 func save_game() -> void:
@@ -467,15 +482,53 @@ func _notification(what: int) -> void:
 		save_game()
 
 
-func found_town() -> void:
-	if city.coins < FOUND_COST:
-		headline = "Founding a town costs $%d." % int(FOUND_COST)
-	else:
-		city.coins -= FOUND_COST
-		var t := _new_town()
-		t.coins = 300.0
-		headline = "%s founded! Neighbouring towns now trade power, water and commuters." % t.town_name
-		switch_town(towns.size() - 1)
+## Cost of a town at region plot g: the base price plus a surcharge for every plot of distance from the nearest town.
+func found_cost(g: Vector2i) -> float:
+	var d := 1 << 20
+	for t in towns:
+		d = mini(d, maxi(absi(t.gpos.x - g.x), absi(t.gpos.y - g.y)))
+	return FOUND_COST + FOUND_STEP * float(maxi(d - 1, 0))
+
+
+func plot_at(p: Vector2) -> Vector2i:
+	return Vector2i((p / (Vector2(City.W, City.H) * TILE)).floor())
+
+
+## Why a town cannot go on plot g, or "" if it can.
+func found_block(g: Vector2i) -> String:
+	for t in towns:
+		if t.gpos == g:
+			return "That plot already has a town."
+	if world != null and not _site_ok(world, g, City.START_W, City.START_H):
+		return "Too much water there."
+	return ""
+
+
+func found_town() -> void:  # the Towns menu: pick the spot on the map
+	if remote or (net != null and net.active):
+		headline = "Founding towns is not available in multiplayer yet."
+		return
+	found_mode = true
+	if fit_prev == 0.0 and _lod() < 3:
+		toggle_map()
+	headline = "Click an empty plot to found a town (Esc cancels). Cost $%d, +$%d per plot of distance." % [int(FOUND_COST), int(FOUND_STEP)]
+
+
+func found_town_at(g: Vector2i) -> bool:
+	var why := found_block(g)
+	if why == "":
+		var cost := found_cost(g)
+		if city.coins < cost:
+			why = "Founding there costs $%d." % int(cost)
+		else:
+			city.coins -= cost
+			var t := _new_town("", g)
+			t.coins = 300.0
+			headline = "%s founded! Neighbouring towns now trade power, water and commuters." % t.town_name
+			found_mode = false
+			return true
+	headline = why
+	return false
 
 
 ## M: zoom out to see the whole region live, press again to come back.
@@ -526,7 +579,9 @@ func _unhandled_input(e: InputEvent) -> void:
 		chatbox.open()
 		return
 	if e is InputEventMouseButton and e.pressed:
-		if e.button_index == MOUSE_BUTTON_LEFT:
+		if e.button_index == MOUSE_BUTTON_LEFT and found_mode:
+			found_town_at(plot_at(get_global_mouse_position()))
+		elif e.button_index == MOUSE_BUTTON_LEFT:
 			_paint(true)
 		elif e.button_index == MOUSE_BUTTON_WHEEL_UP:
 			cam.zoom = (cam.zoom * 1.1).clamp(Vector2(0.03, 0.03), Vector2(2.5, 2.5))
@@ -561,6 +616,9 @@ func _unhandled_input(e: InputEvent) -> void:
 				speed = 1.0 if speed == 0.0 else 0.0
 			KEY_Q, KEY_ESCAPE:
 				tool = INSPECT
+				if found_mode:
+					found_mode = false
+					headline = "Founding cancelled."
 			KEY_M:
 				toggle_map()
 			KEY_B:
@@ -802,7 +860,9 @@ func _process(delta: float) -> void:
 	for t in towns:
 		lo = lo.min(origin(t))
 		hi = hi.max(origin(t) + Vector2(City.W, City.H) * TILE)
-	cam.position = cam.position.clamp(lo, hi)
+	cam.position = cam.position.clamp(lo - Vector2(City.W, City.H) * TILE * EXPLORE, hi + Vector2(City.W, City.H) * TILE * EXPLORE)
+	if wl != null:
+		wl.set_season(city.season)
 	var under := _town_at(cam.position)
 	if under != null and under != city and started:
 		_set_city(under)
@@ -907,8 +967,25 @@ func _draw() -> void:  # world level: weather and the links between towns; every
 				ci.draw_rect(view, Color(0.6, 0.75, 1.0, 0.12))
 
 
+## The plot under the mouse while choosing where to found a town: green if it can be afforded, red if not, with the price.
+func _draw_found(node: CanvasItem) -> void:
+	var g := plot_at(get_global_mouse_position())
+	var size := Vector2(City.W, City.H) * TILE
+	var r := Rect2(Vector2(g) * size, size)
+	var why := found_block(g)
+	var cost := found_cost(g)
+	var ok := why == "" and city.coins >= cost
+	var col := Color(0.35, 0.85, 0.4) if ok else Color(0.9, 0.35, 0.3)
+	node.draw_rect(r, Color(col, 0.18))
+	node.draw_rect(r, col, false, maxf(3.0, 3.0 / cam.zoom.x))
+	var fs := int(clampf(26.0 / cam.zoom.x, 24.0, 400.0))
+	node.draw_string(ThemeDB.fallback_font, r.position + Vector2(size.x * 0.05, size.y * 0.5), why if why != "" else "$%d" % int(cost), HORIZONTAL_ALIGNMENT_LEFT, size.x * 0.9, fs, col)
+
+
 ## Every unit of every army at the front between two towns at war, with tracers and explosions.
 func draw_fx(node: CanvasItem) -> void:
+	if found_mode:
+		_draw_found(node)
 	var now := Time.get_ticks_msec()
 	var sz := clampf(1.1 / cam.zoom.x, 1.6, 10.0)  # keep units readable when zoomed out
 	for ai in towns.size():

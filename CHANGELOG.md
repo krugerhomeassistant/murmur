@@ -7,6 +7,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ### Added
 - `World` (`scripts/world.gd`): deterministic endless terrain generator (sea, rivers, sand, plains, forest, hills, rock, ore) for the upcoming endless map; `tests/world.gd`. Not used by towns yet.
+- Founding a town is a map action: Towns menu > Found a new town, then click any free plot (green = affordable, red = blocked or too dear; Esc cancels). The price is $300 plus $120 per plot of distance from the nearest town, and plots with too much water are refused. Not available in multiplayer yet.
+- The land between and around the towns is drawn from the endless world (rivers, lakes, coast, forest, hills, rock, ore), generated a few milliseconds per frame near the camera, and the camera may roam 10 plots past the outermost town (it was clamped to the towns).
 
 ### Fixed
 - Planner towns could never link a border: the border road was laid as a straight line and gave up for good at the first building in the way (`tests/spectate.gd` failed about 1 run in 4). It now finds a route around buildings, preferring dry land.
