@@ -26,7 +26,7 @@ jobs:
         run: godot --headless --path client --import || true
       - name: Smoke test
         run: godot --headless --path client -s tests/smoke.gd | tee out.txt && grep -q SMOKE_OK out.txt
-      - name: Net cache and shared river tests
+      - name: Simulation tests
         run: |
           timeout 600 godot --headless --path client -s tests/netcache.gd | tee n.txt && grep -q NETCACHE_OK n.txt
           timeout 600 godot --headless --path client -s tests/rivers.gd | tee r.txt && grep -q RIVERS_OK r.txt
@@ -36,6 +36,18 @@ jobs:
           timeout 600 godot --headless --path client -s tests/ai.gd | tee a.txt && grep -q AI_OK a.txt
           timeout 600 godot --headless --path client -s tests/farms.gd | tee f.txt && grep -q FARMS_OK f.txt
           timeout 600 godot --headless --path client -s tests/pmine.gd | tee p.txt && grep -q PMINE_OK p.txt
+  netplay:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Godot
+        run: |
+          wget -q "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip" -O godot.zip
+          unzip -q godot.zip && sudo mv "Godot_v${GODOT_VERSION}-stable_linux.x86_64" /usr/local/bin/godot
+      - name: Import project
+        run: godot --headless --path client --import || true
+      - name: Multiplayer tests
+        run: |
           timeout 600 godot --headless --path client -s tests/net.gd | tee nn.txt && grep -q NET_OK nn.txt
           timeout 600 godot --headless --path client -s tests/cmd.gd | tee cc.txt && grep -q CMD_OK cc.txt
           timeout 600 godot --headless --path client -s tests/netsync.gd | tee ns.txt && grep -q NETSYNC_OK ns.txt
