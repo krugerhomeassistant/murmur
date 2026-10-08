@@ -144,6 +144,8 @@ Today: armies fight on one abstract line between two towns; unopposed units at t
 - [ ] Battle footage for the README (second GIF) once the above exists.
 Rules: keep `Military` deterministic enough for `tests/war.gd`; the host simulates wars (multiplayer); perf must not regress (`--benchmark --war`).
 
+## Known issues
+- [ ] Planner stall: an isolated early town (no policy, ~0.3 mood) can sit under the `mood < 0.38` zone gate for 600 sim-s with 2000 coins and never grow (about 7% of fresh towns, seen in `City.selfcheck`). CI now allows 3 fresh towns; the real fix is to have `_plan_service` raise mood first when the gate is the blocker.
 ## Audit 2026-10-08 follow-ups (not yet done)
 - [ ] Rejoin token: claims are keyed by name only, so anyone can take a dropped player's town by using their name; also a fast rejoin gets a different town while the old peer lingers.
 - [ ] Snapshot backpressure: reliable per-second snapshots can queue without bound for a stalled client.
