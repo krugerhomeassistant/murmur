@@ -1,18 +1,16 @@
 # ACTIVE CONTEXT (read first)
 
-**2026-10-08 late:** branch `perf/net-growth` (PR pending): net re-solve 10x cheaper, `--war` benchmark, blast-position fix, lane/pavement rendering, rivers meet at borders, shelling visual, showcase media (`tests/showcase.gd`, `tests/reel.gd`, README GIF retaken). Next: finish perf pass, audit, v0.2.0 release. Then the war rework (docs/PLAN.md). Planner towns stall near 100 pop (audit item).
-
 Last updated 2026-10-08.
 
 ## State
-`main` is green. Done since the last refresh: release pipeline (docs/RELEASING.md; `murmur-release` and `murmur-benchmark` skills saved), README screenshots + hero GIF (docs/media, retake with scripts/MEDIA.md and `--capture`), multiplayer P0-P3 (docs/MULTIPLAYER.md): transport, `Cmd` command layer, owner-checked commands, snapshot sync, lobby UI, `--server` dedicated mode, mp test (tests/mp.gd). Land-value pass sped up (PR #29).
-User authorised merging my own PRs. The proxy blocks branch deletion and GraphQL (use REST). The device repo (`E:\Projects\Personal\game\murmur`) is a real git clone: fetch/checkout over there (run godot-ai `filesystem_manage scan` after adding scripts). Standing rule: the performance pass is the LAST step before each release.
+`main` is green. Shipped since the last refresh: multiplayer P0-P6 (host-authoritative ENet, chat, rejoin, PvP diplomacy, dedicated `--server`), security hardening (#44), planner tax controller (avg planner pop 74 -> ~180), growth-only net re-solve (~10x cheaper), rivers meet at borders, blast position fix, lane/pavement rendering, README media from a hand-built showcase town (`tests/showcase.gd`, `tests/reel.gd`, `scripts/MEDIA.md`), measured benchmark table (A/B at 1280x720 on the i7-8700 + GTX 1070 Ti, plus `--war`).
+Standing rules: user authorised self-merge; PR bodies carry NO "Generated with Claude Code"/session-link footer (user asked to stop); perf pass is the LAST step before a release; proxy blocks branch deletion and GraphQL (REST only); device VM has no GitHub credentials; device repo is `E:\Projects\Personal\game\murmur` (git clone, fetch/checkout there, then godot-ai `filesystem_manage scan`).
 
 ## Next (in order)
-1. Multiplayer P4 (chat, disconnect/rejoin), P5 (human-vs-human treaties/war: `Diplo` assumes one human), P6 (server polish/docs). Then re-measure snapshot size with 500+ pop towns.
-2. Release v0.2.0 when the user says: perf pass first (stage costs: scan_net, jobs, planner; add a war benchmark scenario), then `murmur-release`.
-3. Smaller: lint (gdtoolkit) in CI, ferries/cargo ships (unclear value), threading only if the benchmark improves.
-4. Waiting on user: hand-play tuning at 500+ pop, repo description/topics on GitHub, deleting merged remote branches (proxy cannot).
+1. v0.2.0 release: perf re-check (benchmark again after the planner change), `murmur-release` skill, portable zip on the device, GitHub release (confirm with user before publishing).
+2. War rework (docs/PLAN.md "War rework", user wants Age of Empires / Empire Earth style): armies fight in the town, ground units blocked by water, boats on rivers, real air units, sieges.
+3. Audit follow-ups in docs/PLAN.md (rejoin token, snapshot backpressure, server password/persistence, missing tests, CI caching, UX settings/help).
+4. Waiting on user: real two-player test, 500+ pop hand-play tuning, repo description/topics, deleting merged branches (command given), enabling auto-delete of head branches.
 
 ## Gotchas learned
-See LESSONS_LEARNED.md. Latest: lambdas capture variables by value (mutate arrays/dicts instead of assigning); zstd cannot decompress dynamically (use gzip with a size cap); `start_game` via eval needs `open_setup()` first and the real Setup panel freed.
+See LESSONS_LEARNED.md. Latest: always A/B sim changes 3x (non-deterministic); lowering planner mood gates hurt; `from_dict` whitelists `SAVE_KEYS`; showcase scripts must be loaded fresh in a running game (`GDScript.new()` + `source_code`) because `load()` caches.

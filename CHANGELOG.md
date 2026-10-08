@@ -16,7 +16,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 - Cars keep to the right-hand lane and pedestrians use the pavements, so traffic no longer piles up on the road centreline.
 
 ### Changed
-- CI jobs have time limits.
+- CI jobs have time limits, run with pipefail, and the smoke step has its own timeout.
+- Docs brought back in line with the code (controls, file names, test lists, save path) after the audit; follow-ups are listed in docs/PLAN.md.
 - Town growth no longer re-floods the utility networks: only demand is recomputed, about 10x cheaper per growth step (`tests/netbench.gd`).
 - Benchmark: `-- --benchmark --war` runs the standard scenario with four wars going.
 - CI: multiplayer tests run as their own parallel job.
