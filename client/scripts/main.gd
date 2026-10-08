@@ -100,8 +100,22 @@ func _net_args() -> void:
 	if "--server" in a:
 		var n := clampi(int(a[a.find("--towns") + 1]) if "--towns" in a and a.find("--towns") + 1 < a.size() else 6, 2, 8)
 		start_game({"name": "Server", "towns": n, "river": 3, "spectate": true, "mp": true, "guide": false})
+		if "--speed" in a and a.find("--speed") + 1 < a.size():
+			speed = clampf(float(a[a.find("--speed") + 1]), 0.5, 8.0)
 		net.serve(towns)
-		print("Murmur server: ", "listening on UDP %d with %d towns" % [port, n] if net.host(port, "Server", true) else "failed to start")
+		print("Murmur server: ", "listening on UDP %d with %d towns at %.1fx" % [port, n, speed] if net.host(port, "Server", true) else "failed to start")
+		var seen := {}
+		net.roster_changed.connect(func() -> void:
+			for id in net.players:
+				if not seen.has(id):
+					print("Murmur server: %s joined (%d players)" % [net.players[id]["name"], net.players.size()])
+			for id in seen.keys():
+				if not net.players.has(id):
+					print("Murmur server: %s left" % seen[id])
+			seen.clear()
+			for id in net.players:
+				seen[id] = net.players[id]["name"])
+		net.chat.connect(func(who: String, text: String) -> void: print("[chat] %s: %s" % [who, text]))
 	elif "--join" in a and a.find("--join") + 1 < a.size():
 		var hp: PackedStringArray = a[a.find("--join") + 1].split(":")
 		join_args = [hp[0], int(hp[1]) if hp.size() > 1 else NetPlay.PORT]
