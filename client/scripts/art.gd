@@ -702,6 +702,32 @@ static func ground(ci: CanvasItem, x: int, y: int, owned: bool, season: int) -> 
 		_tree(ci, p + Vector2(16, 22), h, season)
 
 
+## Look of the world's ground kinds on empty land (World.K): tint every tile, add detail only when zoomed in.
+static func terrain(ci: CanvasItem, x: int, y: int, k: int, far: bool, season: int) -> void:
+	var p := Vector2(x, y) * 32.0
+	var r := Rect2(p, Vector2(32, 32))
+	match k:
+		World.K.SAND:
+			ci.draw_rect(r, Color(0.86, 0.78, 0.55, 0.85))
+		World.K.FOREST:
+			ci.draw_rect(r, Color(0.12, 0.3, 0.14, 0.35))
+		World.K.HILL:
+			ci.draw_rect(r, Color(0.62, 0.55, 0.36, 0.30))
+		World.K.ROCK:
+			ci.draw_rect(r, Color(0.5, 0.5, 0.52, 0.80))
+		_:
+			return
+	if far:
+		return
+	var h := (x * 73856093 ^ y * 19349663) & 255
+	if k == World.K.FOREST:
+		for s in 2:
+			_tree(ci, p + Vector2(6 + ((h >> s) * 9 + s * 13) % 20, 10 + ((h >> s) * 5 + s * 11) % 16), h + s, season)
+	elif k >= World.K.HILL and h < 90:
+		var q := p + Vector2(6 + h % 18, 8 + (h / 3) % 18)
+		ci.draw_rect(Rect2(q, Vector2(6, 4)), Color("6e6a5c") if k == World.K.HILL else Color("8a8a92"))
+
+
 ## Ore deposit: dark rock flecks (richness 1-3 = more flecks); one rect when zoomed out.
 static func ore(ci: CanvasItem, x: int, y: int, rich: int, far: bool) -> void:
 	var p := Vector2(x, y) * 32.0

@@ -15,7 +15,7 @@ world sources                          city
 - `Signals` (`scripts/signals.gd`): the only thing the city reads. Values decay toward baseline.
 - `WorldEvents` (`scripts/events.gd`): simulated source and the player's sandbox buttons, same code path.
 - `City` (`scripts/city.gd`): pure rules, no drawing, no I/O. Selfcheck lives here.
-- `World` (`scripts/world.gd`): endless terrain as a pure function of (seed, x, y) in world tiles: sea, rivers, sand, plains, forest, hills, rock, ore. Integer hashing and + - * / only, so all peers agree bit for bit. Chunked (32x32) with an LRU cache; slow fields are sampled every 4 tiles and interpolated. Not yet used by towns (docs/EMPIRE_DESIGN.md E1).
+- `World` (`scripts/world.gd`): endless terrain as a pure function of (seed, x, y) in world tiles: sea, rivers, sand, plains, forest, hills, rock, ore. Integer hashing and + - * / only, so all peers agree bit for bit. Chunked (32x32) with an LRU cache; slow fields are sampled every 4 tiles and interpolated. New games cut every town plot from it (`City.apply_world`).
 - `main.gd`: input, drawing, UI, citizen dots.
 - Live sources (Phase 3+) replace calls into `Signals`; nothing in `City` changes.
 
