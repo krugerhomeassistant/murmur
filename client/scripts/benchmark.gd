@@ -25,6 +25,7 @@ var slow := [0, 0.0, 0.0, 0.0, 0.0]  # frames over 25 ms: count, sum of frame, s
 @export var result_json := ""
 var beat := -1
 var war := "--war" in OS.get_cmdline_user_args()  # `-- --benchmark --war`
+var watch := "--watch" in OS.get_cmdline_user_args()  # camera follows the busiest town (not the standard measurement; numbers are tagged)
 var phase := 0  # 0 warm-up, 1 sampling, 2 done
 
 
@@ -56,7 +57,7 @@ func _ready() -> void:
 					c.pend = 0.0
 	m.speed = 8.0
 	m.overlay = "all"
-	m.follow = false
+	m.follow = watch
 	m.cam.zoom = Vector2.ONE
 	RenderingServer.viewport_set_measure_render_time(get_viewport().get_viewport_rid(), true)
 
@@ -117,6 +118,7 @@ func _report() -> void:
 		"hardware": "%s | %s | %d threads | %d MB RAM" % [OS.get_processor_name(), RenderingServer.get_video_adapter_name(), OS.get_processor_count(), int(OS.get_memory_info().get("physical", 0)) / 1048576],
 		"build": "Godot %s, %s build, %s, window %s" % [Engine.get_version_info().string, "debug (editor/debugger)" if OS.is_debug_build() else "release", RenderingServer.get_current_rendering_method(), str(DisplayServer.window_get_size())],
 		"war": war,
+		"watch": watch,
 		"scenario": ("war: four pairs at war, " if war else "") + "8 towns grown by %d sim-s fast-forward, then 8x speed, all overlays, zoom 1.0, vsync off, %ds warm-up, %ds sample" % [FAST_FORWARD / 10, int(WARM), int(SAMPLE)],
 		"fps_avg": 1000.0 / avg, "frame_ms_avg": avg, "frame_ms_p50": _pct(s, 0.5), "frame_ms_p95": _pct(s, 0.95), "frame_ms_p99": _pct(s, 0.99), "frame_ms_max": s[-1],
 		"render_cpu_ms": cpu / n, "render_gpu_ms": gpu / n, "draw_calls_avg": calls / n, "draw_calls_max": calls_max,

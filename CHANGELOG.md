@@ -5,6 +5,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+### Changed
+- Planner towns keep tax at 10% or more; `--watch` benchmark flag follows the action; cheaper coverage and shop-distance lookups in the per-second sim.
+
 ### Security
 - Multiplayer hardening from the audit: NaN/INF numbers are refused (a NaN tax gave unlimited money and poisoned every client), per-peer command and chat rate limits, silent connections are dropped after 5 s, chat lines and names lose control characters, "Server" is reserved, `water` respects territory, snapshots accept only known keys and at most 4 MB.
 
