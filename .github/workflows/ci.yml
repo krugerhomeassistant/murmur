@@ -43,6 +43,7 @@ jobs:
           timeout 300 godot --headless --path client -s tests/worldstart.gd | tee wst.txt && grep -q WORLDSTART_OK wst.txt
           timeout 300 godot --headless --path client -s tests/found.gd | tee fo.txt && grep -q FOUND_OK fo.txt
           timeout 300 godot --headless --path client -s tests/empire.gd | tee em.txt && grep -q EMPIRE_OK em.txt
+          timeout 300 godot --headless --path client -s tests/popout.gd | tee po.txt && grep -q POPOUT_OK po.txt
           timeout 120 godot --headless --path client -s tests/warmap.gd | tee wm.txt && grep -q WARMAP_OK wm.txt
           timeout 600 godot --headless --path client -s tests/ai.gd | tee a.txt && grep -q AI_OK a.txt
           timeout 600 godot --headless --path client -s tests/farms.gd | tee f.txt && grep -q FARMS_OK f.txt
