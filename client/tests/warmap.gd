@@ -58,6 +58,7 @@ func _init() -> void:
 	for x in range(x0 - 1, x0 + 4):
 		var i: int = a.terr.get_center().y * City.W + x
 		a.grid[i] = Catalog.Id.ROAD
+	Military.terrain_changed()  # what City.place() does for a bridge
 	_go(ts, 700, func() -> void: pass)
 	assert(Diplo.treaty(a, b) != "war" or a.army.any(func(u: Dictionary) -> bool: return (u["p"] as Vector2).x > rx0 + 3.0 * Military.TILE), "nobody crossed the bridge")
 	# ships stay on water

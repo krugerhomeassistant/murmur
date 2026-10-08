@@ -532,7 +532,7 @@ func place(x: int, y: int, t: int) -> bool:
 	grid[y * W + x] = t
 	coins -= cost_of(t) * (BRIDGE_X if wet else 1.0)
 	if wet:
-		Military._ff.clear()  # a bridge changes where armies can walk
+		Military.terrain_changed()  # a bridge changes where armies can walk
 	if is_road(t):
 		roads_dirty = true
 	scan_dirty = true
@@ -566,6 +566,8 @@ func bulldoze(x: int, y: int) -> bool:
 		return true
 	if is_road(grid[i]):
 		roads_dirty = true
+		if water[i] == 1:
+			Military.terrain_changed()
 	grid[i] = T.EMPTY
 	lvl[i] = 0
 	build[i] = 0.0
@@ -3261,6 +3263,7 @@ func to_dict() -> Dictionary:
 
 
 func from_dict(d: Dictionary) -> void:
+	Military.terrain_changed()
 	if not d.has("water"):
 		water.fill(0)  # saves from before rivers
 	for k in d:
