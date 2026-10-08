@@ -24,4 +24,4 @@ godot --headless --path client -s tests/smoke.gd   # prints SMOKE_OK
 
 1. `python scripts/bump.py X.Y.Z` (updates `VERSION`, `project.godot` and the changelog).
 2. `git commit -am "Release vX.Y.Z" && git push`; tag `vX.Y.Z` on `main`.
-3. Build the portable zip (see `docs/RELEASING.md`) and attach it to the GitHub release.
+3. Run the performance pass first (see `docs/RELEASING.md`), then build the portable zip and attach it to the GitHub release.

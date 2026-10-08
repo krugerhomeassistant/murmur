@@ -6,6 +6,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 ## [Unreleased]
 
 ### Changed
+- Release process documented end to end (docs/RELEASING.md); performance pass is the last step before every release.
 - Perf: land value recompute splats coverage and pollution fields once per pass (headless 8-town profile: land stage 5.0 s to 2.5 s over 30000 steps, worst step 19 to 14 ms).
 - World view: all towns live in one continuous, pannable map (replaces the separate region map and town switching). The viewed town is the one under the camera; far zoom shows live per-town thumbnails and names; M fits the whole world.
 - Border links need a road that belongs to the town's biggest connected road network; planner towns lay it themselves (previously planner towns were always counted as linked).
