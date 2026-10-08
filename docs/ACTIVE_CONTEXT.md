@@ -1,5 +1,7 @@
 # ACTIVE CONTEXT (read first)
 
+**2026-10-08 late:** branch `perf/net-growth` (PR pending): net re-solve 10x cheaper, `--war` benchmark, blast-position fix, lane/pavement rendering, rivers meet at borders, shelling visual, showcase media (`tests/showcase.gd`, `tests/reel.gd`, README GIF retaken). Next: finish perf pass, audit, v0.2.0 release. Then the war rework (docs/PLAN.md). Planner towns stall near 100 pop (audit item).
+
 Last updated 2026-10-08.
 
 ## State

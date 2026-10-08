@@ -888,6 +888,7 @@ func draw_fx(node: CanvasItem) -> void:
 			if towns.find(b) < ai or Diplo.treaty(a, b) != "war" or not (vis.get(a, false) or vis.get(b, false)):
 				continue
 			var l := Military.line(a, b)
+			var ln := maxf(l[0].distance_to(l[1]), 600.0)
 			var u := (l[1] - l[0]).normalized()
 			var nv := Vector2(-u.y, u.x)
 			for side in 2:
@@ -961,6 +962,14 @@ func draw_fx(node: CanvasItem) -> void:
 					if float(un["hp"]) < mx * 0.99:
 						node.draw_rect(Rect2(pos + Vector2(-8, -10) * sz, Vector2(16 * sz, 2.0 * sz)), Color(0, 0, 0, 0.6))
 						node.draw_rect(Rect2(pos + Vector2(-8, -10) * sz, Vector2(16 * sz * float(un["hp"]) / mx, 2.0 * sz)), Color("6fd06f") if float(un["hp"]) / mx > 0.4 else Color("e0a030"))
+					if not fresh and float(un["s"]) >= ln - 80.0 and String(un["k"]) in ["inf", "gren", "snip", "ltank", "tank", "htank", "art"]:  # unopposed at the enemy's edge: shell the town
+						var cyc := int((now + int(float(un["l"]) * 700.0 + 1000.0)) / 900)
+						if (now + int(float(un["l"]) * 700.0 + 1000.0)) % 900 < 160:
+							var rr := float(hash([un["l"], cyc]) % 1000) / 1000.0
+							var rr2 := float(hash([cyc, un["l"]]) % 1000) / 1000.0
+							var tp: Vector2 = pos + u * dir * (60.0 + rr * 260.0) + nv * (rr2 - 0.5) * 220.0
+							node.draw_line(pos, tp, Color(1.0, 0.55, 0.2, 0.9) if un["k"] == "art" else Color(1.0, 0.9, 0.4, 0.9), (3.0 if un["k"] == "art" else 1.5) * sz)
+							node.draw_circle(tp, (8.0 if un["k"] == "art" else 4.0) * sz, Color(1.0, 0.7, 0.25, 0.8))
 					if fresh:  # tracer to the unit it fired at
 						var tgp := float(un["fg"])
 						var tpos: Vector2 = l[0] + u * tgp + nv * float(un["fl"]) * 70.0 * sz
@@ -1106,7 +1115,8 @@ func draw_overlay(node: CanvasItem, t: City) -> void:
 		for c in city.citizens:
 			if c.car and c.path.size() > 0 and c != sel:
 				var dv := c.path[mini(c.pi, c.path.size() - 1)] - c.pos
-				ci.draw_set_transform(c.pos * TILE, dv.angle() if dv.length() > 0.01 else 0.0)
+				var lane := Vector2(-dv.y, dv.x).normalized() * 0.19 if dv.length() > 0.01 else Vector2.ZERO  # keep to the right-hand lane so opposite traffic and followers do not stack
+				ci.draw_set_transform((c.pos + lane) * TILE, dv.angle() if dv.length() > 0.01 else 0.0)
 				ci.draw_rect(Rect2(-5, -3, 10, 6), CAR_COLS[c.id % CAR_COLS.size()])
 				ci.draw_rect(Rect2(0, -2, 3, 4), Color(0.6, 0.75, 0.85))
 				if night:
@@ -1116,7 +1126,9 @@ func draw_overlay(node: CanvasItem, t: City) -> void:
 				continue
 			if c.path.size() == 0 and c != sel:
 				continue
-			var p := c.pos * TILE
+			var wv := c.path[mini(c.pi, c.path.size() - 1)] - c.pos if c.path.size() > 0 else Vector2.ZERO
+			var side := Vector2(-wv.y, wv.x).normalized() * (0.34 if c.id % 2 == 0 else -0.34) if wv.length() > 0.01 else Vector2.ZERO  # walkers use the pavements, one per side
+			var p := (c.pos + side) * TILE
 			ci.draw_circle(p + Vector2(0, 1.5), 4.2, Color(0, 0, 0, 0.3))
 			var col := Color("f3e7cf") if c.mood > 0.6 else (Color("e0a458") if c.mood > 0.35 else Color("c0392b"))
 			if c.sick > 0.0:

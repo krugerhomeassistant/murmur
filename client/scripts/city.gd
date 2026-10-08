@@ -640,7 +640,7 @@ func _gen_shared_river(r: RandomNumberGenerator, plan: Dictionary) -> void:
 		var t := float(a - ap) / asz
 		var tc := clampf(t, 0.0, 1.0)
 		wob = clampf(wob + r.randf_range(-0.5, 0.5), -3.0, 3.0)
-		var c := cp + csz * lerpf(float(plan["a"]), float(plan["b"]), t) + wob * sin(tc * PI)
+		var c := cp + csz * lerpf(float(plan["a"]), float(plan["b"]), tc) + wob * sin(tc * PI)  # tc, not t: outside the territory the river runs straight so it meets the neighbour's
 		for k in 3:
 			var x := a if horiz else int(c) + k
 			var y := int(c) + k if horiz else a
@@ -866,7 +866,7 @@ func _net() -> void:
 			# the flood fill depends on lines, plants and outages only; growth (lvl) just changes demand, so keep `reach` and supply then
 			var rsig := hash([grid, layer, str(offline.keys()), cells.size(), mod(m + "_out")])
 			var keep: bool = not nc.is_empty() and nc.get("rsig", 0) == rsig
-			nc = _net_solve(m, layer, reach, keep, float(nc["sup"]) if keep else 0.0)
+			nc = _net_solve(m, layer, reach, keep, float(nc["sup"]) if keep else 0.0, nc if keep else {})
 			nc["rsig"] = rsig
 			nc["sig"] = sig
 			nc["sat"] = -1.0
@@ -904,30 +904,38 @@ func _net() -> void:
 
 
 ## Flood-fills a line layer from its plants and totals supply/demand. Pure function of the layout, so _net caches it.
-func _net_solve(m: String, layer: PackedByteArray, reach: PackedByteArray, keep := false, kept_sup := 0.0) -> Dictionary:
-	var q: Array[int] = []
+func _net_solve(m: String, layer: PackedByteArray, reach: PackedByteArray, keep := false, kept_sup := 0.0, old := {}) -> Dictionary:
 	var sup := kept_sup
 	if not keep:
 		reach.fill(0)
+		var q: Array[int] = []
 		sup = _flood(m, layer, reach, q)
+	var live: PackedByteArray
+	var idx: PackedInt32Array
+	var nets: int
+	if keep and not old.is_empty():  # growth only: the live cells are unchanged, redo demand alone
+		live = old["live"]
+		idx = old["idx"]
+		nets = old["nets"]
+	else:
+		live = PackedByteArray()
+		live.resize(W * H)
+		idx = PackedInt32Array()  # live cells, so a supply change rewrites only these
+		nets = 0
+		for i in cells:
+			nets += layer[i]
+			if _live(i, reach):
+				live[i] = 1
+				idx.append(i)
 	var dem := 0.0
-	var nets := 0
-	var live := PackedByteArray()
-	live.resize(W * H)
-	var idx := PackedInt32Array()  # live cells, so a supply change rewrites only these
-	for i in cells:
-		nets += layer[i]
-		if _live(i, reach):
-			live[i] = 1
-			idx.append(i)
+	for i in idx:  # demand only comes from live cells
 		var t: int = grid[i]
 		if t == T.EMPTY or connected[i] == 0 or is_road(t):
 			continue
 		var d: Dictionary = Catalog.DEFS[t]
 		if d.has("out") or (is_zone(t) and lvl[i] == 0):
 			continue
-		if live[i] == 1:
-			dem += 0.5 * lvl[i] * (1.0 + (int(d["home"]) + int(d["jobs"])) * 0.1) if is_zone(t) else 1.0
+		dem += 0.5 * lvl[i] * (1.0 + (int(d["home"]) + int(d["jobs"])) * 0.1) if is_zone(t) else 1.0
 	if m == "power":
 		dem *= 1.0 + mod("power_dem")
 	return {"live": live, "idx": idx, "sup": sup, "dem": dem, "nets": nets}
@@ -1327,7 +1335,7 @@ func strike(n: int, from: City) -> void:
 	opts.sort_custom(func(i: int, j: int) -> bool: return _edge_dist(i, d) < _edge_dist(j, d))
 	for k in mini(n, opts.size()):
 		var i: int = opts[mini(k + rng.randi_range(0, 2), opts.size() - 1)]
-		Military.blasts.append({"t": town_name, "p": center(i), "ts": Time.get_ticks_msec()})
+		Military.blasts.append({"t": town_name, "p": center(i) * Military.TILE, "ts": Time.get_ticks_msec()})
 		_ruin(i)
 	_scan()
 

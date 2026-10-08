@@ -74,5 +74,9 @@ func _init() -> void:
 	var nb: int = Military.blasts.size()
 	var r4 := _run({"bomber": 4, "inf": 2}, {"inf": 4})
 	assert(Military.blasts.size() > nb or (r4[1] as City).burned > 0, "bombers destroyed nothing")
+	var tgt: City = r4[1]
+	for e in Military.blasts.slice(nb):  # world-pixel positions inside the bombed town, not cell units
+		var bp: Vector2 = e["p"]
+		assert(bp.x >= tgt.terr.position.x * Military.TILE and bp.x < tgt.terr.end.x * Military.TILE and bp.y >= tgt.terr.position.y * Military.TILE and bp.y < tgt.terr.end.y * Military.TILE, "blast outside the town")
 	print("NAVAL_OK bombs=%d" % (Military.blasts.size() - nb))
 	quit()
