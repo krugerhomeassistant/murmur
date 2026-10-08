@@ -8,7 +8,7 @@ Standing rules: user authorised self-merge; NO authorship marks anywhere (user, 
 Process rule (see LESSONS_LEARNED): before waiting on a long action, delete the old output, confirm it started, poll liveness; max two unchanged waits.
 
 ## Next (in order)
-1. War rework (docs/PLAN.md "War rework", Age of Empires / Empire Earth style): armies fight in the town, ground units blocked by water, boats on rivers, real air units, sieges. Target v0.3.
+1. War rework phase 1 is merged (PR #50: world positions, terrain flow fields, 2D fights). Next: phase 2 sieges/building damage, then air, then command UI (docs/WAR_DESIGN.md). Original item: (docs/PLAN.md "War rework", Age of Empires / Empire Earth style): armies fight in the town, ground units blocked by water, boats on rivers, real air units, sieges. Target v0.3.
 2. Known issue: planner stall in low-mood towns (PLAN.md "Known issues"); CI hides it with retries.
 3. Audit follow-ups in docs/PLAN.md (rejoin token, snapshot backpressure, server password/persistence, missing tests, CI caching, UX settings/help).
 4. Waiting on user: real two-player test, 500+ pop hand-play tuning, repo description/topics, auto-delete head branches.
