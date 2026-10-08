@@ -2177,6 +2177,11 @@ func _has_plant(m: String) -> bool:
 ## Auto-policies: flips policies on when the city needs them and off again with hysteresis.
 func _plan_policy() -> void:
 	var c: Dictionary = cov
+	# taxes: upkeep grows with size, so a planner that never touches the rate starves; nudge it up while poor, back down when people get unhappy
+	if income < 4.0 and mood > 0.3:
+		tax_r = minf(tax_r + 0.01, 0.18)
+	elif mood < 0.25 and tax_r > 0.08:
+		tax_r = maxf(tax_r - 0.01, 0.08)
 	var rules := {
 		"watch": [pop >= 30 and float(c["police"]) < 0.5, float(c["police"]) > 0.8],
 		"recycling": [pop >= int(need_pop["waste"]) and float(c["waste"]) < 0.5 and coins > 150.0, float(c["waste"]) > 0.8 or coins < 60.0],

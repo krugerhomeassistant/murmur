@@ -9,6 +9,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 - Multiplayer hardening from the audit: NaN/INF numbers are refused (a NaN tax gave unlimited money and poisoned every client), per-peer command and chat rate limits, silent connections are dropped after 5 s, chat lines and names lose control characters, "Server" is reserved, `water` respects territory, snapshots accept only known keys and at most 4 MB.
 
 ### Fixed
+- Planner (AI) towns stalled near 70 pop because they never touched taxes while upkeep grows with size; they now raise the residential rate while poor and ease it when unhappy (average pop at 4000 sim-s: 74 before, 107 to 220 after; `tests/growth.gd`).
 - Rivers meet at town borders: outside its own territory a river now runs straight at the border height instead of drifting, so neighbouring towns no longer show a gap (new worlds only).
 - Attackers standing unopposed at an enemy's edge visibly shell its buildings.
 - Raid and bomb explosions were drawn in the top-left corner of the map instead of on the destroyed building (cell units were used as pixels); `tests/war.gd` now checks the position.
