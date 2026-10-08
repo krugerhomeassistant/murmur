@@ -34,6 +34,7 @@ const RANK_DMG := 0.15  # per rank
 const RANK_HP := 0.10
 const ARMY_MAX := 150  # per town: training stops here (upkeep, and fights cost O(n^2))
 const INF_D := 1 << 29
+const BUILD_GAP_MS := 30  # at most one flow-field build per this many ms
 const AGGRO := 520.0  # px: foes closer than this (or 1.5x weapon range) are chased instead of marching on
 const FIELD_TTL := 3000  # fight calls a cached flow field lives at most; terrain_changed() (bridges built or removed) clears it at once
 const TCLS := {"soft": 0, "armor": 1, "air": 2, "ship": 3}
@@ -42,6 +43,7 @@ static var booms: Array = []  # runtime only: explosions for the war visuals
 static var reg := {}  # gpos -> City, every town (Diplo.second keeps it current): terrain lookups for units on the move
 static var _ff := {}  # cached flow fields
 static var _clock := 0  # counts fight() calls, the cache's idea of time
+static var _last_build := 0  # ms of the last flow-field build: builds are spread out so a war's start is not one long frame
 static var blasts: Array = []  # runtime only: buildings hit by raids and bombers {t: town, p: town-space pixel, ts: ms}
 
 
@@ -301,8 +303,12 @@ static func _field(a: City, b: City, goal: Vector2, cls: int) -> Dictionary:
 	var g1 := Vector2i(maxi(a.gpos.x, b.gpos.x), maxi(a.gpos.y, b.gpos.y))
 	var key := "%d,%d,%d,%d,%d,%d,%d" % [g0.x, g0.y, g1.x, g1.y, cls, int(goal.x / TILE), int(goal.y / TILE)]
 	var now := _clock
+	var now_ms := Time.get_ticks_msec()
 	if _ff.has(key) and now - int((_ff[key] as Dictionary)["ts"]) < FIELD_TTL:
 		return _ff[key]
+	if now_ms - _last_build < (BUILD_GAP_MS if DisplayServer.get_name() != "headless" else 0):
+		return {"ok": false}  # not built yet: units slide straight for a moment
+	_last_build = now_ms
 	var rw := (g1.x - g0.x + 1) * City.W
 	var rh := (g1.y - g0.y + 1) * City.H
 	var ox := g0.x * City.W
