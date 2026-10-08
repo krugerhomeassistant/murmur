@@ -198,6 +198,7 @@ static func econ(c: City) -> void:
 		if float(c.train_t["_a"]) >= 10.0:
 			c.train_t["_a"] = 0.0
 			adapt(c)
+	c.arms_use *= 0.9
 	if c.train_on and c.army.size() < ARMY_MAX:
 		var cap := caps(c)
 		var cnt := counts(c)
@@ -206,9 +207,9 @@ static func econ(c: City) -> void:
 			if int(w[k]) > 0 and int(cnt[k]) < int(cap[k]) and c.coins >= float(KIND[k]["cost"]) * 3.0:
 				c.train_t[k] = float(c.train_t.get(k, 0.0)) + 0.5 * int(w[k])  # priority 1 = half speed, 3 = 1.5x
 				if float(c.train_t[k]) >= float(KIND[k]["train"]):
-					c.train_t[k] = 0.0
-					c.coins -= float(KIND[k]["cost"])
-					c.army.append(_unit(k))
+					if _pay(c, k):
+						c.train_t[k] = 0.0
+						c.army.append(_unit(k))
 	var foes: Array = []
 	for p in c.partners:
 		if Diplo.treaty(c, p) == "war":
@@ -223,6 +224,32 @@ static func econ(c: City) -> void:
 			i += 1
 		if u["tgt"] == "":
 			u.erase("p")  # peace: back home at once (phase 1, docs/WAR_DESIGN.md)
+
+
+## A unit costs coins (labour) and arms (one per 25 coins of its value). Arms come from the town's own armouries, else abroad at the import price.
+const LABOUR := 0.6
+const ARMS_PER_COIN := 1.0 / 25.0
+
+
+static func arms_need(k: String) -> float:
+	return ceilf(float(KIND[k]["cost"]) * ARMS_PER_COIN)
+
+
+static func _pay(c: City, k: String) -> bool:
+	var coin := float(KIND[k]["cost"]) * LABOUR
+	var need := arms_need(k)
+	var have := float(c.stock.get("arms", 0.0))
+	var short := maxf(0.0, need - have)
+	var mk: Market = c.sig.mk
+	var abroad: float = short * float(mk.price["arms"]) * Market.IMPORT
+	if c.coins < coin + abroad:
+		return false  # cannot afford it yet; the unit stays ready and is retried
+	c.coins -= coin + abroad
+	c.stock["arms"] = maxf(0.0, have - need)
+	c.arms_use = minf(c.arms_use + need / float(KIND[k]["train"]), 3.0)
+	if short > 0.0:
+		mk.report({}, {"arms": short})  # buying abroad counts as demand and lifts the price
+	return true
 
 
 static func _row(k: String) -> PackedFloat32Array:

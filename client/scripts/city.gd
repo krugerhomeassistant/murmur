@@ -192,7 +192,8 @@ var cpi := 1.0  # cost-of-living index: market price of the food and goods baske
 var hh := {"avg": 0.0, "median": 0.0, "broke": 0.0, "rich": 0.0, "real": 1.0}  # household statistics, recomputed every second
 var hardship := 0.0  # share of households that cannot make ends meet
 var home_w := {}  # runtime: home cell -> [wealth sum, residents]
-var stock := {"crops": 0.0, "food": 0.0, "goods": 0.0, "ore": 0.0, "metal": 0.0}
+var stock := {"crops": 0.0, "food": 0.0, "goods": 0.0, "ore": 0.0, "metal": 0.0, "arms": 0.0}
+var arms_use := 0.0  # arms the army is consuming per second (training), for the market
 var flow := {}
 var cap := 60.0
 var exported := 0.0
@@ -2165,6 +2166,11 @@ func _plan_service(force := false) -> bool:
 		var lim: int = 4 + pop / 25 if d.has("out") else 1 + pop / (60 if not prov.is_empty() else 150)
 		if ch == "mill":
 			lim = 1 + farm_jobs / 30
+		if ch == "arms":
+			var mil := (bt.get(T.BASE, []) as Array).size() + (bt.get(T.BARRACKS, []) as Array).size()
+			if mil == 0 or float(stock.get("arms", 0.0)) >= 40.0:
+				continue  # arms are made where there are troops to equip
+			lim = 1 + mil / 3
 		if ch == "foundry":
 			if mine_jobs == 0:
 				continue
@@ -2180,6 +2186,8 @@ func _plan_service(force := false) -> bool:
 		var sc := 0.0
 		if ch == "mill" and farm_jobs > 0 and float(flow.get("food_local", 1.0)) < 0.7:
 			sc += 0.9
+		if ch == "arms" and (thr > 0.0 or float(stock.get("arms", 0.0)) < 10.0):
+			sc += 0.5 + thr
 		if ch == "foundry" and (float(stock.get("ore", 0.0)) > 4.0 or have == 0):
 			sc += 0.9
 		if ch == "store":
@@ -3331,7 +3339,7 @@ func _trade(_market: float) -> Array:
 	var mills := (bt.get(T.MILL, []) as Array).size()
 	var deps := (bt.get(T.DEPOT, []) as Array).size() + 2 * (bt.get(T.PORT, []) as Array).size()
 	cap = 60.0 + 250.0 * (bt.get(T.WAREHOUSE, []) as Array).size()
-	for k in ["ore", "metal"]:  # saves from before mining
+	for k in ["ore", "metal", "arms"]:  # saves from before mining and arms
 		if not stock.has(k):
 			stock[k] = 0.0
 	var want := {}  # units this town wants from the market this second
@@ -3356,15 +3364,21 @@ func _trade(_market: float) -> Array:
 	var smelt := minf(float(stock["ore"]) + mined, foundries * 2.0)
 	stock["ore"] = float(stock["ore"]) + mined - smelt
 	stock["metal"] = float(stock["metal"]) + smelt * 0.5
-	var w_metal := maxf(0.0, fac_jobs * emp * 0.02 - float(stock["metal"]))
+	var armouries := (bt.get(T.ARMOURY, []) as Array).size()
+	var m_fac := fac_jobs * emp * 0.02
+	var m_arm := armouries * 0.25 * emp
+	var w_metal := maxf(0.0, m_fac + m_arm - float(stock["metal"]))
 	want["metal"] = w_metal
 	if w_metal > 0.0 and rich:
 		var gm := mk.take("metal", minf(w_metal, coins * 0.05 / (float(mk.price["metal"]) * RATE)))
 		stock["metal"] = float(stock["metal"]) + gm
 		bought["metal"] = gm
 		spent += gm * float(mk.price["metal"]) * RATE
-	var mused := minf(float(stock["metal"]), fac_jobs * emp * 0.02)
+	var mused := minf(float(stock["metal"]), m_fac)
 	stock["metal"] = float(stock["metal"]) - mused
+	var marms := minf(float(stock["metal"]), m_arm)  # armouries smelt what is left into arms
+	stock["metal"] = float(stock["metal"]) - marms
+	stock["arms"] = float(stock["arms"]) + marms * 2.0
 	var milled := minf(float(stock["crops"]) + crops, mills * 3.0)
 	var goods := (fac_jobs * emp * 0.06 + mused * 3.0) * mod("goods_mult")
 	var fish := (bt.get(T.FISHDOCK, []) as Array).size() * 6.0 * emp * 0.15 * river_health
@@ -3396,8 +3410,8 @@ func _trade(_market: float) -> Array:
 			offered[k] = sell
 		stock[k] = minf(float(stock[k]), cap)
 	mk.report(offered, want)
-	need_rate = {"crops": mills * 3.0, "food": fneed, "goods": gneed, "ore": foundries * 2.0, "metal": fac_jobs * emp * 0.02}
-	prod_rate = {"crops": crops, "food": milled + fish + ranch_jobs * emp * 0.1 + fish_jobs * emp * 0.12 * river_health, "goods": goods, "ore": mined, "metal": smelt * 0.5}
+	need_rate = {"crops": mills * 3.0, "food": fneed, "goods": gneed, "ore": foundries * 2.0, "metal": m_fac + m_arm, "arms": arms_use}
+	prod_rate = {"crops": crops, "food": milled + fish + ranch_jobs * emp * 0.1 + fish_jobs * emp * 0.12 * river_health, "goods": goods, "ore": mined, "metal": smelt * 0.5, "arms": marms * 2.0}
 	for k in Market.GOODS:  # local scarcity: days of cover (stock plus a minute of production) against use, between export and import parity
 		var nr: float = maxf(float(need_rate[k]), 0.0)
 		var lf := 0.8
