@@ -230,6 +230,9 @@ Shuffle candidates, score up to 16 with `City._site_score(t, i)` and take the be
 
 If the type was Residential, the housing style is then chosen with `_style_for` at the best tile. The plot is placed directly in `grid` with no coin cost (the city pays when construction starts in `City._grow`), the message "Planners zoned a new ... plot." is set, and the map is rescanned.
 
+## Financial focus (`City.focus`, Budget tab)
+Five weights 0-2 (1 = neutral): industry, farming, mining, military, services. They multiply the zoning weight of industrial and office plots (industry), farms (farming) and mines (mining), and the score of military buildings (barracks, base, radar, naval yard, armoury) or service buildings that provide a metric (services). Make or buy: mining focus below 0.4 stops mines and foundries being built (the town buys ore and metal on the market); military focus below 0.4 stops armouries being built, and an existing armoury runs at `min(focus,1)` of capacity, so the town buys arms (`Military._pay`). With **Council sets focus** on (default, `auto_focus`), `City._auto_focus` sets farming from the local food price over base 1.5, mining from the ore price over 0.8 (both clamped 0.5-2) and military from `1 + 2*threat`; moving a slider (command `focus`, value 0-200) turns it off. Saved with the town (`focus`, `auto_focus`); hostile values read as 1.0. Test: `client/tests/focus.gd`.
+
 ## Expansion and annexing
 
 `City._expand_auto` is called only from the zoning step (mode 2, `auto_expand`, fewer than 6 candidate tiles, `_extend_road` failed). Conditions and behaviour:

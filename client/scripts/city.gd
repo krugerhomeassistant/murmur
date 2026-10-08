@@ -119,6 +119,10 @@ var river_health := 1.0  # 1 = clean; falls when sewage goes untreated, kills fi
 var net_sup := {"power": 0.0, "water": 0.0, "sewage": 0.0}
 var net_dem := {"power": 0.0, "water": 0.0, "sewage": 0.0}
 var auto_policy := true
+## Mayor's financial focus: weight 0-2 per sector (1 = neutral). Steers what planners zone and build, and whether the town makes (mines, foundries, armouries) or buys ore, metal and arms.
+const FOCUS := ["industry", "farming", "mining", "military", "services"]
+var focus := {"industry": 1.0, "farming": 1.0, "mining": 1.0, "military": 1.0, "services": 1.0}
+var auto_focus := true  # the council sets focus from prices and threat; moving a slider turns it off
 var crime := 0.0
 var town_name := "Murmur"
 var partners: Array = []  # other towns in the region (City)
@@ -2014,7 +2018,21 @@ func _plan_ore_road() -> bool:
 
 
 ## City planners: when needs arise the city lays plots, and new streets, by itself.
+## Focus weight 0-2 of a sector; hostile or odd values count as neutral.
+func foc(k: String) -> float:
+	var v: Variant = focus.get(k, 1.0)
+	return clampf(float(v), 0.0, 2.0) if v is float or v is int else 1.0
+
+
+## Council focus: money follows scarcity (dear ore, dear food) and danger.
+func _auto_focus() -> void:
+	var f := func(k: String, base: float) -> float: return clampf(float(price_loc.get(k, base)) / base, 0.5, 2.0)
+	focus = {"industry": 1.0, "farming": f.call("food", 1.5), "mining": f.call("ore", 0.8), "military": clampf(1.0 + 2.0 * threat(), 0.5, 2.0), "services": 1.0}
+
+
 func _planner() -> void:
+	if auto_focus:
+		_auto_focus()
 	if auto_policy:
 		_plan_policy()
 	if auto_mode == 0 or coins < 60.0:
@@ -2047,14 +2065,14 @@ func _planner() -> void:
 	for t in [T.RES, T.APT, T.COM, T.IND, T.OFFICE, T.FARM, T.MINE]:
 		if not unlocked(t):
 			continue
-		if t == T.MINE and (mine_jobs >= 8 + 12 * foundries or pop < 60):
-			continue  # mines wait for a foundry to smelt what they dig
+		if t == T.MINE and (mine_jobs >= 8 + 12 * foundries or pop < 60 or foc("mining") < 0.4):
+			continue  # mines wait for a foundry to smelt what they dig; a low mining focus buys ore instead
 		var dd := dem_for(t)
 		if t == T.APT and (res_dem < 0.3 or pop < housing * 0.9):
 			continue
 		if dd < -0.2 and t != T.MINE:  # mines serve exports and metal, not local industrial demand
 			continue
-		var wgt := maxf(dd, 0.0) * 3.0 + 0.5
+		var wgt := (maxf(dd, 0.0) * 3.0 + 0.5) * (foc("farming") if t == T.FARM else foc("mining") if t == T.MINE else foc("industry") if t == T.IND or t == T.OFFICE else 1.0)
 		if t == T.FARM and bt.has(T.MILL):
 			wgt += (1.0 - float(flow.get("food_local", 1.0))) * 0.8
 		kinds.append(t)
@@ -2168,11 +2186,11 @@ func _plan_service(force := false) -> bool:
 			lim = 1 + farm_jobs / 30
 		if ch == "arms":
 			var mil := (bt.get(T.BASE, []) as Array).size() + (bt.get(T.BARRACKS, []) as Array).size()
-			if mil == 0 or float(stock.get("arms", 0.0)) >= 40.0:
+			if mil == 0 or float(stock.get("arms", 0.0)) >= 40.0 or foc("military") < 0.4:
 				continue  # arms are made where there are troops to equip
 			lim = 1 + mil / 3
 		if ch == "foundry":
-			if mine_jobs == 0:
+			if mine_jobs == 0 or foc("mining") < 0.4:
 				continue
 			lim = 1 + mine_jobs / 12
 		if id in [T.BARRACKS, T.BASE, T.RADAR]:
@@ -2234,6 +2252,7 @@ func _plan_service(force := false) -> bool:
 			sc -= 0.1
 		if income - newup < (0.15 if sc < 0.6 else -0.25) and coins < 600.0:
 			continue
+		sc *= foc("military") if id in [T.BARRACKS, T.BASE, T.RADAR, T.NAVYARD, T.ARMOURY] else foc("services") if ch == "" and d.has("prov") else 1.0
 		sc = sc / (float(d["cost"]) / 100.0 + 0.5) + rng.randf() * 0.05
 		if sc > bsc:
 			bsc = sc
@@ -3366,7 +3385,7 @@ func _trade(_market: float) -> Array:
 	stock["metal"] = float(stock["metal"]) + smelt * 0.5
 	var armouries := (bt.get(T.ARMOURY, []) as Array).size()
 	var m_fac := fac_jobs * emp * 0.02
-	var m_arm := armouries * 0.25 * emp
+	var m_arm := armouries * 0.25 * emp * minf(foc("military"), 1.0)  # low military focus: buy arms instead of making them
 	var w_metal := maxf(0.0, m_fac + m_arm - float(stock["metal"]))
 	want["metal"] = w_metal
 	if w_metal > 0.0 and rich:
@@ -3434,7 +3453,7 @@ func _trade(_market: float) -> Array:
 const SAVE_KEYS := ["town_name", "grid", "lvl", "build", "wire", "pipe", "sewer", "lamp", "water", "ore", "ground", "coins", "mood", "tax_r", "tax_c", "tax_i", "clock", "day",
 	"policies", "auto_mode", "auto_policy", "peak", "announced", "next_id", "recent", "active", "approval", "rep", "favor",
 	"petitions", "promises", "pet_recent", "kept", "broken", "next_election", "elections_won", "rally_used", "last_vote",
-	"season", "wage_ix", "price_loc", "stock", "exported", "loans", "done_ms", "disasters_survived", "burned", "hist_coins", "hist_pop", "ruins", "offline", "lamp", "terr", "expansions", "auto_expand", "human", "owner", "temper", "rel", "treaty", "ev_scale", "gpos", "war_n", "war_sc", "occ", "train_on", "train_t", "train_w"]
+	"season", "wage_ix", "price_loc", "stock", "exported", "loans", "done_ms", "disasters_survived", "burned", "hist_coins", "hist_pop", "ruins", "offline", "lamp", "terr", "expansions", "auto_expand", "human", "owner", "temper", "rel", "treaty", "ev_scale", "gpos", "war_n", "war_sc", "occ", "train_on", "train_t", "train_w", "focus", "auto_focus"]
 
 func to_dict() -> Dictionary:
 	var cs: Array = []

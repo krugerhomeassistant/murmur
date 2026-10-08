@@ -44,6 +44,15 @@ static func run(towns: Array[City], t: City, name: String, a: Array) -> Variant:
 			if a.size() == 1 and a[0] is bool:
 				t.auto_policy = a[0]
 				return true
+		"focus":
+			if a.size() == 2 and a[0] is String and a[0] in City.FOCUS and a[1] is int:
+				t.focus[a[0]] = clampi(a[1], 0, 200) / 100.0
+				t.auto_focus = false
+				return true
+		"auto_focus":
+			if a.size() == 1 and a[0] is bool:
+				t.auto_focus = a[0]
+				return true
 		"auto_mode":
 			if _ints(a, 1) and a[0] >= 0 and a[0] <= 2:
 				t.auto_mode = a[0]
