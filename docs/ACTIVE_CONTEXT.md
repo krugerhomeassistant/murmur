@@ -1,16 +1,16 @@
 # ACTIVE CONTEXT (read first)
 
-Last updated 2026-10-07 (night, user asleep; will playtest in the morning).
+Last updated 2026-10-08.
 
 ## State
-`main` is green. Merged this session: #18 world view + real border roads, #19-#20 war visuals and real armies, #21 unit variety (16 kinds incl. ships, vet ranks, Army window), #22 warships + bomber/raid damage, #23 AI armies, #24 farm variants, #25 planner mining/foundry, #26 farm art.
-User explicitly authorised merging PRs myself. Proxy blocks branch deletion and GraphQL (use REST); device repo is NOT a git mirror of main: files are pushed over by hand (SendUserFile + device_commit_files); restore it to clean `main` when convenient.
+`main` is green. Done since the last refresh: release pipeline (docs/RELEASING.md; `murmur-release` and `murmur-benchmark` skills saved), README screenshots + hero GIF (docs/media, retake with scripts/MEDIA.md and `--capture`), multiplayer P0-P3 (docs/MULTIPLAYER.md): transport, `Cmd` command layer, owner-checked commands, snapshot sync, lobby UI, `--server` dedicated mode, mp test (tests/mp.gd). Land-value pass sped up (PR #29).
+User authorised merging my own PRs. The proxy blocks branch deletion and GraphQL (use REST). The device repo (`E:\Projects\Personal\game\murmur`) is a real git clone: fetch/checkout over there (run godot-ai `filesystem_manage scan` after adding scripts). Standing rule: the performance pass is the LAST step before each release.
 
 ## Next (in order)
-1. Performance pass (user: after the additions): remaining sim spikes (planner, jobs, shops, traffic, scan_net); benchmark scenario for the world view with a war running; Military.fight is O(n^2) per pair (6 ms at 110 a side, army cap 150). Standard benchmark: F9 or --benchmark, 8 towns, 8x, all overlays; README table must stay true.
-2. Ferries / cargo ships (unclear value, ponytail question).
-3. Waiting on user: v0.2.0 release (`scripts/bump.py`, rebuild `dist/Murmur-portable.zip`), hand-play tuning at 500+ pop, multiplayer design is decided (docs/MULTIPLAYER.md), P0 next.
-4. Smaller: lint (gdtoolkit) in CI, `murmur-release` / `murmur-benchmark` skills via propose_skills, threading (only if benchmark improves).
+1. Multiplayer P4 (chat, disconnect/rejoin), P5 (human-vs-human treaties/war: `Diplo` assumes one human), P6 (server polish/docs). Then re-measure snapshot size with 500+ pop towns.
+2. Release v0.2.0 when the user says: perf pass first (stage costs: scan_net, jobs, planner; add a war benchmark scenario), then `murmur-release`.
+3. Smaller: lint (gdtoolkit) in CI, ferries/cargo ships (unclear value), threading only if the benchmark improves.
+4. Waiting on user: hand-play tuning at 500+ pop, repo description/topics on GitHub, deleting merged remote branches (proxy cannot).
 
 ## Gotchas learned
-See LESSONS_LEARNED.md. Latest: CI hung 35+ min on huge armies (fixed by flat-array fight + ARMY_MAX); planner needs big score bonuses to compete (scores are divided by cost); `place()` needs a road neighbour so tests must pick roadside tiles.
+See LESSONS_LEARNED.md. Latest: lambdas capture variables by value (mutate arrays/dicts instead of assigning); zstd cannot decompress dynamically (use gzip with a size cap); `start_game` via eval needs `open_setup()` first and the real Setup panel freed.

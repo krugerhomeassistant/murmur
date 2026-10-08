@@ -31,3 +31,6 @@ Decided with the owner, 2026-10-08: **competitive towns** in one shared world (e
 - Bandwidth of grid diffs while towns grow fast at 8x: batch per second, compress with `PackedByteArray.compress`, measure.
 - Planner towns and 8 players at once: host sim cost is the benchmark scenario; keep the standard benchmark honest and add a multiplayer one.
 - Security: validate every RPC argument (bounds, owner, rate); no trust in client state; no player-supplied code or paths.
+
+## Measurements
+- Town snapshot at pop 70 (day ~400): 5.3 KB gzip, pack 1.1 ms on the host, apply 1.3 ms on a client (headless, one town). 8 towns once a second is about 40 KB/s per client. Re-measure with large towns (500+ pop) before release; if it grows, add diffs or send non-viewed towns less often.
