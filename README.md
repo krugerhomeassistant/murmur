@@ -53,17 +53,17 @@ The one number we quote: **8 towns, 8x speed, every overlay on**, spectator mode
 
 Rig: Intel i7-8700, NVIDIA GTX 1070 Ti, Godot 4.7.2 GL Compatibility, run from the editor (debugger attached, so pessimistic), 1280x720 game window. Measured 2026-10-08.
 
-| Metric | Before (`67fd601`) | After network re-solve | After, with four wars (`--war`) | v0.2.0 candidate (larger towns) |
-|---|---|---|---|---|
-| FPS (avg) | 110 | 123 | 94 | 80 |
-| Frame time p99 | 22.2 ms | 16.6 ms | 21.5 ms | 30.1 ms |
-| Frames over 25 ms | 18 | 2 | 9 | 61 |
-| Sim cost per frame | 1.8 ms | 1.4 ms | 2.1 ms | 3.3 ms |
-| Draw cost per frame | 3.6 ms | 3.7 ms | 4.6 ms | 5.6 ms |
-| Draw calls (avg) | 126 | 114 | 152 | 130 |
-| Total population | 612 | 608 | 448 | 781 |
+| Metric | Before (`67fd601`) | After network re-solve | Four wars, old line model | v0.2.0 (larger towns) | Four wars, v0.3 map battles |
+|---|---|---|---|---|---|
+| FPS (avg) | 110 | 123 | 94 | 80 | 81 |
+| Frame time p99 | 22.2 ms | 16.6 ms | 21.5 ms | 30.1 ms | 30.5 ms |
+| Frames over 25 ms | 18 | 2 | 9 | 61 | 63 |
+| Sim cost per frame | 1.8 ms | 1.4 ms | 2.1 ms | 3.3 ms | 2.7 ms |
+| Draw cost per frame | 3.6 ms | 3.7 ms | 4.6 ms | 5.6 ms | 5.5 ms |
+| Draw calls (avg) | 126 | 114 | 152 | 130 | 130 |
+| Total population | 612 | 608 | 448 | 781 | 530 |
 
-Single runs. The sim is not deterministic, so population differs a little between runs (here within 1% for the first two columns); the earlier table, taken at 1706x960, read 140 fps and is not comparable. Effective speed held at 8.0x in all three. "Before" and "After" differ by the growth-only network re-solve (about 10x cheaper per growth step, `tests/netbench.gd`). The last column was taken after the planner learned to manage its tax rate: towns now grow to about 780 people instead of about 610, so it is *not* like-for-like with the others; per-town sim cost is higher because the towns are bigger, not because of a regression in the code (caching the coverage and shop-distance lookups cut `shops` by half and `sickness` by 4x in the same world size). Remaining spikes are the planner and job matching; worker-thread simulation is on the roadmap.
+Single runs. The sim is not deterministic, so population differs a little between runs (here within 1% for the first two columns); the earlier table, taken at 1706x960, read 140 fps and is not comparable. Effective speed held at 8.0x in all three. "Before" and "After" differ by the growth-only network re-solve (about 10x cheaper per growth step, `tests/netbench.gd`). The v0.2.0 column was taken after the planner learned to manage its tax rate: towns now grow to about 780 people instead of about 610, so it is *not* like-for-like with the others; per-town sim cost is higher because the towns are bigger, not because of a regression in the code (caching the coverage and shop-distance lookups cut `shops` by half and `sickness` by 4x in the same world size). The last column is the war rework (`-- --benchmark --war`): four wars are declared after the towns have grown, so marches and battles fall inside the sample (the old-model column declared them at the start, so it is not comparable). Remaining spikes are the planner and job matching; worker-thread simulation is on the roadmap.
 
 Headless profilers (`tests/regionbench.gd`, `bench.gd`, `stageprof.gd`) are secondary: they miss rendering and frame pacing.
 
