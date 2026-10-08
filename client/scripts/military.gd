@@ -35,7 +35,7 @@ const RANK_HP := 0.10
 const ARMY_MAX := 150  # per town: training stops here (upkeep, and fights cost O(n^2))
 const INF_D := 1 << 29
 const AGGRO := 520.0  # px: foes closer than this (or 1.5x weapon range) are chased instead of marching on
-const FIELD_TTL := 30  # fight calls a cached flow field lives; building a bridge clears the cache at once
+const FIELD_TTL := 3000  # fight calls a cached flow field lives at most; terrain_changed() (bridges built or removed) clears it at once
 const TCLS := {"soft": 0, "armor": 1, "air": 2, "ship": 3}
 static var _vsv := {}  # kind -> damage multipliers as a flat array indexed by target class, for the fight inner loop
 static var booms: Array = []  # runtime only: explosions for the war visuals
@@ -239,9 +239,20 @@ static func _of(c: City, foe: String) -> Array:
 
 
 static func register(towns: Array) -> void:
+	var same := reg.size() == towns.size()
+	for c in towns:
+		same = same and reg.get((c as City).gpos) == c
+	if same:
+		return
 	reg.clear()
 	for c in towns:
 		reg[(c as City).gpos] = c
+	_ff.clear()
+
+
+## A bridge was built or removed (or a world loaded): cached flow fields are out of date.
+static func terrain_changed() -> void:
+	_ff.clear()
 
 
 ## World-space pixel rect of a town's territory.
@@ -467,6 +478,7 @@ static func fight(a: City, b: City) -> void:
 		if mc[s] > 0:
 			cen[s] /= float(mc[s])
 	var centre := [terr_px(b).get_center(), terr_px(a).get_center()]  # goal of side s: the other town's heart
+	var fl := {}  # flow fields this call needs, by side and class (built once, not per unit)
 	var hits := PackedFloat32Array()
 	hits.resize(n)
 	var heals := PackedFloat32Array()
@@ -491,14 +503,14 @@ static func fight(a: City, b: City) -> void:
 				heals[j] += h
 				_gain(u, h * 0.5)
 			if mc[side[i]] > 0 and p.distance_to(cen[side[i]]) > 80.0:
-				q = _go(a, b, p, cen[side[i]], spd, cls, jit, false)
+				q = _go(a, b, p, cen[side[i]], spd, cls, jit, false, fl, side[i])
 		elif kd.has("lands"):  # transports hold back until the enemy fleet is gone, then run for the shore
 			var tg: Vector2 = goal
 			if ships[1 - side[i]] > 0 and ships[side[i]] > 1:
 				tg = cen[side[i]]
 			elif ships[1 - side[i]] > 0:
 				tg = p
-			q = _go(a, b, p, tg, spd, cls, jit, tg == goal)
+			q = _go(a, b, p, tg, spd, cls, jit, tg == goal, fl, side[i])
 		else:
 			var best := -1  # best target in range (damage-weighted, so AA picks planes)
 			var bs := 1e9
@@ -530,7 +542,7 @@ static func fight(a: City, b: City) -> void:
 				var stand := maxf(rng_ * 0.8, 10.0)
 				q = _slide(p, tp - (tp - p).normalized() * stand, spd, cls) if cls != 2 else p + (tp - p).limit_length(spd)
 			else:
-				q = _go(a, b, p, goal, spd, cls, jit, true)
+				q = _go(a, b, p, goal, spd, cls, jit, true, fl, side[i])
 		if q != p:
 			u["h"] = (q - p).angle()
 		u["p"] = q
@@ -561,14 +573,14 @@ static func fight(a: City, b: City) -> void:
 
 
 ## One move of `spd` pixels towards `goal`: air flies straight, ground and ships follow a flow field (or hold at the shore if the goal is cut off).
-static func _go(a: City, b: City, p: Vector2, goal: Vector2, spd: float, cls: int, jit: Vector2, use_field: bool) -> Vector2:
+static func _go(a: City, b: City, p: Vector2, goal: Vector2, spd: float, cls: int, jit: Vector2, use_field: bool, fl: Dictionary, sd: int) -> Vector2:
 	if cls == 2:
 		return p + (goal - p).limit_length(spd)
 	if use_field:
-		var gl := goal
-		if cls == 3:
-			gl = _shore(goal)
-		var ff := _field(a, b, gl, cls)
+		var fk := sd * 4 + cls
+		if not fl.has(fk):
+			fl[fk] = _field(a, b, _shore(goal) if cls == 3 else goal, cls)
+		var ff: Dictionary = fl[fk]
 		if bool(ff["ok"]):
 			var q := _follow(p, ff, spd, jit)
 			if q != p:
