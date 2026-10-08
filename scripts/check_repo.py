@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Repo hygiene gate (run in CI): markdown links and backticked paths must exist, VERSION must match the changelog, README needs no unmeasured perf claims."""
+"""Repo hygiene gate (run in CI): markdown links and backticked paths must exist, VERSION must match the changelog, every docs/*.md is in the docs index, README needs no unmeasured perf claims."""
 import re, sys, pathlib
 root = pathlib.Path(__file__).resolve().parent.parent
 errs = []
@@ -14,6 +14,10 @@ for md in [*root.glob("*.md"), *root.glob("docs/*.md"), *root.glob(".github/*.md
             p = m.group(1)
             if not (root / p).exists() and not (root / p.rstrip("/")).exists():
                 errs.append(f"README: path does not exist: {p}")
+idx = (root / "docs/README.md").read_text(encoding="utf-8")
+for d in root.glob("docs/*.md"):
+    if d.name != "README.md" and f"]({d.name})" not in idx:
+        errs.append(f"docs/README.md does not list {d.name}")
 ver = (root / "VERSION").read_text().strip()
 if f"## [{ver}]" not in (root / "CHANGELOG.md").read_text():
     errs.append(f"VERSION {ver} has no CHANGELOG section")
