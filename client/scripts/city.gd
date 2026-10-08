@@ -122,6 +122,8 @@ var auto_policy := true
 ## Mayor's financial focus: weight 0-2 per sector (1 = neutral). Steers what planners zone and build, and whether the town makes (mines, foundries, armouries) or buys ore, metal and arms.
 const FOCUS := ["industry", "farming", "mining", "military", "services"]
 var focus := {"industry": 1.0, "farming": 1.0, "mining": 1.0, "military": 1.0, "services": 1.0}
+var ask_build := false  # planners propose service buildings as decisions instead of building them
+var vetoed := {}  # building id (as text) -> day until which the planner does not propose it again
 var auto_focus := true  # the council sets focus from prices and threat; moving a slider turns it off
 var crime := 0.0
 var town_name := "Murmur"
@@ -2197,7 +2199,7 @@ func _plan_service(force := false) -> bool:
 			lim = maxi(lim, 1 + int(thr * 2.0 * (1.0 + pop / 250.0)))  # a threatened planner town raises its garrison, within reason (upkeep and fight cost)
 		if id == T.NAVYARD and nav:
 			lim = 1 + int(thr * 2.0)
-		if have >= lim:
+		if have >= lim or int(vetoed.get(str(id), 0)) > day:
 			continue
 		if d.get("water", false) and not (id == T.NAVYARD and nav):
 			continue  # ports are placed by the player; planner towns only build naval yards when a river enemy threatens
@@ -2295,6 +2297,9 @@ func _plan_service(force := false) -> bool:
 			bi = cand[k]
 	if bi < 0 or (bs < 0.5 and not prov.is_empty() and not (thr > 0.0 and best in [T.BARRACKS, T.BASE, T.RADAR])):
 		return false
+	if ask_build and human:
+		_propose(best, bi)
+		return false
 	if best == T.LIGHT:
 		lamp[bi] = 1
 	else:
@@ -2303,6 +2308,23 @@ func _plan_service(force := false) -> bool:
 	msg = "Planners built a %s." % String(d["n"]).to_lower()
 	_scan()
 	return true
+
+
+## Planner proposal: shows up with the other decisions; yes builds it, no (or ignoring it) vetoes that building for 10 days.
+func _propose(id: int, at: int) -> void:
+	var n := 0
+	for p in petitions:
+		if p["kind"] == "build":
+			n += 1
+			if int(p["bid"]) == id:
+				return
+	if n >= 2:
+		return
+	var d: Dictionary = Catalog.DEFS[id]
+	var c := cell(at)
+	petitions.append({"kind": "build", "id": "build%d" % id, "bid": id, "cell": at, "tribe": "", "t": "Build a " + String(d["n"]).to_lower(),
+		"txt": "The planners would build it at (%d, %d) for $%d." % [c.x, c.y, int(d["cost"])], "cost": float(d["cost"]), "expires": day + 3})
+	pet_ver += 1
 
 
 ## Runs power lines / water pipes along roads from the grid to the nearest unserved building.
@@ -2994,6 +3016,22 @@ func answer(idx: int, yes: bool) -> void:
 	if p["kind"] == "offer" or p["kind"] == "demand":
 		Diplo.resolve(self, p, yes)
 		return
+	if p["kind"] == "build":
+		var id := int(p["bid"])
+		var at := int(p["cell"])
+		var d: Dictionary = Catalog.DEFS.get(id, {})
+		var free: bool = at >= 0 and at < grid.size() and (lamp[at] == 0 and is_road(grid[at]) if id == T.LIGHT else grid[at] == T.EMPTY)
+		if not yes or d.is_empty() or not free or coins < float(p["cost"]):
+			vetoed[str(id)] = day + 10
+			return
+		if id == T.LIGHT:
+			lamp[at] = 1
+		else:
+			grid[at] = id
+		coins -= float(p["cost"])
+		msg = "Planners built a %s." % String(d["n"]).to_lower()
+		_scan()
+		return
 	if p["kind"] == "recover":
 		if yes and coins >= float(p["cost"]):
 			disasters_survived += 1
@@ -3453,7 +3491,7 @@ func _trade(_market: float) -> Array:
 const SAVE_KEYS := ["town_name", "grid", "lvl", "build", "wire", "pipe", "sewer", "lamp", "water", "ore", "ground", "coins", "mood", "tax_r", "tax_c", "tax_i", "clock", "day",
 	"policies", "auto_mode", "auto_policy", "peak", "announced", "next_id", "recent", "active", "approval", "rep", "favor",
 	"petitions", "promises", "pet_recent", "kept", "broken", "next_election", "elections_won", "rally_used", "last_vote",
-	"season", "wage_ix", "price_loc", "stock", "exported", "loans", "done_ms", "disasters_survived", "burned", "hist_coins", "hist_pop", "ruins", "offline", "lamp", "terr", "expansions", "auto_expand", "human", "owner", "temper", "rel", "treaty", "ev_scale", "gpos", "war_n", "war_sc", "occ", "train_on", "train_t", "train_w", "focus", "auto_focus"]
+	"season", "wage_ix", "price_loc", "stock", "exported", "loans", "done_ms", "disasters_survived", "burned", "hist_coins", "hist_pop", "ruins", "offline", "lamp", "terr", "expansions", "auto_expand", "human", "owner", "temper", "rel", "treaty", "ev_scale", "gpos", "war_n", "war_sc", "occ", "train_on", "train_t", "train_w", "focus", "auto_focus", "ask_build", "vetoed"]
 
 func to_dict() -> Dictionary:
 	var cs: Array = []

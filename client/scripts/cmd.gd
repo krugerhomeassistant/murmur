@@ -49,6 +49,10 @@ static func run(towns: Array[City], t: City, name: String, a: Array) -> Variant:
 				t.focus[a[0]] = clampi(a[1], 0, 200) / 100.0
 				t.auto_focus = false
 				return true
+		"ask_build":
+			if a.size() == 1 and a[0] is bool:
+				t.ask_build = a[0]
+				return true
 		"auto_focus":
 			if a.size() == 1 and a[0] is bool:
 				t.auto_focus = a[0]
