@@ -7,7 +7,7 @@ Related pages: [empire](empire.md) (the empire commands), [world](world.md), [co
 ## Summary
 
 - Transport is Godot's ENet over **UDP**, default port **7777** (`NetPlay.PORT`).
-- Maximum **8 players**: `NetPlay.MAX_PLAYERS`. The server is created with `MAX_PLAYERS - 1` = 7 client slots, so a player-hosted game is the host plus 7 clients (see Open questions for the dedicated server).
+- Maximum **8 players**: `NetPlay.MAX_PLAYERS`. A player-hosted game is the host plus 7 clients (`create_server` gets `MAX_PLAYERS - 1` slots); a dedicated server, which plays no town, takes 8 clients. The host sends the world seed and river setting in the join message (`NetWorld.meta`), so clients draw the same land between towns.
 - Two ways to host, one code path: Start menu > Multiplayer > Host (the host also plays and owns the first town), or a headless dedicated server started with `--server`.
 - Every action a player takes is a command that the host validates (`Cmd.run`) and that only works on a town the sender owns.
 - The host sends every town's full state, gzip-compressed, once per simulated second. Clients never simulate.
@@ -193,8 +193,6 @@ From the code and `docs/MULTIPLAYER.md`:
 
 ## Open questions
 
-- **Dedicated server size.** `NetPlay.host` calls `create_server(port, MAX_PLAYERS - 1)` whether or not the process is dedicated. The README and `docs/MULTIPLAYER.md` say up to 8 players, but a dedicated server (which is not itself a player) seems to accept 7 clients.
-- **World seed on clients.** `NetWorld.meta` carries only `n` and `mine`, and `Main._net_world` does not set `Main.world`. I did not find where a client would learn the host's seed, so the land drawn between towns by `WorldLayer` on a client may not match the host's world, while each town's own water, ore and ground do arrive in the snapshot.
 - **Weather and other `Signals`.** The `Signals` object is ticked inside the simulation loop and is not in `City.to_dict`, so a client's weather overlay and ambient sound presumably do not follow the host's. I did not test it.
 - **Claim identity.** Claims are keyed by display name only. A different person who joins under a name after its owner left receives that town; the design note in `docs/MULTIPLAYER.md` mentions a "name/token", but there is no token in the code.
 - **IPv6 and host names.** `Lobby._join` splits the address on `:`, so an IPv6 literal cannot be entered; whether host names resolve was not checked.

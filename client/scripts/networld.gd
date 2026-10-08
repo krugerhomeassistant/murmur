@@ -35,8 +35,12 @@ static func release(towns: Array[City], peer: int) -> void:
 			t.human = false
 
 
-static func meta(towns: Array[City], mine: int) -> Dictionary:
-	return {"n": towns.size(), "mine": mine}
+static func meta(towns: Array[City], mine: int, winfo := {}) -> Dictionary:
+	var d := {"n": towns.size(), "mine": mine}
+	if winfo.has("seed"):
+		d["seed"] = int(winfo["seed"])
+		d["rivers"] = bool(winfo.get("rivers", true))
+	return d
 
 
 ## Client side: an empty mirror of `n` towns, all wired as neighbours. Real contents arrive as snapshots.

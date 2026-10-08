@@ -30,7 +30,7 @@ const HELLO_WAIT := 5.0  ## a peer that has not said hello by then is dropped, s
 func host(port := PORT, pname := "Host", ded := false) -> bool:
 	stop()
 	var p := ENetMultiplayerPeer.new()
-	if p.create_server(port, MAX_PLAYERS - 1) != OK:
+	if p.create_server(port, MAX_PLAYERS if ded else MAX_PLAYERS - 1) != OK:
 		failed.emit("Could not listen on port %d." % port)
 		return false
 	multiplayer.multiplayer_peer = p
@@ -152,8 +152,12 @@ func _chat(who: String, text: String) -> void:
 
 
 ## Host: the towns clients mirror and command.
-func serve(ts: Array[City]) -> void:
+var world_info := {}  ## host: {"seed", "rivers"} sent to joiners so they draw the same land between towns
+
+
+func serve(ts: Array[City], winfo := {}) -> void:
 	towns = ts
+	world_info = winfo
 
 
 ## Host, about once a second: every town's snapshot to every client.
@@ -222,7 +226,7 @@ func _hello(pname: String) -> void:
 		var mine := NetWorld.assign(towns, id, int(claims.get(players[id]["name"], -1)))
 		if mine >= 0:
 			claims[players[id]["name"]] = mine
-		_world.rpc_id(id, NetWorld.meta(towns, mine))
+		_world.rpc_id(id, NetWorld.meta(towns, mine, world_info))
 
 
 func _unique(n: String) -> String:

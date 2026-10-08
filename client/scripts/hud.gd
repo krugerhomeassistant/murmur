@@ -1150,7 +1150,7 @@ func _empire_refresh(c: City) -> void:
             if k == "" or k == "Alerts":
                 _lbl(emp_grid, 0).text = k
             else:
-                _btn(emp_grid, k, func() -> void: _empire_sort(i)).flat = true
+                _btn(emp_grid, k, func() -> void: _empire_sort(i + 1)).flat = true
         for r in rows:
             var cell := {"nm": _lbl(emp_grid, 100), "pop": _lbl(emp_grid, 40), "co": _lbl(emp_grid, 54), "inc": _lbl(emp_grid, 50), "mood": _lbl(emp_grid, 44), "fl": _lbl(emp_grid, 170)}
             (cell["fl"] as Label).autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -1315,7 +1315,7 @@ func _rebuild_dipl(c: City) -> void:
         emb.tooltip_text = "Cut all trade and commuting. They resent it a lot."
         _act_btn(h2, "Demand tribute", pp, "tribute", "Only works if your military is clearly stronger. They pay up to $150 and resent it.")
         _act_btn(h2, "Peace $150", pp, "peace", "Envoys and apologies: +25% their opinion. Lifts an embargo.")
-        _act_btn(h2, "Declare WAR", pp, "war", "Battles every 20-35 s; the stronger side raids and loots. Three more wins than the other side ends it with reparations. Strong military (barracks, bases) matters. No trade during war.")
+        _act_btn(h2, "Declare WAR", pp, "war", "Armies march across the border and fight in the enemy town; raids damage buildings and an occupied town surrenders. Strong military (barracks, bases) matters. No trade during war.")
         _act_btn(h2, "Cancel treaty", pp, "leave", "End a pact or alliance. They are upset.")
         dipl_ui[p.town_name] = {"side": sd, "r": r, "bar": bar, "emb": emb}
 
@@ -1591,6 +1591,8 @@ func _load_ui() -> void:
         win_open[k] = bool(cf.get_value(k, "open", k != "army"))
         if k != "detail":
             p.visible = bool(win_open[k])
+        if bool(cf.get_value(k, "min", false)) and k != "detail":
+            _minimize.call_deferred(k, p.get_child(0).get_child(1))
         if bool(cf.get_value(k, "popped", false)) and k != "detail":
             _popout.call_deferred(k, cf.get_value(k, "wpos", Vector2i(-1, -1)), cf.get_value(k, "wsize", Vector2i.ZERO))
     _clamp_all.call_deferred()

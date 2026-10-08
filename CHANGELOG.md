@@ -16,6 +16,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 - The land between and around the towns is drawn from the endless world (rivers, lakes, coast, forest, hills, rock, ore), generated a few milliseconds per frame near the camera, and the camera may roam 10 plots past the outermost town (it was clamped to the towns).
 
 ### Fixed
+- Empire window column sorting was shifted by one column; founded towns now use the game's difficulty and stay planner-run while spectating; a dedicated server takes 8 clients; joining players draw the host's world between towns; WASD no longer pans the camera while typing; the benchmark (F9) no longer deletes your save; `leave` can no longer end a war for free; minimized windows come back minimized; the Declare WAR tooltip describes real fights.
 - Planner stall: a tiny low-mood town no longer sits under the zoning mood gate forever; it now builds a service to lift mood first and small towns (pop < 40) use a lower gate (0 stalls in 96 fresh towns, was about 5%).
 - Planner towns could never link a border: the border road was laid as a straight line and gave up for good at the first building in the way (`tests/spectate.gd` failed about 1 run in 4). It now finds a route around buildings, preferring dry land.
 

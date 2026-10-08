@@ -169,7 +169,7 @@ Key presses in a popped window are forwarded to `Main._unhandled_input` (`window
 | `popped` | bool | In its own OS window. |
 | `wpos`, `wsize` | Vector2i | OS window position and size (only for popped windows). |
 
-It is written after a title-bar drag ends, on minimize, on open and close, after pop-out and dock, when a popped window loses focus, on a close request of the main window while any window is popped, and by Reset. `Hud._load_ui` runs at startup: it restores `pos` and `open` (open defaults to true except for `army`), and re-opens popped windows with `_popout`. Windows are clamped into the visible area whenever the main window is resized (`_clamp_all`).
+It is written after a title-bar drag ends, on minimize, on open and close, after pop-out and dock, when a popped window loses focus, on a close request of the main window while any window is popped, and by Reset. `Hud._load_ui` runs at startup: it restores `pos`, `open` and `min` (open defaults to true except for `army`), and re-opens popped windows with `_popout`. Windows are clamped into the visible area whenever the main window is resized (`_clamp_all`).
 
 Windows menu > "Reset window layout" (`Hud._reset_wins`) docks every popped window, shows all windows except Details, Army and Empire, and puts every panel back at its default position.
 
@@ -188,10 +188,8 @@ Headless runs (and platforms without sub-window support) fall back to embedded G
 
 ## Open questions
 
-- **Sort columns look off by one.** `Hud._empire` passes the header's list position (Town 0, Pop 1, Coins 2, Net/s 3, Mood 4) to `_empire_sort`, but `_empire_refresh` reads `emp_sort` as 0 = founded order, 1 = name, 2 = pop, 3 = coins, 4 = net, 5 = mood. As written, "Town" restores the founded order, "Pop" sorts by name, "Coins" by population, "Net/s" by coins and "Mood" by income (all descending except name). This is what the code does; whether it is intended is not stated. `tests/empire.gd` only checks that sorting rebuilds the rows.
 - **Sides depend on the viewed town.** Offline, `Main.cmd` does not check that the viewed town is yours, and `Empire.same_side` compares `human` flags. Viewing a neighbour (`human = false`) makes the planner towns "your towns" for totals, bulk changes and sending.
 - **Founding while spectating.** A founded town is created with `human = true` (`Main.found_town_at`), so after founding one `Main.spectating()` is false: Tab and auto-follow stop and the sides split. This follows from the code; I did not run it.
 - **Multiplayer feedback.** On a client `Main.cmd` returns null, so the Balance button always shows "Nothing to balance." even when the host moved money; on the host or offline a no-op shows "Moved $0 between your towns.".
 - **Planner delegate, shared treasury, simulation level of detail.** `docs/EMPIRE_DESIGN.md` (E2) lists an approve/veto queue for the planner, a shared empire treasury, drill-down control and reduced-rate simulation for many towns as not done. I found none of them in the code.
-- **Minimized state.** `min` is saved to `user://ui.cfg` but `Hud._load_ui` does not read it back, so a minimized window comes back expanded.
 - **Refresh rate.** The window refreshes every sixth frame (`tick_n % 6` in `Hud._process`), which is about ten times a second at 60 frames per second and slower on a slow machine.

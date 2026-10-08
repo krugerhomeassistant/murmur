@@ -15,7 +15,7 @@ Related pages: [world](world.md) (camera limits and zoom levels), [empire](empir
 
 ## Keyboard
 
-All handled in `Main._unhandled_input` and `Main._process` (`client/scripts/main.gd`). Keys are ignored while a text field has focus except where noted. Nothing except F9 (and the polled pan keys) does anything before a game has started.
+All handled in `Main._unhandled_input` and `Main._process` (`client/scripts/main.gd`). Keys are ignored while a text field has focus (the pan keys are too). Nothing except F9 does anything before a game has started.
 
 | Key | Action | Notes |
 |---|---|---|
@@ -198,7 +198,7 @@ Godot's per-user data folder for the project name "Murmur" (the project sets no 
 
 `Benchmark` (`client/scripts/benchmark.gd`) is the standard measurement quoted in the README: seed 20261007, 8 towns, spectator, Normal difficulty and Medium land. It first simulates 30,000 steps of 0.1 s (3,000 simulation seconds, about 50 minutes) without drawing, then runs at 8x with the ALL overlay at zoom 1.0 and vsync off, warms up for 15 s and samples for 30 s. It prints `BENCHMARK_JSON {...}` and writes `user://benchmark.json` with fps, frame-time percentiles, CPU and GPU render time, draw calls, simulation and draw cost, memory, slow-frame breakdown, effective speed and population. With `--benchmark` the game quits afterwards; with F9 it stays running. `--war` declares four wars (towns 0v1, 2v3, 4v5, 6v7, each with a mixed army and $5,000) before sampling. `--watch` makes the camera follow the busiest town; the results are tagged as not standard.
 
-The benchmark starts a new game through `Main.start_game` without the multiplayer flag, which deletes `user://murmur_save.bin`, and the spectator world then autosaves over it. Pressing F9 in a real game therefore discards the saved game (see Open questions).
+The benchmark starts a temporary world (`temp` option of `Main.start_game`): it never deletes or overwrites `user://murmur_save.bin` (`Main.ephemeral` blocks `save_game`), so F9 is safe in a game you want to keep.
 
 ## Command-line flags
 
@@ -249,9 +249,6 @@ The window is 1280 by 720 with canvas-item stretch and expanding aspect, on the 
 
 ## Open questions
 
-- **WASD while typing.** `Main._process` reads W, A, S, D and the arrow keys with `Input.is_key_pressed`, which does not check whether a text field has focus. Typing those letters in the chat box or in the town name field on the start menu would therefore also pan the camera. I did not run the game to confirm.
-- **F9 and your save.** `Benchmark._ready` calls `Main.start_game` without the multiplayer flag, which removes the save file, and the benchmark world autosaves each day. This follows from the code; confirm before telling players that F9 is safe in a game they want to keep.
 - **Controls other than the viewed town.** Offline, `Main.cmd` does not check that the viewed town is one you run, so tools work in a planner-run neighbour as well. Whether that is intended is not stated.
 - **Guide wording.** The guide says "drag a line on the grass" for roads; the code places one tile per mouse-motion event with no interpolation (`Main._paint`).
 - **Guide menu path.** The last guide step says "Windows > Guide in the City menu"; the item is City > "Show the guide".
-- **Minimized windows.** The minimized state is saved in `ui.cfg` but not restored at start.
