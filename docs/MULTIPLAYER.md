@@ -23,7 +23,7 @@ Decided with the owner, 2026-10-08: **competitive towns** in one shared world (e
 - [x] P3a snapshots: host sends each town's `to_dict` gzip-compressed once a second (about 4 KB per town measured, so no diffing yet); `NetWorld` (scripts/networld.gd) packs/unpacks, `NetPlay.broadcast/command`; client mirrors via `from_dict`; commands carry the town index and the host rejects non-owners. `tests/netsync.gd` (NETSYNC_OK) covers join, mirror, command, refusal.
 - [x] P3b game integration: `Main.host_game` (lobby "Host": a normal world, you own town 1, friends take the free towns), `Main.join_game` (client runs a no-sim mirror, `remote = true`, viewed town = yours, snapshots via `from_dict`), `Main.cmd` routes every action through the host, a networked world never touches the single-player save; lobby screen (scripts/lobby.gd) from the start menu; `--server [--port N] [--towns N]` dedicated mode. `tests/mp.gd` (MP_OK) runs a real server process and a real client process.
 - [ ] P4 lobby UI, chat, disconnect/rejoin handling.
-- [ ] P5 competitive features: player-vs-player treaties, war and raids use existing `Diplo`/`Military` with real owners.
+- [x] P5 player-vs-player diplomacy: when the other town belongs to another player (`b.owner != 0`), pacts, alliances, ceasefires and tribute demands become proposals in that player's petitions (`Diplo._ask`), the proposer's price is held and refunded on refusal or expiry; war, embargo, gifts and cancelling stay unilateral. Planner towns answer instantly as before. `tests/pvp.gd` (PVP_OK).
 - [ ] P6 dedicated server polish: CLI flags, config, logging, docs, optional Docker image.
 - [ ] P7 hosted options beyond direct IP (relay, server list) only if wanted.
 

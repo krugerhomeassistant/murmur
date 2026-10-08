@@ -38,3 +38,4 @@ jobs:
           godot --headless --path client -s tests/cmd.gd | tee cc.txt && grep -q CMD_OK cc.txt
           godot --headless --path client -s tests/netsync.gd | tee ns.txt && grep -q NETSYNC_OK ns.txt
           godot --headless --path client -s tests/mp.gd | tee mp.txt && grep -q MP_OK mp.txt
+          godot --headless --path client -s tests/pvp.gd | tee pv.txt && grep -q PVP_OK pv.txt

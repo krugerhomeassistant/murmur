@@ -98,6 +98,8 @@ static func act(a: City, b: City, what: String) -> String:
 	var cost: float = COSTS.get(what, 0.0)
 	if a.coins < cost:
 		return "That needs $%d." % int(cost)
+	if _player(a, b) and (what == "pact" or what == "alliance" or (what == "peace" and t == "war") or (what == "tribute" and mil(a) >= mil(b) + 0.3)):
+		return _ask(a, b, what, cost, t)
 	match what:
 		"gift":
 			a.coins -= cost
@@ -179,6 +181,33 @@ static func act(a: City, b: City, what: String) -> String:
 	return ""
 
 
+## True when `b` is run by a different player (multiplayer): treaties and tribute then need that player's answer instead of an AI's.
+static func _player(a: City, b: City) -> bool:
+	return b.owner != 0 and b.owner != a.owner
+
+
+## A proposal to another player: it lands in their petitions (answered like any offer); the price is held until they decide.
+static func _ask(a: City, b: City, what: String, cost: float, t: String) -> String:
+	if what == "pact" and t != "" and t != "embargo":
+		return "You already have a treaty with %s." % b.town_name
+	if what == "alliance" and t != "pact":
+		return "An alliance needs a trade pact first."
+	if what == "peace" and int(a.war_n.get(b.town_name, 0)) < 3:
+		return "%s will not talk yet. The war has barely begun." % b.town_name
+	var ok := false
+	if what == "tribute":
+		var amt := clampf(b.coins * 0.3, 40.0, 150.0)
+		ok = _offer(b, a, "demand", {"t": "%s demands tribute" % a.town_name, "txt": "%s wants $%d to keep the peace. Refuse and its raiders will hit your border." % [a.town_name, int(amt)], "amount": amt, "days": 0})
+	else:
+		var tr: String = "" if what == "peace" else what
+		var label := "a ceasefire" if what == "peace" else "a %s" % what
+		ok = _offer(b, a, "offer", {"t": "%s proposes %s" % [a.town_name, label], "txt": "%s offers %s. Accept and it takes effect now; refuse and %s gets its money back." % [a.town_name, label, a.town_name], "treaty": tr, "days": 0, "pay": cost})
+	if not ok:
+		return "%s already has a proposal from you waiting." % b.town_name
+	a.coins -= cost
+	return "Proposal sent to %s." % b.town_name
+
+
 ## Answer to an offer/demand decision made by `a` (the human town).
 static func resolve(a: City, p: Dictionary, yes: bool) -> void:
 	var b := a.partner(String(p["with"]))
@@ -188,8 +217,9 @@ static func resolve(a: City, p: Dictionary, yes: bool) -> void:
 		if yes:
 			sign_treaty(a, b, String(p["treaty"]))
 			_shift(a, b, 0.08, 0.1)
-			a._log("You signed a %s with %s." % [p["treaty"], b.town_name])
+			a._log("You signed a %s with %s." % [String(p["treaty"]) if p["treaty"] != "" else "ceasefire", b.town_name])
 		else:
+			b.coins += float(p.get("pay", 0.0))  # a proposing player's deposit comes back
 			_shift(a, b, 0.0, -0.04)
 	else:  # demand
 		var pay: float = float(p["amount"])
@@ -213,10 +243,10 @@ static func _raid(from: City, to: City) -> void:
 	_say(from, to, "%s raids %s's border%s." % [from.town_name, to.town_name, (": %d buildings lost" % n) if n > 0 else ", but the defences hold"])
 
 
-static func _offer(a: City, b: City, kind: String, extra: Dictionary) -> void:
+static func _offer(a: City, b: City, kind: String, extra: Dictionary) -> bool:
 	for p in a.petitions:
 		if p.get("with", "") == b.town_name and p["kind"] != "recover":
-			return
+			return false
 	var p := {"kind": kind, "id": kind + b.town_name, "tribe": "", "with": b.town_name, "expires": a.day + 2}
 	p.merge(extra)
 	a.petitions.append(p)
@@ -224,6 +254,7 @@ static func _offer(a: City, b: City, kind: String, extra: Dictionary) -> void:
 	a.msg = String(p["t"])
 	a._log(a.msg)
 	a.sounds.append("petition")
+	return true
 
 
 ## Called every sim second with all towns.
