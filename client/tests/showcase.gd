@@ -24,7 +24,7 @@ static func build(c: City) -> int:
 				if x > r.end.x - 7:
 					k = T.IND
 				n += int(c.place(x, y, k))
-	var svc := [T.FIRE, T.POLICE, T.CLINIC, T.SCHOOL, T.PARK, T.PARK, T.PLAZA, T.LIBRARY, T.PLAYGROUND, T.BUS, T.WIND, T.WIND, T.WATER, T.SEWAGE, T.CINEMA, T.PARK]
+	var svc := [T.FIRE, T.POLICE, T.CLINIC, T.SCHOOL, T.PARK, T.PARK, T.PLAZA, T.LIBRARY, T.PLAYGROUND, T.BUS, T.WIND, T.WIND, T.WATER, T.SEWAGE, T.CINEMA, T.PARK, T.WIND, T.WIND, T.WIND, T.WIND, T.WIND, T.WIND, T.WATER, T.WATER, T.WATER, T.SEWAGE, T.SEWAGE, T.SEWAGE, T.HOSPITAL, T.POLICE, T.FIRE, T.SCHOOL, T.PARK, T.PARK, T.WIND, T.WIND, T.WIND, T.WATER, T.WATER, T.SEWAGE]
 	var si := 0
 	for y in range(r.position.y + 2, r.end.y - 2, 3):
 		for x in range(r.position.x + 2, r.end.x - 2, 5):
