@@ -82,7 +82,7 @@ art.gd (class Art): hand-drawn 32x32 sprites from primitives for all 39 service 
 - Wired: main._building, main draw loop (EMPTY cells), hud._tool_btn.
 
 ## Rivers (v1)
-- `City.water` (1 = river, saved). `gen_river(seed, mode)` makes a meandering river beside the start plan; none in old saves. Setup option "Rivers".
+- `City.water` (1 = river, lake or sea, saved). New games take it from the shared `World` (see Endless world below); `gen_river(seed, mode)` is the older per-town generator, still used by saves from before the world and by `tests/rivers.gd`. Setup option "Rivers": Natural / None (flat land) / Custom (paint it).
 - Zones/services cannot be built on water (place() and planner skip it). Roads over water = bridges, cost x`BRIDGE_X` (4). Wires/pipes may cross.
 - Art.water (ripples, banks, swimming and jumping fish), Art.bridge (deck+rails).
 
@@ -103,10 +103,9 @@ art.gd (class Art): hand-drawn 32x32 sprites from primitives for all 39 service 
 - Render: `TileLayer` chunks (16x16 tiles) are children of Main (`show_behind_parent`). `Main._lod()`: 0 (zoom >= 1.2) full art baked to a 2x SubViewport texture, 1 (0.7-1.2) block buildings, 2 (<0.7) flat tiles. Chunks re-record at `chunk_hz` within a `CHUNK_MS` budget; `chunk_kick` forces a refresh on edits/town switch/LOD change. Dynamic things (citizens, cars, boats, fire, lights, overlays, weather, cursor) are still drawn by `Main._draw` every frame.
 - Tools: F3 overlay; `godot --headless -s tests/bench.gd | bench2.gd | region.gd | place.gd | netcache.gd`.
 
-## Shared rivers
-Setup Rivers = 'One river through neighbouring towns' (default). Main._fresh picks horizontal/vertical, takes the row/column of the player's town, and gives each town `river_plan {horiz,a,b}` (cross-span fractions at its entry/exit borders from `_edge_frac(seed, k)`); `City._gen_shared_river` draws it with wobble/width tapering to fixed values at the territory edges so neighbours match. Towns founded later still get their own random river.
+## Endless world (E1, in progress)
+`World` (scripts/world.gd) is endless terrain from a seed (see ARCHITECTURE.md). `Main._fresh` picks a world seed whose first N plots are all good town sites (`_pick_world`: dry start layout, at most 35% water in the start territory; up to 40 tries), and every town plot (`City.W` x `City.H` tiles at `City.plot_origin(gpos)`) is cut from it by `City.apply_world`: `water` (sea, lakes, rivers), `ore` and `ground` (sand, forest, hills, rock; look only, drawn by `Art.terrain`). Neighbouring plots therefore share one coastline and river. "Rivers: None" and "Custom" start on flat land. The seed and the rivers flag are saved with the game; saves from before the world keep their own terrain and `ground` stays plain. Towns are still laid out on the region grid (free placement, claiming and founding on the map come in later E1 steps, docs/EMPIRE_DESIGN.md).
 
-## Farm variants
 Farm-sector zones (sector -> effect): `farm` grain, seasonal crops; `orchard` 1.5x crops; `ranch` food on the spot, a little smell; `green` (greenhouse, unlock 80) crops 0.85x of a field-summer rate in every season; `fishfarm` (unlock 70, must touch water) food on the spot scaled by river_health. Crops need a mill; ranch and fish farm food does not. Planner towns pick a variant via City._farm_variant (fields 3, orchard 1, ranch 1 or 3 when food is short without a mill, greenhouse 0.5 or 2.5 in lean seasons, fish farm 1 while the river is healthy).
 
 ## Planner mining

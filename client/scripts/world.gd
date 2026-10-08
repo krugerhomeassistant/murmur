@@ -154,9 +154,9 @@ func _gen(cx: int, cy: int) -> Dictionary:
 			k[j * csize + i] = kind
 			if kind >= K.PLAIN:
 				var v := _vn(x / 5.0, y / 5.0, seed + 307)
-				var need := 0.80 if kind < K.HILL else 0.70
+				var need := 0.90 if kind < K.HILL else 0.80
 				if v > need:
-					o[j * csize + i] = 3 if v > need + 0.10 else (2 if v > need + 0.05 else 1)
+					o[j * csize + i] = 3 if v > need + 0.06 else (2 if v > need + 0.03 else 1)
 	return {"k": k, "o": o}
 
 
@@ -186,3 +186,24 @@ func ore(x: int, y: int) -> int:
 func is_water(x: int, y: int) -> bool:
 	var k := kind(x, y)
 	return k == K.SEA or k == K.RIVER
+
+
+## Kinds and ore for the w*h tiles at (x0, y0), row-major: {"k": PackedByteArray, "o": PackedByteArray}.
+func region(x0: int, y0: int, w: int, h: int) -> Dictionary:
+	var k := PackedByteArray()
+	k.resize(w * h)
+	var o := PackedByteArray()
+	o.resize(w * h)
+	for j in h:
+		var y := y0 + j
+		var i := 0
+		while i < w:
+			var x := x0 + i
+			var ch := _chunk(x, y)
+			var at := posmod(y, csize) * csize + posmod(x, csize)
+			var run := mini(w - i, csize - posmod(x, csize))
+			for r in run:
+				k[j * w + i + r] = ch["k"][at + r]
+				o[j * w + i + r] = ch["o"][at + r]
+			i += run
+	return {"k": k, "o": o}

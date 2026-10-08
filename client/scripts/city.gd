@@ -220,6 +220,8 @@ var shop_field := PackedByteArray()  # tiles to the nearest shop per cell (cappe
 var shop_set_sig := 0
 var up_svc_base := 0.0
 var ore := PackedByteArray()  # ore deposit richness per cell, 0 = none
+var ground := PackedByteArray()  # World.K kind per cell (look only: sand, forest, hills, rock); water/ore above are the rules
+var world_fed := false  # terrain came from the shared World, so set_start must not roll its own river
 var svc_jobs := 0
 var jobs := 0
 var up_zone := 0.0
@@ -284,6 +286,8 @@ func _init(s: Signals) -> void:
 	rng.randomize()
 	ore.resize(W * H)
 	_gen_ore()
+	ground.resize(W * H)
+	ground.fill(World.K.PLAIN)
 	gen_river(rng.randi())
 	for m in Catalog.METRICS:
 		need_pop[m] = Catalog.need_pop(m)
@@ -601,9 +605,34 @@ func _gen_ore() -> void:
 					ore[y * W + x] = maxi(int(ore[y * W + x]), 3 - d * 3 / (rad + 1))
 
 
+## World tile at the top-left corner of the plot at region position g.
+static func plot_origin(g: Vector2i) -> Vector2i:
+	return g * Vector2i(W, H)
+
+
+## Take water, ore and ground from the shared world for the plot whose top-left tile is world tile `wo`.
+## `rivers` false = flat land (setup option): water becomes plain ground.
+func apply_world(w: World, wo: Vector2i, rivers := true) -> void:
+	var r := w.region(wo.x, wo.y, W, H)
+	ground = r["k"]
+	ore = r["o"]
+	for i in W * H:
+		var k: int = ground[i]
+		var wet := k == World.K.SEA or k == World.K.RIVER
+		if wet and not rivers:
+			ground[i] = World.K.PLAIN
+			wet = false
+		water[i] = 1 if wet else 0
+		if wet:
+			ore[i] = 0
+	world_fed = true
+	dry_built()
+
+
 func set_start(w: int, h: int) -> void:
 	terr = Rect2i(W / 2 - w / 2, H / 2 - h / 2, w, h)
-	gen_river(rng.randi(), 1, river_plan)
+	if not world_fed:
+		gen_river(rng.randi(), 1, river_plan)
 	dry_built()
 	_rebuild_cells()
 	_scan()
@@ -1770,49 +1799,61 @@ func _road_net() -> void:
 
 
 ## Planner towns lay a road from their network to the border facing each neighbour, so links exist for real.
+## The route is a breadth-first search over free land (a straight line gets stuck behind the first building); it avoids
+## water unless that is the only way. Up to 12 new tiles per call, the next call carries on from the stub.
 func _plan_gate() -> bool:
 	for p in partners:
 		var k := Diplo.side(self, p)
 		if k < 0 or int(gate[k]) > 0:
 			continue
-		var tx := terr.position.x + terr.size.x / 2
-		var ty := terr.position.y + terr.size.y / 2
-		match k:
-			0:
-				ty = terr.position.y + 1
-			1:
-				tx = terr.end.x - 2
-			2:
-				ty = terr.end.y - 2
-			_:
-				tx = terr.position.x + 1
-		var from := -1
-		var bd := 1 << 30
-		for i in cells:
-			if road_comp[i] == 1:
-				var d := absi(i % W - tx) + absi(i / W - ty)
-				if d < bd:
-					bd = d
-					from = i
-		if from < 0:
-			continue
-		var x := from % W
-		var y := from / W
-		var laid := 0
-		while (x != tx or y != ty) and laid < 12:
-			if x != tx and (k == 1 or k == 3 or y == ty):
-				x += signi(tx - x)
-			else:
-				y += signi(ty - y)
-			if is_road(grid[y * W + x]):
+		for wet_ok in [false, true]:
+			var path := _gate_route(k, wet_ok)
+			if path.is_empty():
 				continue
-			if not place(x, y, T.ROAD):
-				break
-			laid += 1
-		if laid > 0:
-			msg = "Planners laid a road toward %s." % p.town_name
-			return true
+			var laid := 0
+			for i in path:
+				if laid >= 12 or not place(i % W, i / W, T.ROAD):
+					break
+				laid += 1
+			if laid > 0:
+				msg = "Planners laid a road toward %s." % p.town_name
+				return true
 	return false
+
+
+## Cells (without the starting road tile) of the shortest route from the main road network to the border band on side k, or [].
+func _gate_route(k: int, wet_ok: bool) -> Array[int]:
+	var prev := {}
+	var q: Array[int] = []
+	for i in cells:
+		if road_comp[i] == 1:
+			prev[i] = -1
+			q.append(i)
+	var head := 0
+	while head < q.size():
+		var i := q[head]
+		head += 1
+		var x := i % W
+		var y := i / W
+		if grid[i] == T.EMPTY or is_road(grid[i]):
+			var band := (y < terr.position.y + 3) if k == 0 else ((x >= terr.end.x - 3) if k == 1 else ((y >= terr.end.y - 3) if k == 2 else (x < terr.position.x + 3)))
+			if band and road_comp[i] != 1:
+				var path: Array[int] = []
+				var c := i
+				while prev[c] != -1:
+					if not is_road(grid[c]):
+						path.append(c)
+					c = prev[c]
+				path.reverse()
+				return path
+		for d in DIRS:
+			var nx := x + d.x
+			var ny := y + d.y
+			var ni := ny * W + nx
+			if owns(nx, ny) and not prev.has(ni) and (grid[ni] == T.EMPTY or is_road(grid[ni])) and (wet_ok or water[ni] == 0):
+				prev[ni] = i
+				q.append(ni)
+	return []
 
 
 ## Planner towns lay a road toward the nearest ore deposit when none is reachable yet, so a mine can be zoned beside it.
@@ -3241,7 +3282,7 @@ func _trade(market: float) -> Array:
 # ---------- save / load ----------
 
 ## What a save or snapshot carries (also the only keys from_dict accepts, since snapshots come from a possibly hostile host).
-const SAVE_KEYS := ["town_name", "grid", "lvl", "build", "wire", "pipe", "sewer", "lamp", "water", "ore", "coins", "mood", "tax_r", "tax_c", "tax_i", "clock", "day",
+const SAVE_KEYS := ["town_name", "grid", "lvl", "build", "wire", "pipe", "sewer", "lamp", "water", "ore", "ground", "coins", "mood", "tax_r", "tax_c", "tax_i", "clock", "day",
 	"policies", "auto_mode", "auto_policy", "peak", "announced", "next_id", "recent", "active", "approval", "rep", "favor",
 	"petitions", "promises", "pet_recent", "kept", "broken", "next_election", "elections_won", "rally_used", "last_vote",
 	"season", "stock", "exported", "loans", "done_ms", "disasters_survived", "burned", "hist_coins", "hist_pop", "ruins", "offline", "lamp", "terr", "expansions", "auto_expand", "human", "owner", "temper", "rel", "treaty", "ev_scale", "gpos", "war_n", "war_sc", "occ", "train_on", "train_t", "train_w"]

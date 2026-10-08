@@ -28,6 +28,8 @@ var speed := 1.0
 var follow := true  # spectator: auto-cycle the viewed town
 var follow_t := 0.0
 var bench_seed := 0
+var world: World  # shared terrain every town plot is cut from; null for saves from before the endless world
+var world_rivers := true
 var steps_done := 0  # sim steps run, for measuring the effective speed
 const MAX_BATCH := 2
 const SIM_BUDGET_MS := 6.0  # max sim work per frame; the game slows below the chosen speed instead of dropping frames
@@ -175,6 +177,41 @@ static func spiral(n: int) -> Vector2i:
 	return p
 
 
+## True if a town started on plot g would stand on dry, mostly land ground: the seed layout is dry and the start territory is at most 35% water.
+func _site_ok(w: World, g: Vector2i, lw: int, lh: int) -> bool:
+	var wo := City.plot_origin(g)
+	var foot := w.region(wo.x + City.OX + 18, wo.y + City.OY + 15, 13, 3)["k"] as PackedByteArray
+	for k in foot:
+		if k == World.K.SEA or k == World.K.RIVER:
+			return false
+	var t := w.region(wo.x + City.W / 2 - lw / 2, wo.y + City.H / 2 - lh / 2, lw, lh)["k"] as PackedByteArray
+	var wet := 0
+	for k in t:
+		if k == World.K.SEA or k == World.K.RIVER:
+			wet += 1
+	return wet <= t.size() * 0.35
+
+
+## A world whose first `n` plots all make good town sites (best of 40 tries if none is perfect).
+func _pick_world(n: int, lw: int, lh: int) -> World:
+	var base := bench_seed if bench_seed != 0 else randi()
+	var best: World = null
+	var best_ok := -1
+	for a in 40:
+		var w := World.new(base + a * 7919)
+		var ok := 0
+		for k in n:
+			if not _site_ok(w, spiral(k), lw, lh):
+				break
+			ok += 1
+		if ok > best_ok:
+			best = w
+			best_ok = ok
+		if ok == n:
+			break
+	return best
+
+
 func _free_name() -> String:
 	for n in TOWN_NAMES:
 		if towns.all(func(t: City) -> bool: return t.town_name != n):
@@ -191,6 +228,8 @@ func _new_town(nm := "") -> City:
 	t.temper = TEMPERS[towns.size() % TEMPERS.size()]
 	t.gpos = spiral(towns.size())
 	t.seed_start()
+	if world != null:
+		t.apply_world(world, City.plot_origin(t.gpos), world_rivers)
 	for o in towns:
 		o.partners.append(t)
 		t.partners.append(o)
@@ -206,6 +245,9 @@ func _fresh(o: Dictionary) -> void:
 	var lw: int = [40, 48, 64][land]
 	var lh: int = [24, 32, 40][land]
 	var mood: int = o.get("mood", 1)
+	var rmode: int = o.get("river", 0)
+	world_rivers = not (rmode == 1 or rmode == 2)  # "none" and "I paint it" start on flat land
+	world = _pick_world(o.get("towns", 2), lw, lh)
 	city = _new_town(o.get("name", "Murmur"))
 	city.temper = 0.0
 	var n: int = o.get("towns", 2)
@@ -214,20 +256,9 @@ func _fresh(o: Dictionary) -> void:
 		nb.human = false
 		nb.coins = 400.0
 		nb.temper = [0.2, TEMPERS[k % TEMPERS.size()], -0.25, randf_range(-0.3, 0.3)][mood]
-	var rmode: int = o.get("river", 0)
-	var rsd := randi()
-	var rhoriz := randf() < 0.5
 	for k in towns.size():
 		towns[k].acc = 0.3 * k
-		if rmode == 3:  # one river through the whole row/column of towns that contains the player's town
-			var g := towns[k].gpos
-			var same_line: bool = (g.y == towns[0].gpos.y) if rhoriz else (g.x == towns[0].gpos.x)
-			if same_line:
-				var idx := g.x if rhoriz else g.y
-				towns[k].river_plan = {"horiz": rhoriz, "a": _edge_frac(rsd, idx), "b": _edge_frac(rsd, idx + 1)}
 		towns[k].set_start(lw, lh)
-		if rmode == 1 or rmode == 2 or (rmode == 3 and towns[k].river_plan.is_empty()):
-			towns[k].water.fill(0)
 		towns[k].ev_scale = [1.5, 1.0, 0.7][diff]
 	city.coins = [600.0, 300.0, 150.0][diff]
 	city.auto_mode = o.get("auto", 2)
@@ -244,11 +275,6 @@ func _fresh(o: Dictionary) -> void:
 		headline = "Spectating: no mayor. Tab or the Towns menu switches town, F toggles auto-follow, 8x speeds it up."
 		return
 	headline = "Welcome to %s. %s Lay roads and zone beside them; the city grows as needs arise." % [city.town_name, ("Your neighbour %s runs itself (Region tab)." % towns[1].town_name) if n > 1 else "You are on your own."]
-
-
-## Where the shared river crosses the border with index k, as a fraction of the territory's cross span (same for both towns).
-static func _edge_frac(sd: int, k: int) -> float:
-	return 0.3 + 0.4 * float(hash([sd, k]) % 1000) / 1000.0
 
 
 func open_setup() -> void:
@@ -399,7 +425,7 @@ func save_game() -> void:
 	var ts: Array = []
 	for t in towns:
 		ts.append(t.to_dict())
-	f.store_var({"v": 2, "cur": towns.find(city), "towns": ts, "sig": sig.v.duplicate()})
+	f.store_var({"v": 2, "cur": towns.find(city), "towns": ts, "sig": sig.v.duplicate(), "world": {"seed": world.seed, "rivers": world_rivers} if world != null else {}})
 
 
 func load_game() -> bool:
@@ -409,6 +435,9 @@ func load_game() -> bool:
 	var d: Variant = f.get_var()
 	if not (d is Dictionary) or int((d as Dictionary).get("v", 0)) != 2 or (d["towns"] as Array).is_empty():
 		return false  # older saves used a smaller map
+	var wd: Dictionary = d.get("world", {})
+	world = World.new(int(wd["seed"])) if wd.has("seed") else null
+	world_rivers = bool(wd.get("rivers", true))
 	towns.clear()
 	for td in d["towns"]:
 		var t := City.new(sig)
@@ -1199,6 +1228,8 @@ func draw_chunk(c_item: CanvasItem, t_: City, x0: int, y0: int, x1: int, y1: int
 				else:
 					Art.water(ci, x, y, wn, night, city.river_health)
 			if t == T.EMPTY:
+				if not wet and city.ground[i] != World.K.PLAIN:
+					Art.terrain(ci, x, y, city.ground[i], far, city.season)
 				if not wet and not far:
 					Art.ground(ci, x, y, city.owns(x, y), city.season)
 				if city.ore[i] > 0 and not wet:
