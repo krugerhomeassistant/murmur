@@ -9,3 +9,6 @@ Order matters. Performance is always the last step before a release.
 5. **Tag.** `git tag vX.Y.Z` on the merge commit and push the tag.
 6. **Build.** Portable Windows build: stage the exported game with `client/scripts/*.gd` and `*.uid` into `game/scripts/` of the portable folder, zip as `dist/Murmur-portable.zip` (git-ignored).
 7. **Publish.** GitHub release for the tag, notes from the changelog section, zip attached.
+
+## Manual steps (the agent session cannot do these)
+The agent proxy blocks tag pushes and release creation. After the release PR merges: `git fetch origin && git tag vX.Y.Z <merge sha> && git push origin vX.Y.Z`, then create the GitHub release in the web UI (notes from the changelog, attach `dist/Murmur-portable.zip`).
