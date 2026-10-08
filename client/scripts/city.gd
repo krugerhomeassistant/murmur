@@ -136,7 +136,7 @@ var saving_for := 0.0  # treasury target for a needed service; pauses other spen
 var burning := 0
 var burned := 0  # buildings lost to fire, lifetime
 var plaza := -1
-var army: Array = []  # units: {k, hp, tgt, s, l} (see Military); runtime keys ft/fg/fl are not saved
+var army: Array = []  # units: {k, hp, tgt, l, p (world px, at war only), h} (see Military); runtime keys ft/fg/fl are not saved
 var occ := {}  # enemy town name -> seconds it has held our border
 var raid := {}  # runtime: raid progress against a foe
 var train_on := true  # auto-train troops from barracks and bases
@@ -531,6 +531,8 @@ func place(x: int, y: int, t: int) -> bool:
 		return false
 	grid[y * W + x] = t
 	coins -= cost_of(t) * (BRIDGE_X if wet else 1.0)
+	if wet:
+		Military.terrain_changed()  # a bridge changes where armies can walk
 	if is_road(t):
 		roads_dirty = true
 	scan_dirty = true
@@ -564,6 +566,8 @@ func bulldoze(x: int, y: int) -> bool:
 		return true
 	if is_road(grid[i]):
 		roads_dirty = true
+		if water[i] == 1:
+			Military.terrain_changed()
 	grid[i] = T.EMPTY
 	lvl[i] = 0
 	build[i] = 0.0
@@ -3249,11 +3253,17 @@ func to_dict() -> Dictionary:
 	var d := {"v": 1, "cit": cs}
 	for k in SAVE_KEYS:
 		d[k] = get(k)
-	d["army"] = army.map(func(u: Dictionary) -> Dictionary: return {"k": u["k"], "hp": u["hp"], "tgt": u["tgt"], "s": u["s"], "l": u["l"], "mx": u.get("mx", u["hp"]), "xp": u.get("xp", 0.0), "rk": u.get("rk", 0)})
+	d["army"] = army.map(func(u: Dictionary) -> Dictionary:
+		var r := {"k": u["k"], "hp": u["hp"], "tgt": u["tgt"], "l": u["l"], "mx": u.get("mx", u["hp"]), "xp": u.get("xp", 0.0), "rk": u.get("rk", 0)}
+		if u.has("p"):
+			r["p"] = u["p"]
+			r["h"] = u.get("h", 0.0)
+		return r)
 	return d
 
 
 func from_dict(d: Dictionary) -> void:
+	Military.terrain_changed()
 	if not d.has("water"):
 		water.fill(0)  # saves from before rivers
 	for k in d:

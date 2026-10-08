@@ -259,6 +259,7 @@ static func _offer(a: City, b: City, kind: String, extra: Dictionary) -> bool:
 
 ## Called every sim second with all towns.
 static func second(towns: Array, rng: RandomNumberGenerator) -> void:
+	Military.register(towns)
 	for c in towns:
 		Military.econ(c)
 	for i in towns.size():
