@@ -11,3 +11,4 @@
 | [TOOLING_AND_MCP.md](TOOLING_AND_MCP.md) | Tools, skills and MCP servers used |
 | [ACTIVE_CONTEXT.md](ACTIVE_CONTEXT.md) | Current state for resuming work |
 | [RELEASING.md](RELEASING.md) | Release process |
+| [MULTIPLAYER.md](MULTIPLAYER.md) | Multiplayer design and phases |
