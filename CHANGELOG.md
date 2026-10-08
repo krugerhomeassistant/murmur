@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 ## [Unreleased]
 
 ### Changed
+- Town growth no longer re-floods the utility networks: only demand is recomputed, about 10x cheaper per growth step (`tests/netbench.gd`).
+- Benchmark: `-- --benchmark --war` runs the standard scenario with four wars going.
+
+### Changed
 - CI: multiplayer tests run as their own parallel job.
 - GDScript lint (gdtoolkit) in CI; style-only rules (line length, naming, ordering) are switched off in client/gdlintrc.
 - Dedicated server options (`--towns`, `--speed`) with join/leave/chat logging; multiplayer run instructions.
