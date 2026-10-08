@@ -5,6 +5,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+### Changed
+- War rework, phase 1 (docs/WAR_DESIGN.md): units at war have real map positions, march through the terrain on flow fields, and fight in 2D. Ground units cannot enter rivers (a road bridge opens the way), ships stay on river water, aircraft fly straight; armies advance on the enemy town and fight there instead of on a line between the towns. New `tests/warmap.gd`.
+
 ## [0.2.0] - 2026-10-08
 
 ### Changed

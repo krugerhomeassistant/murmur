@@ -2,8 +2,8 @@ class_name Military
 extends RefCounted
 ## Real armies. Towns train units from barracks and bases, deploy them to the front when at war, and the units fight
 ## with hit points, range and damage. A war ends when one side's army is gone and the other holds its border.
-## Geometry: the front is the line from town a's edge to town b's edge (see line()); a unit's `s` is how many pixels
-## it has marched from its own edge.
+## Geometry: units at war have a world position `p` (pixels) and heading `h`; see docs/WAR_DESIGN.md. line() still gives the
+## edge-to-edge axis between two towns, used to spawn units on the side facing the enemy.
 ## Every unit type lives in KIND: `t` is what it counts as when shot at (soft/armor/air), `vs` its damage multiplier
 ## against each of those, `cap` how many each building houses, `radar` that air capacity is also limited by radar posts.
 
@@ -33,10 +33,15 @@ const RANK_XP := [250.0, 800.0, 2000.0]  # damage dealt (or healed) to reach ran
 const RANK_DMG := 0.15  # per rank
 const RANK_HP := 0.10
 const ARMY_MAX := 150  # per town: training stops here (upkeep, and fights cost O(n^2))
-const LANE := 35.0  # px of sideways offset per unit of lane, counted in range checks (must stay below the shortest weapon range / 2)
+const INF_D := 1 << 29
+const AGGRO := 520.0  # px: foes closer than this (or 1.5x weapon range) are chased instead of marching on
+const FIELD_TTL := 30  # fight calls a cached flow field lives; building a bridge clears the cache at once
 const TCLS := {"soft": 0, "armor": 1, "air": 2, "ship": 3}
 static var _vsv := {}  # kind -> damage multipliers as a flat array indexed by target class, for the fight inner loop
 static var booms: Array = []  # runtime only: explosions for the war visuals
+static var reg := {}  # gpos -> City, every town (Diplo.second keeps it current): terrain lookups for units on the move
+static var _ff := {}  # cached flow fields
+static var _clock := 0  # counts fight() calls, the cache's idea of time
 static var blasts: Array = []  # runtime only: buildings hit by raids and bombers {t: town, p: town-space pixel, ts: ms}
 
 
@@ -160,7 +165,7 @@ static func max_hp(u: Dictionary) -> float:
 
 static func _unit(k: String, hp_scale := 1.0) -> Dictionary:
 	var h := float(KIND[k]["hp"]) * hp_scale
-	return {"k": k, "hp": h, "mx": h, "xp": 0.0, "rk": 0, "tgt": "", "s": 0.0, "l": randf_range(-1.0, 1.0)}
+	return {"k": k, "hp": h, "mx": h, "xp": 0.0, "rk": 0, "tgt": "", "l": randf_range(-1.0, 1.0)}
 
 
 static func _gain(u: Dictionary, xp: float) -> void:
@@ -214,8 +219,8 @@ static func econ(c: City) -> void:
 		elif not ok.any(func(p: City) -> bool: return p.town_name == u["tgt"]):
 			u["tgt"] = (ok[i % ok.size()] as City).town_name
 			i += 1
-		if u["tgt"] == "" and float(u["s"]) > 0.0:
-			u["s"] = maxf(float(u["s"]) - float(KIND[u["k"]]["spd"]), 0.0)  # march home
+		if u["tgt"] == "":
+			u.erase("p")  # peace: back home at once (phase 1, docs/WAR_DESIGN.md)
 
 
 static func _row(k: String) -> PackedFloat32Array:
@@ -233,98 +238,302 @@ static func _of(c: City, foe: String) -> Array:
 	return r
 
 
-## One second of fighting on the front between two towns at war.
+static func register(towns: Array) -> void:
+	reg.clear()
+	for c in towns:
+		reg[(c as City).gpos] = c
+
+
+## World-space pixel rect of a town's territory.
+static func terr_px(c: City) -> Rect2:
+	return Rect2(origin(c) + Vector2(c.terr.position) * TILE, Vector2(c.terr.size) * TILE)
+
+
+static func _cls(k: String) -> int:
+	return int(TCLS[KIND[k]["t"]])
+
+
+## Can a unit of class `cls` (0/1 ground, 3 ship) stand on this tile of town `c`? Ground: land or a road bridge. Ships: river without a bridge.
+static func _tile_ok(c: City, i: int, cls: int) -> bool:
+	if cls == 3:
+		return c.water[i] == 1 and not c.is_road(c.grid[i])
+	return c.water[i] == 0 or c.is_road(c.grid[i])
+
+
+static func passable(p: Vector2, cls: int) -> bool:
+	if cls == 2:
+		return true
+	var tx := floori(p.x / TILE)
+	var ty := floori(p.y / TILE)
+	var c: City = reg.get(Vector2i(floori(float(tx) / City.W), floori(float(ty) / City.H)))
+	return c != null and _tile_ok(c, posmod(ty, City.H) * City.W + posmod(tx, City.W), cls)
+
+
+## Nearest standable point to `p`, searching outwards in rings of tiles (for spawning and goals).
+static func nearest_ok(p: Vector2, cls: int, max_r := 24) -> Vector2:
+	if passable(p, cls):
+		return p
+	for r in range(1, max_r + 1):
+		for dy in range(-r, r + 1):
+			for dx in range(-r, r + 1):
+				if maxi(absi(dx), absi(dy)) != r:
+					continue
+				var q := p + Vector2(dx, dy) * TILE
+				if passable(q, cls):
+					return q
+	return Vector2.INF
+
+
+## Breadth-first distance field (in tiles) from `goal` over everything a class can stand on, across the towns spanned by a and b.
+static func _field(a: City, b: City, goal: Vector2, cls: int) -> Dictionary:
+	var g0 := Vector2i(mini(a.gpos.x, b.gpos.x), mini(a.gpos.y, b.gpos.y))
+	var g1 := Vector2i(maxi(a.gpos.x, b.gpos.x), maxi(a.gpos.y, b.gpos.y))
+	var key := "%d,%d,%d,%d,%d,%d,%d" % [g0.x, g0.y, g1.x, g1.y, cls, int(goal.x / TILE), int(goal.y / TILE)]
+	var now := _clock
+	if _ff.has(key) and now - int((_ff[key] as Dictionary)["ts"]) < FIELD_TTL:
+		return _ff[key]
+	var rw := (g1.x - g0.x + 1) * City.W
+	var rh := (g1.y - g0.y + 1) * City.H
+	var ox := g0.x * City.W
+	var oy := g0.y * City.H
+	var walk := PackedByteArray()
+	walk.resize(rw * rh)
+	for gy in range(g0.y, g1.y + 1):
+		for gx in range(g0.x, g1.x + 1):
+			var c: City = reg.get(Vector2i(gx, gy))
+			if c == null:
+				continue
+			for y in City.H:
+				var row := ((gy - g0.y) * City.H + y) * rw + (gx - g0.x) * City.W
+				for x in City.W:
+					if _tile_ok(c, y * City.W + x, cls):
+						walk[row + x] = 1
+	var gx0 := clampi(floori(goal.x / TILE) - ox, 0, rw - 1)
+	var gy0 := clampi(floori(goal.y / TILE) - oy, 0, rh - 1)
+	var dist := PackedInt32Array()
+	dist.resize(rw * rh)
+	dist.fill(INF_D)
+	var res := {"ts": now, "ox": ox, "oy": oy, "rw": rw, "rh": rh, "dist": dist, "walk": walk, "ok": false}
+	var gi := gy0 * rw + gx0
+	if walk[gi] == 0:  # goal not standable: take the nearest tile that is
+		var best := -1
+		var bd := 1 << 30
+		for i in walk.size():
+			if walk[i] == 1:
+				var d := (i % rw - gx0) * (i % rw - gx0) + (i / rw - gy0) * (i / rw - gy0)
+				if d < bd:
+					bd = d
+					best = i
+		if best < 0:
+			_ff[key] = res
+			return res
+		gi = best
+	res["ok"] = true
+	res["goal"] = (Vector2(gi % rw + ox, gi / rw + oy) + Vector2(0.5, 0.5)) * TILE
+	dist[gi] = 0
+	var q := PackedInt32Array([gi])
+	var h := 0
+	var dxs := [1, -1, 0, 0, 1, 1, -1, -1]
+	var dys := [0, 0, 1, -1, 1, -1, 1, -1]
+	while h < q.size():
+		var i := q[h]
+		h += 1
+		var x := i % rw
+		var y := i / rw
+		var d := dist[i] + 1
+		for k in 8:
+			var nx: int = x + dxs[k]
+			var ny: int = y + dys[k]
+			if nx < 0 or ny < 0 or nx >= rw or ny >= rh:
+				continue
+			var ni := ny * rw + nx
+			if walk[ni] == 0 or dist[ni] != INF_D:
+				continue
+			if k >= 4 and (walk[y * rw + nx] == 0 or walk[ny * rw + x] == 0):
+				continue  # no cutting corners past water
+			dist[ni] = d
+			q.append(ni)
+	_ff[key] = res
+	return res
+
+
+## Move `spd` pixels downhill along a flow field; `jit` is the unit's sideways wobble so columns do not run on one line.
+static func _follow(p: Vector2, ff: Dictionary, spd: float, jit: Vector2) -> Vector2:
+	var dist: PackedInt32Array = ff["dist"]
+	var rw: int = ff["rw"]
+	var rh: int = ff["rh"]
+	var ox: int = ff["ox"]
+	var oy: int = ff["oy"]
+	var rem := spd
+	for _k in 3:
+		var tx := floori(p.x / TILE) - ox
+		var ty := floori(p.y / TILE) - oy
+		if tx < 0 or ty < 0 or tx >= rw or ty >= rh:
+			return p
+		var d := dist[ty * rw + tx]
+		if d >= INF_D or d == 0:
+			return p
+		var bx := tx
+		var by := ty
+		var bd := d
+		var bg := 1e18
+		var gp: Vector2 = ff.get("goal", p)
+		for dy in range(-1, 2):
+			for dx in range(-1, 2):
+				var nx := tx + dx
+				var ny := ty + dy
+				if (dx == 0 and dy == 0) or nx < 0 or ny < 0 or nx >= rw or ny >= rh:
+					continue
+				var nd := dist[ny * rw + nx]
+				if nd >= d or (dx != 0 and dy != 0 and (dist[ty * rw + nx] >= INF_D or dist[ny * rw + tx] >= INF_D)):
+					continue
+				var gd := ((Vector2(nx + ox, ny + oy) + Vector2(0.5, 0.5)) * TILE).distance_squared_to(gp)
+				if nd < bd or (nd == bd and gd < bg):  # equal steps: take the one that points at the goal
+					bd = nd
+					bg = gd
+					bx = nx
+					by = ny
+		if bd >= d:
+			return p
+		var c := (Vector2(bx + ox, by + oy) + Vector2(0.5, 0.5)) * TILE + (jit if bd > 0 else Vector2.ZERO)
+		var to := c - p
+		var l := to.length()
+		if l <= rem:
+			p = c
+			rem -= l
+		else:
+			return p + to / l * rem
+	return p
+
+
+## Straight move that slides around water: tries the direct heading, then turns up to 105 degrees either way.
+static func _slide(p: Vector2, to: Vector2, spd: float, cls: int) -> Vector2:
+	var d := to - p
+	if d.length() < 0.5:
+		return p
+	var dir := d.normalized()
+	var step := minf(spd, d.length())
+	for a in [0.0, 0.6, -0.6, 1.2, -1.2, 1.8, -1.8]:
+		var q: Vector2 = p + dir.rotated(a) * step
+		if passable(q, cls):
+			return q
+	return p
+
+
+static func _spawn(c: City, foe: City, u: Dictionary) -> Vector2:
+	var l := line(c, foe)
+	var dir := (l[1] - l[0]).normalized()
+	var p0: Vector2 = l[0] + dir * 90.0 + Vector2(-dir.y, dir.x) * float(u["l"]) * 70.0
+	var q := nearest_ok(p0, _cls(u["k"]))
+	return q if q.is_finite() else p0
+
+
+## One second of war between two towns: units spawn on the side facing the enemy, march on the other's territory
+## through the terrain, and shoot whatever is in weapon range.
 static func fight(a: City, b: City) -> void:
-	var l := line(a, b)
-	var ln := maxf(l[0].distance_to(l[1]), 600.0)
+	reg[a.gpos] = a
+	reg[b.gpos] = b
+	_clock += 1
 	var now := Time.get_ticks_msec()
 	var all: Array = []
-	var side: Array = []
-	for u in _of(a, b.town_name):
-		u["s"] = minf(float(u["s"]), ln)
-		all.append(u)
-		side.append(0)
-	for u in _of(b, a.town_name):
-		u["s"] = minf(float(u["s"]), ln)
-		all.append(u)
-		side.append(1)
+	var side := PackedInt32Array()
+	for pair in [[a, b, 0], [b, a, 1]]:
+		var c: City = pair[0]
+		var fo: City = pair[1]
+		for u in _of(c, fo.town_name):
+			if not u.has("p"):
+				u["p"] = _spawn(c, fo, u)
+				u["h"] = (terr_px(fo).get_center() - (u["p"] as Vector2)).angle()
+			all.append(u)
+			side.append(pair[2])
 	var n := all.size()
-	var gpos := PackedFloat32Array()  # position in a's frame
-	var lane := PackedFloat32Array()
-	var tc := PackedInt32Array()  # target class of each unit
-	var foes := [PackedInt32Array(), PackedInt32Array()]  # foes[s]: indices of the units opposing side s
-	var ms := [0.0, 0.0]  # mean march distance of each side's fighters, where medics stay behind
+	var pos := PackedVector2Array()
+	var tc := PackedInt32Array()
+	var foes := [PackedInt32Array(), PackedInt32Array()]
+	var cen := [Vector2.ZERO, Vector2.ZERO]  # centroid of each side's fighters (medics and transports follow it)
 	var mc := [0, 0]
+	var ships := [0, 0]
 	for i in n:
-		gpos.append(float(all[i]["s"]) if side[i] == 0 else ln - float(all[i]["s"]))
-		lane.append(float(all[i]["l"]))
-		tc.append(int(TCLS[KIND[all[i]["k"]]["t"]]))
+		pos.append(all[i]["p"])
+		tc.append(_cls(all[i]["k"]))
 		foes[1 - side[i]].append(i)
-		if not KIND[all[i]["k"]].has("heal") and not KIND[all[i]["k"]].has("lands"):
-			ms[side[i]] += float(all[i]["s"])
+		var kd: Dictionary = KIND[all[i]["k"]]
+		if tc[i] == 3:
+			ships[side[i]] += 1
+		if not kd.has("heal") and not kd.has("lands"):
+			cen[side[i]] += pos[i]
 			mc[side[i]] += 1
-	var hits: Array = []
+	for s in 2:
+		if mc[s] > 0:
+			cen[s] /= float(mc[s])
+	var centre := [terr_px(b).get_center(), terr_px(a).get_center()]  # goal of side s: the other town's heart
+	var hits := PackedFloat32Array()
 	hits.resize(n)
-	hits.fill(0.0)
-	var heals := hits.duplicate()
+	var heals := PackedFloat32Array()
+	heals.resize(n)
 	for i in n:
 		var u: Dictionary = all[i]
 		var kd: Dictionary = KIND[u["k"]]
-		var own_s := float(u["s"])
-		var spd := float(kd["spd"]) * (1.0 + 0.12 * float(u["l"]))  # lane-based jitter so a column does not arrive as one clump
-		if kd.has("lands"):  # transports hold back until the enemy fleet is gone, then run for the shore
-			var ships := false
-			for j in foes[side[i]]:
-				if tc[j] == 3:
-					ships = true
-			var tg: float = (ms[side[i]] / maxf(mc[side[i]], 1) - 70.0) if ships else ln - 20.0
-			u["s"] = clampf(own_s + clampf(tg - own_s, -spd, spd), 0.0, ln)
-			continue
+		var p: Vector2 = pos[i]
+		var cls := tc[i]
+		var spd := float(kd["spd"]) * (1.0 + 0.12 * float(u["l"]))  # jitter so a column does not arrive as one clump
+		var jit := Vector2(float(u["l"]), fposmod(float(u["l"]) * 7.3, 1.0) - 0.5) * TILE * 0.4
+		var goal: Vector2 = centre[side[i]]
+		var q := p
 		if kd.has("heal"):
 			var cand: Array = []
 			for j in n:
-				if j != i and side[j] == side[i] and float(all[j]["hp"]) < max_hp(all[j]) and absf(float(gpos[j]) - float(gpos[i])) <= float(kd["rng"]):
+				if j != i and side[j] == side[i] and float(all[j]["hp"]) < max_hp(all[j]) and p.distance_to(pos[j]) <= float(kd["rng"]):
 					cand.append(j)
-			cand.sort_custom(func(p: int, q: int) -> bool: return float(all[p]["hp"]) / max_hp(all[p]) < float(all[q]["hp"]) / max_hp(all[q]))
+			cand.sort_custom(func(m: int, k: int) -> bool: return float(all[m]["hp"]) / max_hp(all[m]) < float(all[k]["hp"]) / max_hp(all[k]))
 			for j in cand.slice(0, 3):
 				var h := minf(float(kd["heal"]), max_hp(all[j]) - float(all[j]["hp"]))
 				heals[j] += h
 				_gain(u, h * 0.5)
-			var home: float = (float(ms[side[i]]) / float(mc[side[i]]) - 70.0) if mc[side[i]] > 0 else 0.0
-			u["s"] = clampf(own_s + clampf(home - own_s, -spd, spd), 0.0, ln)
-			continue
-		var best := -1  # best target in range (damage-weighted, so AA picks planes), and the nearest one otherwise
-		var bs := 1e9
-		var near := -1
-		var nd := 1e9
-		var row := _row(u["k"])
-		var rng_ := float(kd["rng"])
-		var gi := gpos[i]
-		var li := lane[i]
-		for j in foes[side[i]]:
-			var vs := row[tc[j]]
-			if vs <= 0.0:
+			if mc[side[i]] > 0 and p.distance_to(cen[side[i]]) > 80.0:
+				q = _go(a, b, p, cen[side[i]], spd, cls, jit, false)
+		elif kd.has("lands"):  # transports hold back until the enemy fleet is gone, then run for the shore
+			var tg: Vector2 = goal
+			if ships[1 - side[i]] > 0 and ships[side[i]] > 1:
+				tg = cen[side[i]]
+			elif ships[1 - side[i]] > 0:
+				tg = p
+			q = _go(a, b, p, tg, spd, cls, jit, tg == goal)
+		else:
+			var best := -1  # best target in range (damage-weighted, so AA picks planes)
+			var bs := 1e9
+			var near := -1
+			var nd := 1e18
+			var row := _row(u["k"])
+			var rng_ := float(kd["rng"])
+			for j in foes[side[i]]:
+				var vs := row[tc[j]]
+				if vs <= 0.0:
+					continue
+				var d2 := p.distance_squared_to(pos[j])
+				if d2 < nd:
+					nd = d2
+					near = j
+				if d2 <= rng_ * rng_ and sqrt(d2) / vs < bs:
+					bs = sqrt(d2) / vs
+					best = j
+			if best >= 0:
+				var dm := float(kd["dmg"]) * (1.0 + RANK_DMG * rank(u)) * row[tc[best]]
+				hits[best] += dm
+				_gain(u, dm)
+				u["ft"] = now
+				u["fp"] = pos[best]
+				u["h"] = (pos[best] - p).angle()
 				continue
-			var d := absf(gpos[j] - gi) + absf(lane[j] - li) * LANE
-			if d < nd:
-				nd = d
-				near = j
-			if d <= rng_ and d / vs < bs:
-				bs = d / vs
-				best = j
-		if best >= 0:
-			var dm := float(kd["dmg"]) * (1.0 + RANK_DMG * rank(u)) * row[tc[best]]
-			hits[best] += dm
-			_gain(u, dm)
-			u["ft"] = now
-			u["fg"] = gpos[best]
-			u["fl"] = all[best]["l"]
-			continue
-		var target_s := ln - 20.0
-		if near >= 0:
-			target_s = float(gpos[near]) if side[i] == 0 else ln - float(gpos[near])
-			target_s -= signf(target_s - own_s) * maxf(float(kd["rng"]) * 0.8 - absf(float(all[near]["l"]) - float(u["l"])) * LANE, 10.0)  # stop at firing range, allowing for the sideways gap
-		u["s"] = clampf(own_s + clampf(target_s - own_s, -spd, spd), 0.0, ln)
+			if near >= 0 and sqrt(nd) <= maxf(AGGRO, rng_ * 1.5):
+				var tp: Vector2 = pos[near]
+				var stand := maxf(rng_ * 0.8, 10.0)
+				q = _slide(p, tp - (tp - p).normalized() * stand, spd, cls) if cls != 2 else p + (tp - p).limit_length(spd)
+			else:
+				q = _go(a, b, p, goal, spd, cls, jit, true)
+		if q != p:
+			u["h"] = (q - p).angle()
+		u["p"] = q
 	for i in n:
 		all[i]["hp"] = minf(float(all[i]["hp"]) - float(hits[i]) + float(heals[i]), max_hp(all[i]))
 	for i in n:
@@ -333,7 +542,7 @@ static func fight(a: City, b: City) -> void:
 			var killer: City = b if side[i] == 0 else a
 			owner.army.erase(all[i])
 			killer.war_sc[owner.town_name] = int(killer.war_sc.get(owner.town_name, 0)) + 1
-			booms.append({"a": a.town_name, "b": b.town_name, "g": gpos[i], "l": all[i]["l"], "t": now})
+			booms.append({"a": a.town_name, "b": b.town_name, "p": all[i]["p"], "t": now})
 			owner.sounds.append("alarm")
 	booms = booms.filter(func(e: Dictionary) -> bool: return now - int(e["t"]) < 3000)
 	blasts = blasts.filter(func(e: Dictionary) -> bool: return now - int(e["ts"]) < 9000)
@@ -342,24 +551,64 @@ static func fight(a: City, b: City) -> void:
 		a.war_t = 20.0
 		a.war_n[b.town_name] = int(a.war_n.get(b.town_name, 0)) + 1
 		b.war_n[a.town_name] = int(b.war_n.get(a.town_name, 0)) + 1
-	_occupy(a, b, ln)
-	_occupy(b, a, ln)
-	_bomb(a, b, ln)
-	_bomb(b, a, ln)
+	_occupy(a, b)
+	_occupy(b, a)
+	_bomb(a, b)
+	_bomb(b, a)
 	if a.war_n.get(b.town_name, 0) >= 30 and a.army.size() + b.army.size() < 6:
 		Diplo.sign_treaty(a, b, "")
 		Diplo._say(a, b, "%s and %s, with their armies spent, agree to a ceasefire." % [a.town_name, b.town_name])
 
 
-## Attackers standing on a town's edge unopposed raid it and, held long enough, force its surrender.
-static func _occupy(att: City, vic: City, ln: float) -> void:
+## One move of `spd` pixels towards `goal`: air flies straight, ground and ships follow a flow field (or hold at the shore if the goal is cut off).
+static func _go(a: City, b: City, p: Vector2, goal: Vector2, spd: float, cls: int, jit: Vector2, use_field: bool) -> Vector2:
+	if cls == 2:
+		return p + (goal - p).limit_length(spd)
+	if use_field:
+		var gl := goal
+		if cls == 3:
+			gl = _shore(goal)
+		var ff := _field(a, b, gl, cls)
+		if bool(ff["ok"]):
+			var q := _follow(p, ff, spd, jit)
+			if q != p:
+				return q
+			var tx := floori(p.x / TILE) - int(ff["ox"])
+			var ty := floori(p.y / TILE) - int(ff["oy"])
+			var rw: int = ff["rw"]
+			if tx >= 0 and ty >= 0 and tx < rw and ty < int(ff["rh"]) and int((ff["dist"] as PackedInt32Array)[ty * rw + tx]) < INF_D:
+				return p  # arrived
+	return _slide(p, goal, spd, cls)
+
+
+## Ships head for the river tile nearest `goal`.
+static func _shore(goal: Vector2) -> Vector2:
+	var c: City = reg.get(Vector2i(floori(goal.x / TILE / City.W), floori(goal.y / TILE / City.H)))
+	if c == null:
+		return goal
+	var best := goal
+	var bd := 1e18
+	var org := origin(c)
+	for i in c.water.size():
+		if c.water[i] == 1:
+			var w := org + (Vector2(i % City.W, i / City.W) + Vector2(0.5, 0.5)) * TILE
+			var d := w.distance_squared_to(goal)
+			if d < bd:
+				bd = d
+				best = w
+	return best
+
+
+## Attackers inside a town's territory with no real opposition raid it and, held long enough, force its surrender.
+static func _occupy(att: City, vic: City) -> void:
+	var zone := terr_px(vic).grow(100.0)
 	var n := 0
 	for u in _of(att, vic.town_name):
-		if float(u["s"]) >= ln - 80.0:
+		if u.has("p") and zone.has_point(u["p"]):
 			n += int(KIND[u["k"]].get("lands", 1))
 	var def := 0
 	for u in _of(vic, att.town_name):
-		if float(u["s"]) <= 300.0:
+		if u.has("p") and zone.has_point(u["p"]):
 			def += 1
 	if n >= 2 and n > def:
 		vic.occ[att.town_name] = float(vic.occ.get(att.town_name, 0.0)) + 1.0
@@ -377,10 +626,11 @@ static func _occupy(att: City, vic: City, ln: float) -> void:
 
 
 ## Bombers over an enemy town with no fighters, jets or anti-air left to stop them flatten its buildings, one strike per bomber every few seconds.
-static func _bomb(att: City, vic: City, ln: float) -> void:
+static func _bomb(att: City, vic: City) -> void:
+	var zone := terr_px(vic)
 	var nb := 0
 	for u in _of(att, vic.town_name):
-		if u["k"] == "bomber" and float(u["s"]) >= ln - 150.0:
+		if u["k"] == "bomber" and u.has("p") and zone.has_point(u["p"]):
 			nb += 1
 	if nb == 0:
 		return
