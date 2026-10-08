@@ -42,6 +42,7 @@ var log_l: RichTextLabel
 var pol_btns := {}
 var auto_opt: OptionButton
 var focus_auto: CheckButton
+var ask_chk: CheckButton
 var focus_sliders := {}
 var tax_ls := {}
 var tax_sliders := {}
@@ -593,6 +594,13 @@ func _right() -> void:
     auto_chk = ap
     ap.toggled.connect(func(on: bool) -> void: m.cmd("auto_policy", [on]))
     po.add_child(ap)
+    var ab := CheckButton.new()
+    ab.text = "Ask before planners build services"
+    ab.focus_mode = Control.FOCUS_NONE
+    ab.tooltip_text = "Planner towns propose each service building (clinic, station, armoury...) as a decision in the Mayor's office. Build it, or veto it and the planner leaves that building alone for 10 days."
+    ask_chk = ab
+    ab.toggled.connect(func(on: bool) -> void: m.cmd("ask_build", [on]))
+    po.add_child(ab)
     _hdr(po, "POLICIES (continuous cost or saving)")
     for k in Catalog.POLICIES:
         var cb := CheckButton.new()
@@ -1387,7 +1395,8 @@ func _rebuild_decisions(c: City) -> void:
         var kind: String = p["kind"]
         var rec: bool = kind == "recover"
         var dip: bool = kind == "offer" or kind == "demand"
-        var who := "Disaster recovery" if rec else ("Diplomacy" if dip else String(Catalog.TRIBES[p["tribe"]]["n"]))
+        var bld: bool = kind == "build"
+        var who := "Disaster recovery" if rec else ("Planners" if bld else ("Diplomacy" if dip else String(Catalog.TRIBES[p["tribe"]]["n"])))
         var t := "[b]%s[/b]  [color=#9aa88f]%s, answer by day %d[/color]\n%s" % [p["t"], who, p["expires"], p["txt"]]
         if kind == "petition":
             t += "\n[color=#f2cf4a]Promise: %s within %d days.[/color]" % [Civics.need_text(p["need"]), p["days"]]
@@ -1400,6 +1409,9 @@ func _rebuild_decisions(c: City) -> void:
         if rec:
             yes_t = "Rebuild ($%d)" % int(p["cost"])
             no_t = "Let it recover"
+        elif bld:
+            yes_t = "Build ($%d)" % int(p["cost"])
+            no_t = "Veto"
         elif kind == "offer":
             yes_t = "Sign it"
         elif kind == "demand":
@@ -1430,6 +1442,7 @@ func sync_town() -> void:
     auto_opt.select(c.auto_mode)
     auto_chk.set_pressed_no_signal(c.auto_policy)
     focus_auto.set_pressed_no_signal(c.auto_focus)
+    ask_chk.set_pressed_no_signal(c.ask_build)
     for k in City.FOCUS:
         (focus_sliders[k] as HSlider).set_value_no_signal(c.foc(k) * 100.0)
     exp_chk.set_pressed_no_signal(c.auto_expand)
