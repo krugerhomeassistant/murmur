@@ -32,8 +32,8 @@ static func build(c: City) -> int:
 		svc.append(T.SEWAGE)
 		svc.append(T.PARK if k % 3 == 0 else T.PLAYGROUND)
 	var si := 0
-	for y in range(r.position.y + 2, r.end.y - 2, 3):
-		for x in range(r.position.x + 2, r.end.x - 2, 5):
+	for y in range(r.position.y + 2, r.end.y - 2, 2):
+		for x in range(r.position.x + 2, r.end.x - 2, 4):
 			if si >= svc.size():
 				break
 			var i := y * City.W + x
