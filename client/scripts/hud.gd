@@ -41,6 +41,8 @@ var act_l: RichTextLabel
 var log_l: RichTextLabel
 var pol_btns := {}
 var auto_opt: OptionButton
+var focus_auto: CheckButton
+var focus_sliders := {}
 var tax_ls := {}
 var tax_sliders := {}
 var auto_chk: CheckButton
@@ -475,6 +477,30 @@ func _right() -> void:
         tax_sliders[k[0]] = sl
         sl.value_changed.connect(func(v: float) -> void: m.cmd("tax", [String(k[0]), v / 100.0]))
         h.add_child(sl)
+    _hdr(bu, "FINANCIAL FOCUS (where the mayor puts the money)")
+    var afc := CheckButton.new()
+    afc.text = "Council sets focus"
+    afc.button_pressed = true
+    afc.focus_mode = Control.FOCUS_NONE
+    afc.tooltip_text = "On: focus follows prices (dear ore raises mining, dear food raises farming) and danger (military). Moving a slider turns this off."
+    afc.toggled.connect(func(on: bool) -> void: m.cmd("auto_focus", [on]))
+    focus_auto = afc
+    bu.add_child(afc)
+    for k in City.FOCUS:
+        var fh := HBoxContainer.new()
+        bu.add_child(fh)
+        var fl := _lbl(fh, 110, "Weight of %s in planner spending. Below 0.4 the town stops making it and buys instead (mining: ore and smelting; military: arms)." % k)
+        fl.text = String(k).capitalize()
+        var fs := HSlider.new()
+        fs.min_value = 0
+        fs.max_value = 200
+        fs.step = 10
+        fs.value = 100
+        fs.custom_minimum_size = Vector2(150, 0)
+        fs.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+        focus_sliders[k] = fs
+        fs.value_changed.connect(func(v: float) -> void: m.cmd("focus", [String(k), int(v)]))
+        fh.add_child(fs)
     _hdr(bu, "INCOME AND EXPENSES  /s")
     budget = _rich(bu, 0)
     graph = Control.new()
@@ -1403,6 +1429,9 @@ func sync_town() -> void:
         (tax_sliders[k] as HSlider).set_value_no_signal(float(c.get("tax_" + k)) * 100.0)
     auto_opt.select(c.auto_mode)
     auto_chk.set_pressed_no_signal(c.auto_policy)
+    focus_auto.set_pressed_no_signal(c.auto_focus)
+    for k in City.FOCUS:
+        (focus_sliders[k] as HSlider).set_value_no_signal(c.foc(k) * 100.0)
     exp_chk.set_pressed_no_signal(c.auto_expand)
 
 
