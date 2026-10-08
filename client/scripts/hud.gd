@@ -51,7 +51,7 @@ var over_panel: PanelContainer
 var over_l: Label
 var hover_text := ""
 var tick_n := 0
-const WIN_KEYS := ["build", "info", "detail", "mayor", "army"]
+const WIN_KEYS := ["build", "info", "detail", "mayor", "army", "empire"]
 const UI_FILE := "user://ui.cfg"
 var wins := {}
 var win_open := {}
@@ -85,6 +85,7 @@ func _ready() -> void:
     _bottom()
     _mayor()
     _army()
+    _empire()
     maptip = PanelContainer.new()
     maptip.mouse_filter = Control.MOUSE_FILTER_IGNORE
     maptip.z_index = 100
@@ -267,6 +268,7 @@ func _top() -> void:
     wm.add_check_item("Hover details", 2)
     wm.add_check_item("Mayor's office", 3)
     wm.add_check_item("Army", 4)
+    wm.add_check_item("Empire (all towns)", 5)
     wm.add_separator()
     wm.add_item("Reset window layout", 9)
     wm.about_to_popup.connect(func() -> void:
@@ -855,6 +857,7 @@ func _process(_d: float) -> void:
         over_l.text = "GAME OVER\n%s\nPeak population %d.   Press R to restart." % [c.over, int(c.peak)]
     if tick_n % 6 != 0:
         return
+    _empire_refresh(c)
     for id in tool_btns:
         if Catalog.DEFS.has(id):
             var open: bool = c.unlocked(id)
@@ -967,6 +970,139 @@ func _army_refresh(c: City) -> void:
     for k in Military.KIND:
         (army_rows[k]["cnt"] as Label).text = "%d / %d" % [n[k], cap[k]]
         (army_rows[k]["pr"] as Label).text = str(w[k])
+
+
+# ---------- empire: all your towns at a glance ----------
+
+var emp_tot: Label
+var emp_grid: GridContainer
+var emp_cells: Array = []  # per town: {"nm", "pop", "co", "inc", "mood", "fl", "go", "send"}
+var emp_sort := 0  # 0 order founded, 1 name, 2 pop, 3 coins, 4 net, 5 mood
+var emp_auto: OptionButton
+var emp_pol: CheckButton
+var emp_exp: CheckButton
+var emp_train: CheckButton
+var emp_taxl := {}
+
+
+func _empire() -> void:
+    var body := _win("empire", "Empire (all your towns)", Vector2(160, 70), Vector2(600, 400))
+    emp_tot = _lbl(body, 0)
+    emp_tot.add_theme_font_size_override("font_size", 13)
+    var sc := ScrollContainer.new()
+    sc.size_flags_vertical = Control.SIZE_EXPAND_FILL
+    sc.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+    sc.custom_minimum_size = Vector2(0, 250)
+    body.add_child(sc)
+    emp_grid = GridContainer.new()
+    emp_grid.columns = 8
+    emp_grid.add_theme_constant_override("h_separation", 8)
+    sc.add_child(emp_grid)
+    _hdr(body, "ALL MY TOWNS: one setting for every town you run")
+    var r1 := HBoxContainer.new()
+    body.add_child(r1)
+    _lbl(r1, 90).text = "Auto-growth"
+    emp_auto = OptionButton.new()
+    emp_auto.focus_mode = Control.FOCUS_NONE
+    for o in ["Off", "Zones only", "Zones + roads"]:
+        emp_auto.add_item(o)
+    emp_auto.item_selected.connect(func(i: int) -> void: m.cmd("apply_all", ["auto_mode", i]))
+    r1.add_child(emp_auto)
+    var r2 := HBoxContainer.new()
+    body.add_child(r2)
+    emp_pol = _chk(r2, "Auto-policies", "auto_policy")
+    emp_exp = _chk(r2, "Auto-annex", "auto_expand")
+    emp_train = _chk(r2, "Auto-train troops", "train")
+    var r3 := HBoxContainer.new()
+    body.add_child(r3)
+    _lbl(r3, 40).text = "Tax"
+    for k in ["r", "c", "i"]:
+        var kk: String = k
+        emp_taxl[k] = _lbl(r3, 78)
+        _btn(r3, "-", func() -> void: _tax_all(kk, -0.01))
+        _btn(r3, "+", func() -> void: _tax_all(kk, 0.01))
+    var r4 := HBoxContainer.new()
+    body.add_child(r4)
+    var bb := _btn(r4, "Balance treasuries (floor $200)", func() -> void:
+        var n: Variant = m.cmd("balance", [200])
+        m.headline = "Moved $%d between your towns." % int(float(n)) if n != null else "Nothing to balance.")
+    bb.tooltip_text = "Rich towns (over $600) give half of what they hold above $400; towns under $200 are topped up. No money is created."
+    win_open["empire"] = false
+    (wins["empire"] as PanelContainer).visible = false
+
+
+func _chk(p: Node, text: String, key: String) -> CheckButton:
+    var c := CheckButton.new()
+    c.text = text
+    c.focus_mode = Control.FOCUS_NONE
+    c.toggled.connect(func(on: bool) -> void: m.cmd("apply_all", [key, on]))
+    p.add_child(c)
+    return c
+
+
+func _tax_all(k: String, d: float) -> void:
+    m.cmd("apply_all", ["tax", k, clampf(snappedf(float(m.city.get("tax_" + k)) + d, 0.01), 0.0, 0.5)])
+
+
+func _empire_sort(col: int) -> void:
+    emp_sort = col
+    emp_cells.clear()  # rebuild in the new order
+
+
+func _empire_refresh(c: City) -> void:
+    if not (wins["empire"] as PanelContainer).visible:
+        return
+    var mine := Empire.mine(m.towns, c)
+    var tt := Empire.totals(mine)
+    emp_tot.text = "%d of your towns   pop %d   treasury $%d   net %+.1f/s" % [tt["towns"], tt["pop"], int(tt["coins"]), tt["income"]]
+    var rows: Array = []
+    for t in m.towns:
+        rows.append(Empire.row(m.towns, t))
+    if emp_sort > 0:
+        var key: String = ["", "name", "pop", "coins", "income", "mood"][emp_sort]
+        rows.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return String(a[key]) < String(b[key]) if emp_sort == 1 else float(a[key]) > float(b[key]))
+    if emp_cells.size() != rows.size():
+        for ch in emp_grid.get_children():
+            ch.queue_free()
+        emp_cells.clear()
+        for k in ["Town", "Pop", "Coins", "Net/s", "Mood", "Alerts", "", ""]:
+            var i: int = ["Town", "Pop", "Coins", "Net/s", "Mood", "Alerts", "", ""].find(k)
+            if k == "" or k == "Alerts":
+                _lbl(emp_grid, 0).text = k
+            else:
+                _btn(emp_grid, k, func() -> void: _empire_sort(i)).flat = true
+        for r in rows:
+            var cell := {"nm": _lbl(emp_grid, 100), "pop": _lbl(emp_grid, 40), "co": _lbl(emp_grid, 54), "inc": _lbl(emp_grid, 50), "mood": _lbl(emp_grid, 44), "fl": _lbl(emp_grid, 170)}
+            (cell["fl"] as Label).autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+            (cell["fl"] as Label).add_theme_font_size_override("font_size", 11)
+            cell["go"] = _btn(emp_grid, "Go", func() -> void: pass)
+            cell["send"] = _btn(emp_grid, "+$100", func() -> void: pass)
+            (cell["send"] as Button).tooltip_text = "Send $100 from the town you are viewing (towns on your side only)."
+            emp_cells.append(cell)
+    for k in rows.size():
+        var r: Dictionary = rows[k]
+        var cell: Dictionary = emp_cells[k]
+        var t: City = m.towns[r["idx"]]
+        (cell["nm"] as Label).text = ("> " if t == c else "") + String(r["name"])
+        (cell["pop"] as Label).text = str(r["pop"])
+        (cell["co"] as Label).text = "$%d" % int(r["coins"])
+        (cell["inc"] as Label).text = "%+.1f" % float(r["income"])
+        (cell["mood"] as Label).text = "%d%%" % int(float(r["mood"]) * 100.0)
+        (cell["fl"] as Label).text = "; ".join(r["flags"]) if not (r["flags"] as Array).is_empty() else "ok"
+        var idx: int = r["idx"]
+        for sg in (cell["go"] as Button).pressed.get_connections():
+            (cell["go"] as Button).pressed.disconnect(sg["callable"])
+        (cell["go"] as Button).pressed.connect(func() -> void: m.switch_town(idx))
+        for sg in (cell["send"] as Button).pressed.get_connections():
+            (cell["send"] as Button).pressed.disconnect(sg["callable"])
+        (cell["send"] as Button).pressed.connect(func() -> void: m.cmd("send", [idx, 100]))
+        (cell["send"] as Button).disabled = t == c or not Empire.same_side(c, t)
+    emp_auto.select(c.auto_mode)
+    emp_pol.set_pressed_no_signal(c.auto_policy)
+    emp_exp.set_pressed_no_signal(c.auto_expand)
+    emp_train.set_pressed_no_signal(c.train_on)
+    for k in emp_taxl:
+        (emp_taxl[k] as Label).text = "%s %d%%" % [{"r": "Res", "c": "Com", "i": "Ind"}[k], int(float(c.get("tax_" + k)) * 100.0)]
 
 
 # ---------- mayor's office ----------
@@ -1170,6 +1306,8 @@ func _rebuild_decisions(c: City) -> void:
 
 
 func reset() -> void:
+    if m.spectating() and wins.has("empire"):  # no mayor: the empire dashboard is the way to play
+        _set_open("empire", true)
     dipl_key = ""
     dec_ver = -1
     dec_town = null
@@ -1266,14 +1404,15 @@ func _reset_wins() -> void:
     var vs := get_viewport_rect().size
     for k in wins:
         var p: PanelContainer = wins[k]
-        p.visible = k != "detail" and k != "army"
-        win_open[k] = k != "army"
+        p.visible = k != "detail" and k != "army" and k != "empire"
+        win_open[k] = k != "army" and k != "empire"
         p.set_deferred("size", Vector2.ZERO)
     (wins["build"] as PanelContainer).position = Vector2(8, 44)
     (wins["info"] as PanelContainer).position = Vector2(maxf(vs.x - 396.0, 200.0), 44)
     (wins["detail"] as PanelContainer).position = Vector2(200, clampf(vs.y - 300.0, 60.0, 400.0))
     (wins["mayor"] as PanelContainer).position = Vector2(200, 44)
     (wins["army"] as PanelContainer).position = Vector2(220, 80)
+    (wins["empire"] as PanelContainer).position = Vector2(160, 70)
     _clamp_all.call_deferred()
     _save_ui()
 
