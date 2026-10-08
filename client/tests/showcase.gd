@@ -51,3 +51,53 @@ static func build(c: City) -> int:
 	c.scan_dirty = true
 	c.flush()
 	return n
+
+
+## Whole recipe: new 4-town spectator world, hand-built downtown, extra utilities, ~650 residents, locked mood and summer.
+static func stage(m: Node) -> void:
+	var T = Catalog.Id
+	m.bench_seed = 20261011
+	m.open_setup()
+	m.start_game({"name": "Murmur", "towns": 4, "mood": 1, "diff": 1, "land": 1, "river": 3, "auto": 2, "policy": true, "expand": true, "guide": false, "spectate": true})
+	for ch in m.hud.get_children():
+		if ch.get_script() != null and str(ch.get_script().resource_path).ends_with("setup.gd"):
+			ch.queue_free()
+	var c: City = m.city
+	build(c)
+	for i in c.cells:
+		if c.is_zone(c.grid[i]) and c.lvl[i] == 0:
+			c.lvl[i] = 1 + (i * 7) % 3
+	var want := {T.COAL: 6, T.WATER: 32, T.SEWAGE: 28, T.WIND: 4}
+	var idx := []
+	for i in c.cells:
+		if c.is_zone(c.grid[i]) and c._road_next_to(i) >= 0 and i % 5 < 2:
+			idx.append(i)
+	idx.shuffle()
+	var p := 0
+	for t in want:
+		var k := 0
+		while k < want[t] and p < idx.size():
+			var i: int = idx[p]
+			p += 1
+			c.grid[i] = T.EMPTY
+			c.lvl[i] = 0
+			if c.place(i % City.W, i / City.W, t):
+				k += 1
+	c.scan_dirty = true
+	c.flush()
+	var n := 0
+	while n < 650 and c._spawn():
+		n += 1
+	var lock := Timer.new()
+	lock.wait_time = 0.1
+	lock.timeout.connect(func() -> void:
+		c.mood = 0.85
+		c.protest = false
+		c.coins = 1.0e7
+		c.day = 10 + c.day % 2)  # stay in summer
+	m.add_child(lock)
+	lock.start()
+	c.clock = 10.0
+	m.follow = false
+	m.speed = 1.0
+	m.chunk_kick = true

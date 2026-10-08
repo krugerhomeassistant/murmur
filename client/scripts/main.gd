@@ -1106,7 +1106,8 @@ func draw_overlay(node: CanvasItem, t: City) -> void:
 		for c in city.citizens:
 			if c.car and c.path.size() > 0 and c != sel:
 				var dv := c.path[mini(c.pi, c.path.size() - 1)] - c.pos
-				ci.draw_set_transform(c.pos * TILE, dv.angle() if dv.length() > 0.01 else 0.0)
+				var lane := Vector2(-dv.y, dv.x).normalized() * 0.19 if dv.length() > 0.01 else Vector2.ZERO  # keep to the right-hand lane so opposite traffic and followers do not stack
+				ci.draw_set_transform((c.pos + lane) * TILE, dv.angle() if dv.length() > 0.01 else 0.0)
 				ci.draw_rect(Rect2(-5, -3, 10, 6), CAR_COLS[c.id % CAR_COLS.size()])
 				ci.draw_rect(Rect2(0, -2, 3, 4), Color(0.6, 0.75, 0.85))
 				if night:
@@ -1116,7 +1117,9 @@ func draw_overlay(node: CanvasItem, t: City) -> void:
 				continue
 			if c.path.size() == 0 and c != sel:
 				continue
-			var p := c.pos * TILE
+			var wv := c.path[mini(c.pi, c.path.size() - 1)] - c.pos if c.path.size() > 0 else Vector2.ZERO
+			var side := Vector2(-wv.y, wv.x).normalized() * (0.34 if c.id % 2 == 0 else -0.34) if wv.length() > 0.01 else Vector2.ZERO  # walkers use the pavements, one per side
+			var p := (c.pos + side) * TILE
 			ci.draw_circle(p + Vector2(0, 1.5), 4.2, Color(0, 0, 0, 0.3))
 			var col := Color("f3e7cf") if c.mood > 0.6 else (Color("e0a458") if c.mood > 0.35 else Color("c0392b"))
 			if c.sick > 0.0:
