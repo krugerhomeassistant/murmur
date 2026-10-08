@@ -66,8 +66,8 @@ static func stage(m: Node) -> void:
 	build(c)
 	for i in c.cells:
 		if c.is_zone(c.grid[i]) and c.lvl[i] == 0:
-			c.lvl[i] = 1 + (i * 7) % 3
-	var want := {T.COAL: 6, T.WATER: 32, T.SEWAGE: 28, T.WIND: 4}
+			c.lvl[i] = 1 + (i * 7) % 2
+	var want := {T.COAL: 8, T.WATER: 36, T.SEWAGE: 32, T.WIND: 6}
 	var idx := []
 	for i in c.cells:
 		if c.is_zone(c.grid[i]) and c._road_next_to(i) >= 0 and i % 5 < 2:
