@@ -26,16 +26,16 @@ jobs:
         run: godot --headless --path client -s tests/smoke.gd | tee out.txt && grep -q SMOKE_OK out.txt
       - name: Net cache and shared river tests
         run: |
-          godot --headless --path client -s tests/netcache.gd | tee n.txt && grep -q NETCACHE_OK n.txt
-          godot --headless --path client -s tests/rivers.gd | tee r.txt && grep -q RIVERS_OK r.txt
-          godot --headless --path client -s tests/spectate.gd | tee s.txt && grep -q SPECTATE_OK s.txt
-          godot --headless --path client -s tests/mining.gd | tee m.txt && grep -q MINING_OK m.txt
-          godot --headless --path client -s tests/war.gd | tee w.txt && grep -q WAR_OK w.txt && grep -q MIX_OK w.txt && grep -q NAVAL_OK w.txt
-          godot --headless --path client -s tests/ai.gd | tee a.txt && grep -q AI_OK a.txt
-          godot --headless --path client -s tests/farms.gd | tee f.txt && grep -q FARMS_OK f.txt
-          godot --headless --path client -s tests/pmine.gd | tee p.txt && grep -q PMINE_OK p.txt
-          godot --headless --path client -s tests/net.gd | tee nn.txt && grep -q NET_OK nn.txt
-          godot --headless --path client -s tests/cmd.gd | tee cc.txt && grep -q CMD_OK cc.txt
-          godot --headless --path client -s tests/netsync.gd | tee ns.txt && grep -q NETSYNC_OK ns.txt
-          godot --headless --path client -s tests/mp.gd | tee mp.txt && grep -q MP_OK mp.txt
-          godot --headless --path client -s tests/pvp.gd | tee pv.txt && grep -q PVP_OK pv.txt
+          timeout 600 godot --headless --path client -s tests/netcache.gd | tee n.txt && grep -q NETCACHE_OK n.txt
+          timeout 600 godot --headless --path client -s tests/rivers.gd | tee r.txt && grep -q RIVERS_OK r.txt
+          timeout 600 godot --headless --path client -s tests/spectate.gd | tee s.txt && grep -q SPECTATE_OK s.txt
+          timeout 600 godot --headless --path client -s tests/mining.gd | tee m.txt && grep -q MINING_OK m.txt
+          timeout 600 godot --headless --path client -s tests/war.gd | tee w.txt && grep -q WAR_OK w.txt && grep -q MIX_OK w.txt && grep -q NAVAL_OK w.txt
+          timeout 600 godot --headless --path client -s tests/ai.gd | tee a.txt && grep -q AI_OK a.txt
+          timeout 600 godot --headless --path client -s tests/farms.gd | tee f.txt && grep -q FARMS_OK f.txt
+          timeout 600 godot --headless --path client -s tests/pmine.gd | tee p.txt && grep -q PMINE_OK p.txt
+          timeout 600 godot --headless --path client -s tests/net.gd | tee nn.txt && grep -q NET_OK nn.txt
+          timeout 600 godot --headless --path client -s tests/cmd.gd | tee cc.txt && grep -q CMD_OK cc.txt
+          timeout 600 godot --headless --path client -s tests/netsync.gd | tee ns.txt && grep -q NETSYNC_OK ns.txt
+          timeout 600 godot --headless --path client -s tests/mp.gd | tee mp.txt && grep -q MP_OK mp.txt
+          timeout 600 godot --headless --path client -s tests/pvp.gd | tee pv.txt && grep -q PVP_OK pv.txt

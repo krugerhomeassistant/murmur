@@ -44,6 +44,7 @@ var remote := false  # multiplayer client: a mirror of the host's world, nothing
 var mirror_ready := false
 var net_mine := -1
 var chatbox: ChatBox
+var join_args := []  # last --join target, for the test client's retries
 var net_apply_ms := 0.0  # last snapshot apply cost
 var sfx: Sfx
 const SAVE := "user://murmur_save.bin"
@@ -103,7 +104,12 @@ func _net_args() -> void:
 		print("Murmur server: ", "listening on UDP %d with %d towns" % [port, n] if net.host(port, "Server", true) else "failed to start")
 	elif "--join" in a and a.find("--join") + 1 < a.size():
 		var hp: PackedStringArray = a[a.find("--join") + 1].split(":")
-		net.join(hp[0], int(hp[1]) if hp.size() > 1 else NetPlay.PORT, "Player")
+		join_args = [hp[0], int(hp[1]) if hp.size() > 1 else NetPlay.PORT]
+		net.join(join_args[0], join_args[1], "Player")
+		if "--mp-test" in a:  # test client: retry while the server boots, and never hang a CI job
+			get_tree().create_timer(40.0).timeout.connect(func() -> void:
+				print("MP_CLIENT_FAIL timeout")
+				get_tree().quit(1))
 
 
 ## `--capture DIR [--every SECONDS]`: saves the window as numbered PNGs (README screenshots and GIFs; scripts/make_media.py).
@@ -316,6 +322,10 @@ func _net_reply(_c: String, r: Variant) -> void:
 
 
 func _net_failed(reason: String) -> void:
+	if "--mp-test" in OS.get_cmdline_user_args() and not remote and not join_args.is_empty():
+		await get_tree().create_timer(1.0).timeout
+		net.join(join_args[0], join_args[1], "Player")
+		return
 	if remote:
 		remote = false
 		started = false
