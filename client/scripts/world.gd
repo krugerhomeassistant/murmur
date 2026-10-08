@@ -8,7 +8,7 @@ enum K { SEA, RIVER, SAND, PLAIN, FOREST, HILL, ROCK }
 
 const SEA_LEVEL := 0.36
 const PAD := 3  # river lines need the field one tile past the chunk, then a one-tile dilation
-const MAX_CHUNKS := 192
+const MAX_CHUNKS := 512
 
 var seed := 0
 var csize := 32
@@ -168,6 +168,11 @@ func _chunk(x: int, y: int) -> Dictionary:
 		_cache[cp] = _gen(cp.x, cp.y)
 		_order.append(cp)
 	return _cache[cp]
+
+
+## Raw chunk (cx, cy): {"k": kinds, "o": ore}, csize * csize bytes each.
+func chunk(cx: int, cy: int) -> Dictionary:
+	return _chunk(cx * csize, cy * csize)
 
 
 func _at(x: int, y: int) -> int:

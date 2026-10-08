@@ -285,7 +285,7 @@ func _top() -> void:
             tp.add_item("%s%s  (pop %d)" % ["> " if m.towns[k] == m.city else "", m.towns[k].town_name, m.towns[k].pop], k)
         tp.add_separator()
         tp.add_item("Whole world (M)", 98)
-        tp.add_item("Found a new town ($%d)" % int(m.FOUND_COST), 99))
+        tp.add_item("Found a new town (from $%d)" % int(m.FOUND_COST), 99))
     tp.id_pressed.connect(func(id: int) -> void:
         if id == 99:
             m.found_town()
