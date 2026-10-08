@@ -8,6 +8,7 @@ env:
 jobs:
   hygiene:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - name: Docs, links, version and community files
@@ -16,6 +17,7 @@ jobs:
         run: pip install -q gdtoolkit==4.5.0 && cd client && gdlint scripts tests
   smoke:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - name: Install Godot
@@ -38,6 +40,7 @@ jobs:
           timeout 600 godot --headless --path client -s tests/pmine.gd | tee p.txt && grep -q PMINE_OK p.txt
   netplay:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - name: Install Godot

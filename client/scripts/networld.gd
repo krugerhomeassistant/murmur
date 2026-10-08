@@ -9,7 +9,7 @@ static func pack(t: City) -> PackedByteArray:
 
 
 static func unpack(b: PackedByteArray) -> Dictionary:
-	var d: Variant = bytes_to_var(b.decompress_dynamic(32 << 20, FileAccess.COMPRESSION_GZIP))  # size-capped: the sender is untrusted
+	var d: Variant = bytes_to_var(b.decompress_dynamic(4 << 20, FileAccess.COMPRESSION_GZIP))  # size-capped: the sender is untrusted
 	return d if d is Dictionary else {}
 
 

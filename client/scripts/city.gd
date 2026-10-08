@@ -3198,15 +3198,18 @@ func _trade(market: float) -> Array:
 
 # ---------- save / load ----------
 
+## What a save or snapshot carries (also the only keys from_dict accepts, since snapshots come from a possibly hostile host).
+const SAVE_KEYS := ["town_name", "grid", "lvl", "build", "wire", "pipe", "sewer", "lamp", "water", "ore", "coins", "mood", "tax_r", "tax_c", "tax_i", "clock", "day",
+	"policies", "auto_mode", "auto_policy", "peak", "announced", "next_id", "recent", "active", "approval", "rep", "favor",
+	"petitions", "promises", "pet_recent", "kept", "broken", "next_election", "elections_won", "rally_used", "last_vote",
+	"season", "stock", "exported", "loans", "done_ms", "disasters_survived", "burned", "hist_coins", "hist_pop", "ruins", "offline", "lamp", "terr", "expansions", "auto_expand", "human", "owner", "temper", "rel", "treaty", "ev_scale", "gpos", "war_n", "war_sc", "occ", "train_on", "train_t", "train_w"]
+
 func to_dict() -> Dictionary:
 	var cs: Array = []
 	for c in citizens:
 		cs.append([c.id, c.home, c.work, c.tribe, c.nm, c.bias, c.shift, c.spd, c.commute, c.sick])
 	var d := {"v": 1, "cit": cs}
-	for k in ["town_name", "grid", "lvl", "build", "wire", "pipe", "sewer", "lamp", "water", "ore", "coins", "mood", "tax_r", "tax_c", "tax_i", "clock", "day",
-			"policies", "auto_mode", "auto_policy", "peak", "announced", "next_id", "recent", "active", "approval", "rep", "favor",
-			"petitions", "promises", "pet_recent", "kept", "broken", "next_election", "elections_won", "rally_used", "last_vote",
-			"season", "stock", "exported", "loans", "done_ms", "disasters_survived", "burned", "hist_coins", "hist_pop", "ruins", "offline", "lamp", "terr", "expansions", "auto_expand", "human", "owner", "temper", "rel", "treaty", "ev_scale", "gpos", "war_n", "war_sc", "occ", "train_on", "train_t", "train_w"]:
+	for k in SAVE_KEYS:
 		d[k] = get(k)
 	d["army"] = army.map(func(u: Dictionary) -> Dictionary: return {"k": u["k"], "hp": u["hp"], "tgt": u["tgt"], "s": u["s"], "l": u["l"], "mx": u.get("mx", u["hp"]), "xp": u.get("xp", 0.0), "rk": u.get("rk", 0)})
 	return d
@@ -3216,7 +3219,7 @@ func from_dict(d: Dictionary) -> void:
 	if not d.has("water"):
 		water.fill(0)  # saves from before rivers
 	for k in d:
-		if k == "cit" or k == "v":
+		if k == "cit" or k == "v" or not (k in SAVE_KEYS or k == "army"):
 			continue
 		var cur: Variant = get(k)
 		if cur is Array:

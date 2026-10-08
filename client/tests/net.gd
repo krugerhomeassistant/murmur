@@ -40,6 +40,20 @@ func _init() -> void:
 		await create_timer(0.1).timeout
 	OS.kill(pid)
 	ok = ok and net.players.size() == 1
+	var np := NetPlay.new()  # sanitising and the rate limit are pure host-side helpers
+	ok = ok and NetPlay._plain("a\nb\tc\u001b[31m") == "a b c [31m" and NetPlay._clean("server") == "Player" and NetPlay._clean("  \n ") == "Player"
+	var granted := 0
+	for k in 200:
+		granted += int(np._allow(7))
+	ok = ok and granted >= 60 and granted < 100  # burst of 60 plus a trickle, then refused
+	ok = ok and NetWorld.unpack(var_to_bytes({"a": PackedByteArray([1, 2, 3])}).compress(FileAccess.COMPRESSION_GZIP)).has("a")
+	var big := PackedByteArray()
+	big.resize(5 << 20)  # over the 4 MB decompression cap
+	ok = ok and NetWorld.unpack(var_to_bytes(big).compress(FileAccess.COMPRESSION_GZIP)).is_empty()
+	var t := City.new(Signals.new())
+	t.from_dict({"coins": 5.0, "not_a_save_key": 1, "multiplayer": 3})  # unknown keys are ignored
+	ok = ok and t.coins == 5.0 and not ("not_a_save_key" in t)
+	np.free()
 	print("NET_OK" if ok else "NET_FAIL players=%s" % str(net.players))
 	net.stop()
 	quit(0 if ok else 1)
