@@ -6,6 +6,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 ## [Unreleased]
 
 ### Changed
+- README screenshots and a hero GIF (docs/media), captured from the game.
+- `--capture DIR` saves the window as PNG frames for README media.
 - Player actions all go through one validated command path (`Cmd`), groundwork for multiplayer; no gameplay change.
 - Multiplayer phase 0: `--server`/`--join` flags, lobby player table with ping, two-process test.
 - Multiplayer design doc (docs/MULTIPLAYER.md): host-authoritative, competitive towns, 2-8 players, LAN/direct IP and dedicated server.

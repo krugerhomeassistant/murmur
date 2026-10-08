@@ -78,6 +78,7 @@ func _ready() -> void:
 	get_tree().root.add_child.call_deferred(net)
 	open_setup()
 	_net_args.call_deferred()
+	_capture_args.call_deferred()
 	if "--benchmark" in OS.get_cmdline_user_args():
 		run_benchmark(true)
 
@@ -91,6 +92,28 @@ func _net_args() -> void:
 	elif "--join" in a and a.find("--join") + 1 < a.size():
 		var hp: PackedStringArray = a[a.find("--join") + 1].split(":")
 		net.join(hp[0], int(hp[1]) if hp.size() > 1 else NetPlay.PORT, "Player")
+
+
+## `--capture DIR [--every SECONDS]`: saves the window as numbered PNGs (README screenshots and GIFs; scripts/make_media.py).
+func _capture_args() -> void:
+	var a := OS.get_cmdline_user_args()
+	if not "--capture" in a or a.find("--capture") + 1 >= a.size():
+		return
+	capture(a[a.find("--capture") + 1], float(a[a.find("--every") + 1]) if "--every" in a and a.find("--every") + 1 < a.size() else 0.25)
+
+
+func capture(path: String, every := 0.25) -> void:
+	var dir := ProjectSettings.globalize_path(path)
+	DirAccess.make_dir_recursive_absolute(dir)
+	var t := Timer.new()
+	t.wait_time = maxf(every, 0.05)
+	var n := [0]
+	t.timeout.connect(func() -> void:
+		if started:
+			get_viewport().get_texture().get_image().save_png("%s/f%04d.png" % [dir, n[0]])
+			n[0] += 1)
+	add_child(t)
+	t.start()
 
 
 func run_benchmark(quit_after := false) -> void:

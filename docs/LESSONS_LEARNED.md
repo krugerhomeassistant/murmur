@@ -70,3 +70,7 @@ Format: [Problem] -> [Root Cause] -> [Verified Solution]
 - [Wars sometimes never ended (units parked in range along the front but could not hit each other)] -> [stop distance ignored the sideways lane offset that range checks include, so two units 88 px apart along the line with a 100 px lane gap were out of range forever] -> [stop distance now subtracts the lane gap and LANE is kept small (35 px per lane unit) so every weapon can close; tests/war.gd passed 6/6 afterwards. Flaky headless tests deserve a loop of runs, not one]
 
 - [Planner never built military buildings under threat] -> [service scores are divided by cost/100+0.5 and must beat a 0.2 floor, so a bonus of ~1 times threat lost to cheap services] -> [bonus scaled to 3-6 times threat for barracks/base/radar/naval yard; test with a hostile pair and topped-up coins (tests/ai.gd)]
+
+- [Game run on the device hit "Could not find type NetPlay"] -> [the editor's global class cache is stale after files are added by git/sync] -> [`filesystem_manage op=scan` in godot-ai, stop, then `project_run` again].
+- [Start menu stays on screen after `start_game` via game_eval] -> [a fresh `Setup.new()` replaced `Main.setup`, orphaning the real panel in the HUD] -> [call `open_setup()` first, then `start_game`, then free the HUD child whose script is setup.gd].
+- [Capturing media blocks eval with EVAL_HUNG] -> [a long fast-forward loop runs on the game thread; the call times out at 10 s but keeps running] -> [ignore the error, wait, then query state].
