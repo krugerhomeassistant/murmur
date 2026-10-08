@@ -43,6 +43,8 @@ var net: NetPlay
 var remote := false  # multiplayer client: a mirror of the host's world, nothing simulates here
 var mirror_ready := false
 var net_mine := -1
+var chatbox: ChatBox
+var join_args := []  # last --join target, for the test client's retries
 var net_apply_ms := 0.0  # last snapshot apply cost
 var sfx: Sfx
 const SAVE := "user://murmur_save.bin"
@@ -102,7 +104,12 @@ func _net_args() -> void:
 		print("Murmur server: ", "listening on UDP %d with %d towns" % [port, n] if net.host(port, "Server", true) else "failed to start")
 	elif "--join" in a and a.find("--join") + 1 < a.size():
 		var hp: PackedStringArray = a[a.find("--join") + 1].split(":")
-		net.join(hp[0], int(hp[1]) if hp.size() > 1 else NetPlay.PORT, "Player")
+		join_args = [hp[0], int(hp[1]) if hp.size() > 1 else NetPlay.PORT]
+		net.join(join_args[0], join_args[1], "Player")
+		if "--mp-test" in a:  # test client: retry while the server boots, and never hang a CI job
+			get_tree().create_timer(40.0).timeout.connect(func() -> void:
+				print("MP_CLIENT_FAIL timeout")
+				get_tree().quit(1))
 
 
 ## `--capture DIR [--every SECONDS]`: saves the window as numbered PNGs (README screenshots and GIFs; scripts/make_media.py).
@@ -231,6 +238,12 @@ static func _edge_frac(sd: int, k: int) -> float:
 
 
 func open_setup() -> void:
+	if started and net != null and net.active:  # leaving a networked game
+		net.stop()
+		remote = false
+	if chatbox != null:
+		chatbox.queue_free()
+		chatbox = null
 	started = false
 	if setup != null:
 		setup.queue_free()
@@ -241,6 +254,13 @@ func open_setup() -> void:
 
 
 ## Multiplayer host from the lobby: a normal world where you own the first town; others join into the free towns.
+func _ensure_chat() -> void:
+	if chatbox == null:
+		chatbox = ChatBox.new()
+		chatbox.m = self
+		hud.add_child(chatbox)
+
+
 func host_game(port: int, towns_n: int, pname: String) -> void:
 	start_game({"name": pname, "towns": clampi(towns_n, 2, 8), "river": 3, "mood": 1, "mp": true, "guide": false, "spectate": false, "auto": 2, "policy": true, "expand": true})
 	for t in towns:
@@ -249,6 +269,7 @@ func host_game(port: int, towns_n: int, pname: String) -> void:
 	city.owner = 1
 	net.serve(towns)
 	net.host(port, pname)
+	_ensure_chat()
 	headline = "Hosting on UDP %d. Friends join with your address; each takes a free town." % port
 
 
@@ -263,6 +284,7 @@ func _net_world(meta: Dictionary) -> void:
 	net_mine = int(meta["mine"])
 	city = towns[maxi(net_mine, 0)]
 	_begin()
+	_ensure_chat()
 	headline = "Joined. You run %s." % city.town_name if net_mine >= 0 else "Joined as a spectator: every town is taken."
 
 
@@ -300,6 +322,10 @@ func _net_reply(_c: String, r: Variant) -> void:
 
 
 func _net_failed(reason: String) -> void:
+	if "--mp-test" in OS.get_cmdline_user_args() and not remote and not join_args.is_empty():
+		await get_tree().create_timer(1.0).timeout
+		net.join(join_args[0], join_args[1], "Player")
+		return
 	if remote:
 		remote = false
 		started = false
@@ -452,6 +478,9 @@ func _unhandled_input(e: InputEvent) -> void:
 	if e is InputEventKey and e.pressed and not e.echo and e.keycode == KEY_F9 and get_node_or_null("Benchmark") == null:
 		run_benchmark()
 	if not started:
+		return
+	if chatbox != null and e is InputEventKey and e.pressed and not e.echo and (e.keycode == KEY_ENTER or e.keycode == KEY_KP_ENTER):
+		chatbox.open()
 		return
 	if e is InputEventMouseButton and e.pressed:
 		if e.button_index == MOUSE_BUTTON_LEFT:

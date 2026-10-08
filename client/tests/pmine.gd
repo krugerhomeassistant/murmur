@@ -5,18 +5,24 @@ func _init() -> void:
 	var c := City.new(sig)
 	c.town_name = "Pm"
 	c.human = false
+	c.rng.seed = 6  # fixed so CI time is bounded: an unseeded town can grow huge and make this run for many minutes
+	c._gen_ore()
 	c.seed_start()
 	c.peak = 500.0
+	var mines := 0
+	var f := 0
 	for step in 60000:
 		sig.tick(0.1)
 		c.tick(0.1)
 		if step % 200 == 0:
 			c.coins = maxf(c.coins, 1500.0)
-	var mines := 0
-	for i in City.W * City.H:
-		if c.grid[i] == Catalog.Id.MINE:
-			mines += 1
-	var f := (c.bt.get(Catalog.Id.FOUNDRY, []) as Array).size()
+			mines = 0
+			for i in City.W * City.H:
+				if c.grid[i] == Catalog.Id.MINE:
+					mines += 1
+			f = (c.bt.get(Catalog.Id.FOUNDRY, []) as Array).size()
+			if mines > 0 and f > 0:
+				break
 	print("pop %d mines %d foundries %d ore %.1f metal %.1f" % [c.pop, mines, f, float(c.stock.get("ore", 0.0)), float(c.stock.get("metal", 0.0))])
 	assert(mines > 0, "planner never zoned a mine")
 	assert(f > 0, "planner never built a foundry")
