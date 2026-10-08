@@ -8,7 +8,7 @@ Standing rules: user authorised self-merge; NO authorship marks anywhere (user, 
 Process rule (see LESSONS_LEARNED): before waiting on a long action, delete the old output, confirm it started, poll liveness; max two unchanged waits.
 
 ## Next (in order)
-0. User approved the roadmap 2026-10-08 (endless procedural world, empire mode, group multiplayer, deeper economy/infrastructure/military): docs/EMPIRE_DESIGN.md. Start with E1 (world.gd + plots), then E2-E6. War phase 2 folds into E6.
+0. User approved the roadmap 2026-10-08 (endless procedural world, empire mode, group multiplayer, deeper economy/infrastructure/military): docs/EMPIRE_DESIGN.md. E1 is done except fog of war and multiplayer founding (merged: PRs #54 World generator, #55 towns cut from the world + planner border-road fix, #56 found on map + WorldLayer, this PR rivers). Next: E2 empire mode (dashboard, bulk policies, planner delegate, empire treasury, sim LOD), then E3-E6. War phase 2 folds into E6. Perf pass (WorldLayer draws, world gen) is due before the next release.
 1. War rework phase 1 is merged (PR #50: world positions, terrain flow fields, 2D fights). Next: phase 2 sieges/building damage, then air, then command UI (docs/WAR_DESIGN.md). Original item: (docs/PLAN.md "War rework", Age of Empires / Empire Earth style): armies fight in the town, ground units blocked by water, boats on rivers, real air units, sieges. Target v0.3.
 2. Known issue: planner stall in low-mood towns (PLAN.md "Known issues"); CI hides it with retries.
 3. Audit follow-ups in docs/PLAN.md (rejoin token, snapshot backpressure, server password/persistence, missing tests, CI caching, UX settings/help).

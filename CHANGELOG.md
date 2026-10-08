@@ -14,6 +14,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 - Planner towns could never link a border: the border road was laid as a straight line and gave up for good at the first building in the way (`tests/spectate.gd` failed about 1 run in 4). It now finds a route around buildings, preferring dry land.
 
 ### Changed
+- Rivers of the endless world rise at the foot of the hills instead of crossing mountains, and are smoother; your starting town is always placed with some water nearby.
 - New games are cut from the shared procedural world: rivers, lakes, coast, sand, forest, hills, rock and ore now continue across neighbouring towns, and a start-site search keeps every starting town on dry land. The Rivers setup option is now Natural / None / Custom. The world seed is saved; older saves keep their terrain.
 - Docs: README roadmap and docs index brought up to date; `scripts/check_repo.py` now fails when a `docs/*.md` file is missing from the docs index.
 - War rework, phase 1 (docs/WAR_DESIGN.md): units at war have real map positions, march through the terrain on flow fields, and fight in 2D. Ground units cannot enter rivers (a road bridge opens the way), ships stay on river water, aircraft fly straight; armies advance on the enemy town and fight there instead of on a line between the towns. New `tests/warmap.gd`.
