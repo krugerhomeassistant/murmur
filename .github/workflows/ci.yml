@@ -12,6 +12,8 @@ jobs:
       - uses: actions/checkout@v4
       - name: Docs, links, version and community files
         run: python3 scripts/check_repo.py
+      - name: GDScript lint
+        run: pip install -q gdtoolkit==4.5.0 && cd client && gdlint scripts tests
   smoke:
     runs-on: ubuntu-latest
     steps:

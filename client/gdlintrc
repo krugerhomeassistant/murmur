@@ -1,0 +1,1 @@
+disable: [max-line-length, class-definitions-order, max-returns, max-file-lines, max-public-methods, function-variable-name, function-argument-name]
