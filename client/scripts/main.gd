@@ -181,8 +181,8 @@ static func spiral(n: int) -> Vector2i:
 	return p
 
 
-## True if a town started on plot g would stand on dry, mostly land ground: the seed layout is dry and the start territory is at most 35% water.
-func _site_ok(w: World, g: Vector2i, lw: int, lh: int) -> bool:
+## True if a town started on plot g would stand on dry, mostly land ground: the seed layout is dry and the start territory has at least `min_wet` and at most 35% water tiles.
+func _site_ok(w: World, g: Vector2i, lw: int, lh: int, min_wet := 0) -> bool:
 	var wo := City.plot_origin(g)
 	var foot := w.region(wo.x + City.OX + 18, wo.y + City.OY + 15, 13, 3)["k"] as PackedByteArray
 	for k in foot:
@@ -193,7 +193,7 @@ func _site_ok(w: World, g: Vector2i, lw: int, lh: int) -> bool:
 	for k in t:
 		if k == World.K.SEA or k == World.K.RIVER:
 			wet += 1
-	return wet <= t.size() * 0.35
+	return wet <= t.size() * 0.35 and wet >= min_wet
 
 
 ## A world whose first `n` plots all make good town sites (best of 40 tries if none is perfect).
@@ -205,7 +205,7 @@ func _pick_world(n: int, lw: int, lh: int) -> World:
 		var w := World.new(base + a * 7919)
 		var ok := 0
 		for k in n:
-			if not _site_ok(w, spiral(k), lw, lh):
+			if not _site_ok(w, spiral(k), lw, lh, 30 if k == 0 and world_rivers else 0):  # your own town gets some water for ports and fishing
 				break
 			ok += 1
 		if ok > best_ok:

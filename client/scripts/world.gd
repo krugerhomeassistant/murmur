@@ -68,7 +68,7 @@ func _lat(f: int, gx: int, gy: int) -> float:
 			return _fbm(x / 110.0, y / 110.0, seed, 4)
 		F.MOIST:
 			return _fbm(x / 90.0, y / 90.0, seed + 101, 3)
-	return _fbm(x / 70.0, y / 70.0, seed + 211, 3)
+	return _fbm(x / 90.0, y / 90.0, seed + 211, 2)
 
 
 ## Interpolated field over the w*h tiles starting at (x0, y0), row-major.
@@ -134,7 +134,7 @@ func _gen(cx: int, cy: int) -> Dictionary:
 				kind = K.SEA
 			else:
 				var river := false
-				if e > SEA_LEVEL + 0.02:
+				if e > SEA_LEVEL + 0.02 and e < 0.64:  # springs rise at the foot of the hills
 					for dj in range(-1, 2):
 						for di in range(-1, 2):
 							if line[(j + PAD + dj) * n + i + PAD + di] == 1:
