@@ -640,7 +640,7 @@ func _gen_shared_river(r: RandomNumberGenerator, plan: Dictionary) -> void:
 		var t := float(a - ap) / asz
 		var tc := clampf(t, 0.0, 1.0)
 		wob = clampf(wob + r.randf_range(-0.5, 0.5), -3.0, 3.0)
-		var c := cp + csz * lerpf(float(plan["a"]), float(plan["b"]), t) + wob * sin(tc * PI)
+		var c := cp + csz * lerpf(float(plan["a"]), float(plan["b"]), tc) + wob * sin(tc * PI)  # tc, not t: outside the territory the river runs straight so it meets the neighbour's
 		for k in 3:
 			var x := a if horiz else int(c) + k
 			var y := int(c) + k if horiz else a
