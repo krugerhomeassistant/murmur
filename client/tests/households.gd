@@ -66,20 +66,29 @@ func _init() -> void:
 	_run(sig2, t2, 1200)
 	if t2.wage_ix <= 1.0 and t2.cpi > 1.1:
 		errs.append("wages should follow prices up")
-	# payments keep broke households afloat
-	var t3 := _town(Signals.new())
-	_run(t3.sig, t3, 60)
-	for ct in t3.citizens:
+	# payments keep broke households afloat: same town twice, only the policy differs
+	var base := _town(Signals.new())
+	_run(base.sig, base, 120)
+	for ct in base.citizens:
 		ct.wealth = 0.0
-	t3.set_policy("cost_support", true)
-	_run(t3.sig, t3, 60)
-	var t4 := _town(Signals.new())
-	_run(t4.sig, t4, 60)
-	for ct in t4.citizens:
-		ct.wealth = 0.0
-	_run(t4.sig, t4, 60)
-	if t3.hardship > t4.hardship + 0.001 and t3.pop > 5:
-		errs.append("cost-of-living payments should not increase hardship (%.2f vs %.2f)" % [t3.hardship, t4.hardship])
+		ct.work = -1  # nobody earns: only the payments can help
+	var snap := base.to_dict()
+	var plain := _town(Signals.new())
+	plain.from_dict(snap)
+	var paid := _town(Signals.new())
+	paid.from_dict(snap)
+	paid.set_policy("cost_support", true)
+	for i in 20:
+		plain._households()
+		paid._households()
+	var w_plain := 0.0
+	var w_paid := 0.0
+	for ct in plain.citizens:
+		w_plain += ct.wealth
+	for ct in paid.citizens:
+		w_paid += ct.wealth
+	if plain.citizens.size() > 3 and w_paid <= w_plain:
+		errs.append("cost-of-living payments should leave households with more savings (%.1f vs %.1f)" % [w_paid, w_plain])
 	# save round trip
 	var d := t2.to_dict()
 	var r := _town(Signals.new())
