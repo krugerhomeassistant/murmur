@@ -51,19 +51,19 @@ Dense late-game maps are the usual killer of city builders, so performance is pr
 
 The one number we quote: **8 towns, 8x speed, every overlay on**, spectator mode (all towns on the planner, fixed seed), 30 s fast-forward then 15 s warm-up and 30 s sampled. Run it with **F9** in game or `godot --path client -- --benchmark`; results are written to `user://benchmark.json`.
 
-Rig: Intel i7-8700, NVIDIA GTX 1070 Ti, Godot 4.7.2 GL Compatibility, run from the editor (debugger attached, so pessimistic), 1706x960 window.
+Rig: Intel i7-8700, NVIDIA GTX 1070 Ti, Godot 4.7.2 GL Compatibility, run from the editor (debugger attached, so pessimistic), 1280x720 game window. Measured 2026-10-08.
 
-| Metric | Before | After |
-|---|---|---|
-| FPS (avg) | 77 | 140 |
-| Frame time p99 | 46.5 ms | 17.7 ms |
-| Frames over 25 ms | 426 | 6 |
-| Sim cost per frame | 6.0 ms | 1.3 ms |
-| Render CPU / GPU | n/a | 0.7 ms / 1.4 ms |
-| Draw calls (avg) | n/a | 122 |
-| RAM / VRAM | 81 MB / 27 MB | 84 MB / 35 MB |
+| Metric | Before (`67fd601`) | After (v0.2.0 candidate) | After, with four wars (`--war`) |
+|---|---|---|---|
+| FPS (avg) | 110 | 123 | 94 |
+| Frame time p99 | 22.2 ms | 16.6 ms | 21.5 ms |
+| Frames over 25 ms | 18 | 2 | 9 |
+| Sim cost per frame | 1.8 ms | 1.4 ms | 2.1 ms |
+| Draw cost per frame | 3.6 ms | 3.7 ms | 4.6 ms |
+| Draw calls (avg) | 126 | 114 | 152 |
+| Total population | 612 | 608 | 448 |
 
-"Before" is `main` plus the benchmark harness only; "After" is `main` as of the armies, farm and planner-mining work (a single run, 702 total population across the 8 towns; the world-view build measured 107 to 111 fps on earlier runs and the build before it 128, so expect about 15% run-to-run variance). Effective speed held at 8.0x. Total population differs between builds because planner towns now have to build real border roads before they trade. Remaining spikes are ~20 ms steps (planner, job matching); worker-thread simulation is on the roadmap.
+Single runs. The sim is not deterministic, so population differs a little between runs (here within 1% for the first two columns); the earlier table, taken at 1706x960, read 140 fps and is not comparable. Effective speed held at 8.0x in all three. "Before" and "After" differ by the growth-only network re-solve (about 10x cheaper per growth step, `tests/netbench.gd`). Remaining spikes are the planner and job matching; worker-thread simulation is on the roadmap.
 
 Headless profilers (`tests/regionbench.gd`, `bench.gd`, `stageprof.gd`) are secondary: they miss rendering and frame pacing.
 
