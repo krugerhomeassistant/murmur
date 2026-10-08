@@ -6,6 +6,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 ## [Unreleased]
 
 ### Changed
+- Multiplayer playable in the game: lobby (host or join by address), `--server` dedicated mode, client mirror world, networked games never overwrite the single-player save.
 - Multiplayer phase 3a: town snapshot sync and owner-checked commands between a host and clients (test: two processes).
 - README screenshots and a hero GIF (docs/media), captured from the game.
 - `--capture DIR` saves the window as PNG frames for README media.

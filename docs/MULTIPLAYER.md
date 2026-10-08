@@ -21,7 +21,7 @@ Decided with the owner, 2026-10-08: **competitive towns** in one shared world (e
 - [x] P1 ownership (core): `City.owner` (saved), `NetWorld.assign/release`; the Main/HUD side (per-peer "my town", spectators) lands with P3b. [ ] original scope: `City.owner`, per-peer "my town" (main's `city` is the local player's), spectator for extra peers.
 - [x] P2 commands: `Cmd.run` (scripts/cmd.gd) is the single validated route for place, bulldoze, water, tax, policy, loan, expand, auto toggles, training, petitions, rally and diplomacy; HUD and input call `Main.cmd`. `tests/cmd.gd` (CMD_OK) covers hostile arguments. Sandbox event triggers stay local-only.
 - [x] P3a snapshots: host sends each town's `to_dict` gzip-compressed once a second (about 4 KB per town measured, so no diffing yet); `NetWorld` (scripts/networld.gd) packs/unpacks, `NetPlay.broadcast/command`; client mirrors via `from_dict`; commands carry the town index and the host rejects non-owners. `tests/netsync.gd` (NETSYNC_OK) covers join, mirror, command, refusal.
-- [ ] P3b game integration: host `Main` serves its towns and broadcasts, client `Main` runs a no-sim mirror world, viewed town = own town, lobby screen.
+- [x] P3b game integration: `Main.host_game` (lobby "Host": a normal world, you own town 1, friends take the free towns), `Main.join_game` (client runs a no-sim mirror, `remote = true`, viewed town = yours, snapshots via `from_dict`), `Main.cmd` routes every action through the host, a networked world never touches the single-player save; lobby screen (scripts/lobby.gd) from the start menu; `--server [--port N] [--towns N]` dedicated mode. `tests/mp.gd` (MP_OK) runs a real server process and a real client process.
 - [ ] P4 lobby UI, chat, disconnect/rejoin handling.
 - [ ] P5 competitive features: player-vs-player treaties, war and raids use existing `Diplo`/`Military` with real owners.
 - [ ] P6 dedicated server polish: CLI flags, config, logging, docs, optional Docker image.
@@ -31,3 +31,6 @@ Decided with the owner, 2026-10-08: **competitive towns** in one shared world (e
 - Bandwidth of grid diffs while towns grow fast at 8x: batch per second, compress with `PackedByteArray.compress`, measure.
 - Planner towns and 8 players at once: host sim cost is the benchmark scenario; keep the standard benchmark honest and add a multiplayer one.
 - Security: validate every RPC argument (bounds, owner, rate); no trust in client state; no player-supplied code or paths.
+
+## Measurements
+- Town snapshot at pop 70 (day ~400): 5.3 KB gzip, pack 1.1 ms on the host, apply 1.3 ms on a client (headless, one town). 8 towns once a second is about 40 KB/s per client. Re-measure with large towns (500+ pop) before release; if it grows, add diffs or send non-viewed towns less often.

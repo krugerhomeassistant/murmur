@@ -96,6 +96,14 @@ func _ready() -> void:
 	note.add_theme_font_size_override("font_size", 11)
 	note.text = "Left click: build / inspect.  Right or middle drag, or WASD: pan.  Wheel: zoom.  Space: pause.  Q inspect, B bulldoze.  The game autosaves every day."
 	v.add_child(note)
+	var mp := Button.new()
+	mp.text = "Multiplayer (host or join)"
+	mp.focus_mode = Control.FOCUS_NONE
+	mp.pressed.connect(func() -> void:
+		var lb := Lobby.new()
+		lb.m = m
+		m.hud.add_child(lb))
+	v.add_child(mp)
 	var qb := Button.new()
 	qb.text = "Quit"
 	qb.focus_mode = Control.FOCUS_NONE

@@ -40,6 +40,10 @@ var cam: Camera2D
 var mod: CanvasModulate
 var hud: Hud
 var net: NetPlay
+var remote := false  # multiplayer client: a mirror of the host's world, nothing simulates here
+var mirror_ready := false
+var net_mine := -1
+var net_apply_ms := 0.0  # last snapshot apply cost
 var sfx: Sfx
 const SAVE := "user://murmur_save.bin"
 var last_day := -1
@@ -76,6 +80,9 @@ func _ready() -> void:
 	net = NetPlay.new()
 	net.name = "Net"
 	get_tree().root.add_child.call_deferred(net)
+	net.world.connect(_net_world)
+	net.state.connect(_net_state)
+	net.failed.connect(_net_failed)
 	open_setup()
 	_net_args.call_deferred()
 	_capture_args.call_deferred()
@@ -88,7 +95,10 @@ func _net_args() -> void:
 	var a := OS.get_cmdline_user_args()
 	var port := int(a[a.find("--port") + 1]) if "--port" in a and a.find("--port") + 1 < a.size() else NetPlay.PORT
 	if "--server" in a:
-		print("Murmur server: ", "listening on UDP %d" % port if net.host(port, "Server", true) else "failed to start")
+		var n := clampi(int(a[a.find("--towns") + 1]) if "--towns" in a and a.find("--towns") + 1 < a.size() else 6, 2, 8)
+		start_game({"name": "Server", "towns": n, "river": 3, "spectate": true, "mp": true, "guide": false})
+		net.serve(towns)
+		print("Murmur server: ", "listening on UDP %d with %d towns" % [port, n] if net.host(port, "Server", true) else "failed to start")
 	elif "--join" in a and a.find("--join") + 1 < a.size():
 		var hp: PackedStringArray = a[a.find("--join") + 1].split(":")
 		net.join(hp[0], int(hp[1]) if hp.size() > 1 else NetPlay.PORT, "Player")
@@ -229,8 +239,74 @@ func open_setup() -> void:
 	hud.add_child(setup)
 
 
+## Multiplayer host from the lobby: a normal world where you own the first town; others join into the free towns.
+func host_game(port: int, towns_n: int, pname: String) -> void:
+	start_game({"name": pname, "towns": clampi(towns_n, 2, 8), "river": 3, "mood": 1, "mp": true, "guide": false, "spectate": false, "auto": 2, "policy": true, "expand": true})
+	for t in towns:
+		if t != city:
+			t.human = false
+	city.owner = 1
+	net.serve(towns)
+	net.host(port, pname)
+	headline = "Hosting on UDP %d. Friends join with your address; each takes a free town." % port
+
+
+func join_game(ip: String, port: int, pname: String) -> void:
+	net.join(ip, port, pname)
+
+
+func _net_world(meta: Dictionary) -> void:
+	remote = true
+	mirror_ready = false
+	towns = NetWorld.mirror(sig, int(meta["n"]))
+	net_mine = int(meta["mine"])
+	city = towns[maxi(net_mine, 0)]
+	_begin()
+	headline = "Joined. You run %s." % city.town_name if net_mine >= 0 else "Joined as a spectator: every town is taken."
+
+
+func _net_state(i: int, d: Dictionary) -> void:
+	if not remote or i >= towns.size():
+		return
+	var t0 := Time.get_ticks_usec()
+	towns[i].from_dict(d)
+	net_apply_ms = (Time.get_ticks_usec() - t0) / 1000.0
+	if not mirror_ready and i == maxi(net_mine, 0):
+		mirror_ready = true
+		cam.position = _center(towns[i])
+		chunk_kick = true
+		print("MP_CLIENT world=%d mine=%d town=%s pop=%d apply_ms=%.1f" % [towns.size(), net_mine, towns[i].town_name, towns[i].pop, net_apply_ms])
+		if "--mp-test" in OS.get_cmdline_user_args():
+			_mp_test()
+
+
+## `--mp-test` (tests/mp.gd): as a client, change the tax rate through the host and wait to see it come back in a snapshot.
+func _mp_test() -> void:
+	cmd("tax", ["r", 0.2])
+	for i in 100:
+		await get_tree().create_timer(0.1).timeout
+		if is_equal_approx(city.tax_r, 0.2):
+			print("MP_CLIENT_OK pop=%d" % city.pop)
+			get_tree().quit()
+			return
+	print("MP_CLIENT_FAIL tax_r=%s" % city.tax_r)
+	get_tree().quit(1)
+
+
+func _net_failed(reason: String) -> void:
+	if remote:
+		remote = false
+		started = false
+		towns.clear()
+		open_setup()
+	if setup != null and setup.note != null:
+		setup.note.text = reason
+	headline = reason
+
+
 func start_game(o: Dictionary) -> void:
-	DirAccess.remove_absolute(ProjectSettings.globalize_path(SAVE))
+	if not o.get("mp", false):
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(SAVE))
 	_fresh(o)
 	_begin()
 	hud.guide.visible = false
@@ -252,8 +328,9 @@ func continue_game() -> void:
 func _begin() -> void:
 	pin_cell = -1
 	chunk_kick = true
-	setup.queue_free()
-	setup = null
+	if setup != null:
+		setup.queue_free()
+		setup = null
 	started = true
 	speed = 1.0
 	last_day = -1
@@ -268,6 +345,8 @@ func _begin() -> void:
 
 
 func save_game() -> void:
+	if remote or (net != null and net.active):
+		return  # a networked world is never written over your single-player save
 	var f := FileAccess.open(SAVE, FileAccess.WRITE)
 	if f == null:
 		return
@@ -429,6 +508,11 @@ func cell() -> Vector2i:
 
 ## Every player action goes through Cmd (validated; the multiplayer host runs the same call for clients).
 func cmd(n: String, a: Array = []) -> Variant:
+	if net != null and net.active:  # multiplayer: the host decides (and refuses commands for towns you don't own)
+		if city.owner != net.my_id():
+			headline = "That town is not yours."
+			return null
+		return net.command(towns.find(city), n, a)
 	return Cmd.run(towns, city, n, a)
 
 
@@ -462,6 +546,8 @@ func _paint(click: bool) -> void:
 					headline = "%s unlocks at population %d." % [Catalog.DEFS[tool]["n"], Catalog.DEFS[tool]["unlock"]]
 			elif cmd("place", [c.x, c.y, tool]):
 				sfx.cue("place")
+			elif remote:
+				pass  # the host answers asynchronously; the town updates when its next snapshot arrives
 			elif click and not city.owns(c.x, c.y):
 				headline = "That land isn't yours yet. Annex it from the Region tab."
 			elif click and tool == T.LIGHT:
@@ -642,7 +728,7 @@ func _process(delta: float) -> void:
 	var under := _town_at(cam.position)
 	if under != null and under != city and started:
 		_set_city(under)
-	if started:
+	if started and not remote:
 		acc = minf(acc + delta * speed, STEP * 20.0)  # never owe more than 20 steps: slow down instead of freezing
 		while acc >= STEP:
 			if Time.get_ticks_usec() - p0 > SIM_BUDGET_MS * 1000.0:  # out of frame budget: run slower than asked rather than stutter
@@ -655,6 +741,7 @@ func _process(delta: float) -> void:
 			if dacc >= 1.0:
 				dacc -= 1.0
 				Diplo.second(towns, city.rng)
+				net.broadcast()
 			var batched := 0
 			for t in towns:
 				if t == city:
