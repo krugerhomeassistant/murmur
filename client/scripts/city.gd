@@ -1335,7 +1335,7 @@ func strike(n: int, from: City) -> void:
 	opts.sort_custom(func(i: int, j: int) -> bool: return _edge_dist(i, d) < _edge_dist(j, d))
 	for k in mini(n, opts.size()):
 		var i: int = opts[mini(k + rng.randi_range(0, 2), opts.size() - 1)]
-		Military.blasts.append({"t": town_name, "p": center(i), "ts": Time.get_ticks_msec()})
+		Military.blasts.append({"t": town_name, "p": center(i) * Military.TILE, "ts": Time.get_ticks_msec()})
 		_ruin(i)
 	_scan()
 

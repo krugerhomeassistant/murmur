@@ -5,11 +5,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+### Fixed
+- Raid and bomb explosions were drawn in the top-left corner of the map instead of on the destroyed building (cell units were used as pixels); `tests/war.gd` now checks the position.
+- Cars keep to the right-hand lane and pedestrians use the pavements, so traffic no longer piles up on the road centreline.
+
 ### Changed
 - Town growth no longer re-floods the utility networks: only demand is recomputed, about 10x cheaper per growth step (`tests/netbench.gd`).
 - Benchmark: `-- --benchmark --war` runs the standard scenario with four wars going.
 
-### Changed
 - CI: multiplayer tests run as their own parallel job.
 - GDScript lint (gdtoolkit) in CI; style-only rules (line length, naming, ordering) are switched off in client/gdlintrc.
 - Dedicated server options (`--towns`, `--speed`) with join/leave/chat logging; multiplayer run instructions.
