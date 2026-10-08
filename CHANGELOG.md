@@ -6,6 +6,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 ## [Unreleased]
 
 ### Changed
+- CI: multiplayer tests run as their own parallel job.
 - Dedicated server options (`--towns`, `--speed`) with join/leave/chat logging; multiplayer run instructions.
 - Multiplayer chat (Enter) and rejoin: a returning player gets their old town back.
 - Multiplayer: treaties, ceasefires and tribute between two players are proposals the other player answers; planner towns still answer instantly.
