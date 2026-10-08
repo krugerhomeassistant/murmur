@@ -403,8 +403,8 @@ A Mine can only be placed where `ore > 0`. Its output scales with `mine_yield`, 
 ## Open questions
 
 - Avenue upkeep: the catalog says 0.2 and the Buildings page shows 0.2, but `City._money` charges 0.12 per avenue tile. Is the catalog value stale or the budget line?
-- Line upkeep: the catalog says 0.03 per wire, pipe and sewer tile; the budget charges 0.015 per tile through `up_svc`.
-- Sewage description: the catalog text for the Sewage metric says uncovered homes "make people sick more often", but `City._sickness` does not read sewage coverage. The only gameplay links found are the mood term and `river_health`.
+- Line upkeep is 0.015 per tile in both the catalog and the budget (fixed).
+- Sewage description no longer claims sickness; `City._sickness` does not read sewage coverage.
 - Regional trade credit: in `City._money`, a town earns `0.2 * RATE` for each unit that every partner imports (`p.imports`), not only the units it exported. With three or more towns this may over-credit a town. Not verified against intent.
 - `City._hit` writes `lvl[i] = 0` for non-zone buildings, which has no visible effect; the buildings are listed in `ruins` and `_rebuild` only restores them if they were erased. Intended behaviour for damaged services is unclear.
 - A lamp placed by the player can be 2 tiles from another (only adjacency is refused), while the planner keeps lamps 3 apart. Probably intentional.

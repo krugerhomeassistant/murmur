@@ -358,7 +358,7 @@ healthy citizens living or working at a building where someone is sick:
 - Sickness is only started by events: Epidemic and similar events infect `inst.infect` random citizens (25-40 s). It then spreads only through shared home or workplace cells ("hot" cells), and stops when nobody is sick. There is no background illness.
 - Sick citizens go home (`_want`), count as unemployed for `employed` (so they stop paying tax), and are not replaced at work.
 - `sick_n / pop` lowers the mood target (0.25 per fraction). A death removes the citizen and logs "X did not survive the illness."
-- The text of the Sewage stat says sewage coverage makes people sick more often; no such rule exists in `_sickness` (see Open questions).
+- Sewage coverage does not affect `_sickness`; the stat text no longer claims it does (fixed in the text pass).
 
 ## Weather and seasons
 
@@ -420,7 +420,7 @@ Every 5-11 s a random citizen shows a speech bubble from `City.thought(c)`. The 
 ## Open questions
 
 - A walking citizen follows the path calculated at departure. If a road on it is bulldozed after that, the code does not recompute or stop them; whether citizens can end up walking through removed road tiles is not checked here. Only the path at departure is verified in `City.selfcheck`.
-- The Policing stat text in `Catalog.METRICS` says uncovered homes lower mood "up to -12%", but its weight `w` is 0.06 (a -6% maximum at full ramp).
+- Policing stat text now says -6%, matching its weight 0.06.
 - The Transit stat text says covered homes "walk 30% faster"; the code gives +30% to homes whose coverage exceeds 0.5.
 - The Sewage text claims sewage coverage affects how often people fall ill; `_sickness` has no sewage term. Sewage affects river health, fishing and mood only.
 - Wind turbine text says storms and cold snaps reduce its output; the code lowers power *coverage* through `cov_power` mods in those events, but plant output is only changed by `mod("power_out")`, which no data file sets.

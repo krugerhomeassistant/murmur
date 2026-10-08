@@ -12,8 +12,8 @@ const MAX_CHUNKS := 512
 
 var seed := 0
 var csize := 32
+var _last := Vector2i(1 << 30, 1 << 30)
 var _cache := {}  # Vector2i -> {"k": PackedByteArray, "o": PackedByteArray}
-var _order: Array[Vector2i] = []
 
 
 func _init(sd := 0, chunk := 32) -> void:
@@ -162,11 +162,16 @@ func _gen(cx: int, cy: int) -> Dictionary:
 
 func _chunk(x: int, y: int) -> Dictionary:
 	var cp := Vector2i(floori(float(x) / csize), floori(float(y) / csize))
-	if not _cache.has(cp):
-		if _order.size() >= MAX_CHUNKS:
-			_cache.erase(_order.pop_front())
-		_cache[cp] = _gen(cp.x, cp.y)
-		_order.append(cp)
+	if cp != _last:  # LRU: a Dictionary keeps insertion order, so re-insert on use and evict the first key
+		_last = cp
+		var c: Variant = _cache.get(cp)
+		if c == null:
+			if _cache.size() >= MAX_CHUNKS:
+				_cache.erase(_cache.keys()[0])
+			c = _gen(cp.x, cp.y)
+		else:
+			_cache.erase(cp)
+		_cache[cp] = c
 	return _cache[cp]
 
 

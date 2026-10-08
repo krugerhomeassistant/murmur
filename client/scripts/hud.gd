@@ -1226,7 +1226,7 @@ func _mayor() -> void:
     top.add_child(appr_bar)
     rally_b = _btn(top, "Rally $%d" % int(Civics.RALLY_COST), func() -> void:
         m.headline = "" if m.cmd("rally") else "Rallies only in the last 7 days before an election, once per campaign, and they cost $%d." % int(Civics.RALLY_COST))
-    rally_b.tooltip_text = "Hold a campaign rally: +7% approval. Once per election, only in the last week."
+    rally_b.tooltip_text = "Hold a campaign rally: +7 points of approval. Once per election, only in the last week."
     elect_l = _wrap(body, 0)
     var mt := TabContainer.new()
     mt.size_flags_vertical = Control.SIZE_EXPAND_FILL

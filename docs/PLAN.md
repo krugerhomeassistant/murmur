@@ -156,7 +156,8 @@ Rules: keep `Military` deterministic enough for `tests/war.gd`; the host simulat
 ## Wiki follow-ups (found while writing docs/wiki; details in each page's Open questions)
 - [ ] Code vs text: avenue upkeep 0.2 in the catalog but 0.12 charged; line tiles 0.03 vs 0.015; sewage text says it makes people ill but `_sickness` ignores it; policing text says -12% mood but the weight is 0.06; transit text vs code; rally tooltip "+7% approval" is +0.07 rep; "Declare WAR" tooltip still describes removed abstract battles; mode 1 "zones only" planner still lays roads and the auto-annex checkbox does nothing there.
 - [x] Fixed from that list: Empire sort headers, founded towns skipping difficulty and turning spectating off, dedicated server slots, clients lacking the host's world seed, WASD panning while typing, F9 overwriting the save, `leave` ending a war, minimized windows not restored, stale Declare WAR tooltip.
-- [ ] Still open: weather not in snapshots; Balance on a client does nothing; `_hit` on non-zone buildings has no effect; recovery offer "no" still counts as survived; world chunk cache is FIFO not LRU; code-vs-text mismatches above.
+- [x] Fixed: weather in snapshots (`wx`), recovery "no" no longer counts as survived, world chunk cache is LRU, avenue/line upkeep, policing, sewage and rally text now match the code.
+- [ ] Still open: Balance on a client does nothing (unverified); `_hit` on non-zone buildings has no effect; sewage does not affect sickness (text no longer claims it); sewage/transit text vs code; planner mode 1 still lays roads and auto-annex does nothing there.
 - [ ] Wiki process: the generated pages cover data tables; keep mechanics pages in step with rule changes (PR template).
 
 ## Known issues
