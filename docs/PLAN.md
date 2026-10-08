@@ -163,8 +163,8 @@ Rules: keep `Military` deterministic enough for `tests/war.gd`; the host simulat
 ## Known issues
 - [x] Planner stall fixed (`City._plan_service(force)`, lower gate for pop < 40).
 ## Audit 2026-10-08 follow-ups (not yet done)
-- [ ] Rejoin token: claims are keyed by name only, so anyone can take a dropped player's town by using their name; also a fast rejoin gets a different town while the old peer lingers.
-- [ ] Snapshot backpressure: reliable per-second snapshots can queue without bound for a stalled client.
+- [x] (done) Rejoin token: claims are keyed by name only, so anyone can take a dropped player's town by using their name; also a fast rejoin gets a different town while the old peer lingers.
+- [x] (done) Snapshot backpressure: reliable per-second snapshots can queue without bound for a stalled client.
 - [ ] Server: password, bind address, kick/ban, world persistence; `SECURITY.md` should say the dedicated server is not hardened.
 - [ ] Tests missing: save/load round trip, elections/game-over, diplomacy single-player, events, hud/setup wiring, net abuse (silent peers, command floods).
 - [ ] CI: cache the Godot binary, `set -o pipefail`, export job, tag-triggered release workflow (smoke step once hung 25 min on a runner; per-step timeouts now exist).

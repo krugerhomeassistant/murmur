@@ -20,7 +20,12 @@ var players := {}  ## peer id -> {"name": String, "ping": int ms}; host-owned, m
 var dedicated := false
 var active := false
 var towns: Array[City] = []  ## host: the simulated towns (set with serve)
-var claims := {}  ## host: player name -> the town they last ran, so a rejoin returns to it
+var claims := {}  ## host: rejoin token -> the town they last ran, so a rejoin returns to it (the name is not proof of who you are)
+var _tok := {}  ## host: peer id -> rejoin token (never sent to other players)
+var _seq := 0  ## host: snapshot rounds sent
+var _acked := {}  ## host: peer id -> last round the client confirmed
+const LAG := 4  ## rounds a client may fall behind before it is skipped
+const KICK_LAG := 60  ## rounds behind before it is dropped
 var _acc := 0.0
 var _bucket := {}  ## host: peer id -> [tokens, last refill time]
 const HELLO_WAIT := 5.0  ## a peer that has not said hello by then is dropped, so silent connections cannot fill the slots
@@ -54,7 +59,7 @@ func join(ip: String, port := PORT, pname := "Player") -> bool:
 	multiplayer.multiplayer_peer = p
 	active = true
 	players.clear()
-	multiplayer.connected_to_server.connect(func() -> void: _hello.rpc_id(1, _clean(pname)), CONNECT_ONE_SHOT)
+	multiplayer.connected_to_server.connect(func() -> void: _hello.rpc_id(1, _clean(pname), _my_token()), CONNECT_ONE_SHOT)
 	multiplayer.connection_failed.connect(func() -> void: stop(); failed.emit("Connection failed."), CONNECT_ONE_SHOT)
 	multiplayer.server_disconnected.connect(func() -> void: stop(); failed.emit("Host closed the game."), CONNECT_ONE_SHOT)
 	return true
@@ -96,6 +101,18 @@ static func _clean(n: String) -> String:
 
 
 ## Host: token bucket per peer so one client cannot pin the host with a command loop (30 per second, bursts of 60).
+## This install's secret rejoin token (kept in user://net.cfg); a fresh random one per session if the file cannot be written.
+static func _my_token() -> String:
+	var cf := ConfigFile.new()
+	cf.load("user://net.cfg")
+	var t := String(cf.get_value("net", "token", ""))
+	if t.length() < 16:
+		t = Crypto.new().generate_random_bytes(16).hex_encode()
+		cf.set_value("net", "token", t)
+		cf.save("user://net.cfg")
+	return t
+
+
 func _allow(id: int, cost := 1.0) -> bool:
 	var now := Time.get_ticks_msec() / 1000.0
 	var b: Array = _bucket.get(id, [60.0, now])
@@ -117,6 +134,8 @@ func _on_peer(id: int) -> void:
 
 func _on_gone(id: int) -> void:
 	_bucket.erase(id)
+	_tok.erase(id)
+	_acked.erase(id)
 	NetWorld.release(towns, id)
 	if players.erase(id):
 		_push()
@@ -164,8 +183,23 @@ func serve(ts: Array[City], winfo := {}) -> void:
 func broadcast() -> void:
 	if not is_host() or players.size() <= (0 if dedicated else 1):
 		return
-	for i in towns.size():
-		_state.rpc(i, NetWorld.pack(towns[i]))
+	_seq += 1
+	var packs: Array[PackedByteArray] = []
+	for t in towns:
+		packs.append(NetWorld.pack(t))
+	for id in multiplayer.get_peers():
+		if not players.has(id):
+			continue
+		var gap := _seq - int(_acked.get(id, _seq - 1))
+		if gap > KICK_LAG:
+			multiplayer.multiplayer_peer.disconnect_peer(id)  # stalled for a minute: stop queueing for it
+			continue
+		if gap > LAG:
+			_round.rpc_id(id, _seq)  # a slow client skips snapshots (only this tiny ping queues) and catches up once it answers
+			continue
+		for i in packs.size():
+			_state.rpc_id(id, i, packs[i])
+		_round.rpc_id(id, _seq)
 
 
 ## A player action. Clients ask the host; the host runs it for its own town directly.
@@ -212,20 +246,40 @@ func _state(idx: int, b: PackedByteArray) -> void:
 		state.emit(idx, d)
 
 
+@rpc("authority", "reliable")
+func _round(n: int) -> void:
+	_ack.rpc_id(1, n)
+
+
 @rpc("any_peer", "reliable")
-func _hello(pname: String) -> void:
+func _ack(n: int) -> void:
+	if multiplayer.is_server():
+		var id := multiplayer.get_remote_sender_id()
+		_acked[id] = maxi(int(_acked.get(id, 0)), n)
+
+
+@rpc("any_peer", "reliable")
+func _hello(pname: String, token: String) -> void:
 	if not multiplayer.is_server():
 		return
 	var id := multiplayer.get_remote_sender_id()
 	if players.has(id):
 		return
+	var tok := token if token.length() >= 16 and token.length() <= 64 else ""
+	if tok != "":
+		for old in _tok.keys():
+			if _tok[old] == tok and old != id:  # same player reconnecting before the old link timed out: take the old seat over
+				multiplayer.multiplayer_peer.disconnect_peer(old)
+				_on_gone(old)
+		_tok[id] = tok
+	_acked[id] = _seq
 	players[id] = {"name": _unique(_clean(pname)), "ping": 0}
 	_push()
 	_welcome.rpc_id(id)
 	if not towns.is_empty():
-		var mine := NetWorld.assign(towns, id, int(claims.get(players[id]["name"], -1)))
-		if mine >= 0:
-			claims[players[id]["name"]] = mine
+		var mine := NetWorld.assign(towns, id, int(claims.get(tok, -1)) if tok != "" else -1)
+		if mine >= 0 and tok != "":
+			claims[tok] = mine
 		_world.rpc_id(id, NetWorld.meta(towns, mine, world_info))
 
 

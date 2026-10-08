@@ -11,7 +11,7 @@ Related pages: [empire](empire.md) (the empire commands), [world](world.md), [co
 - Two ways to host, one code path: Start menu > Multiplayer > Host (the host also plays and owns the first town), or a headless dedicated server started with `--server`.
 - Every action a player takes is a command that the host validates (`Cmd.run`) and that only works on a town the sender owns.
 - The host sends every town's full state, gzip-compressed, once per simulated second. Clients never simulate.
-- A player who leaves hands the town back to the planner; rejoining under the same name returns it.
+- A player who leaves hands the town back to the planner; rejoining with the same install's secret token returns it.
 - There is no password, encryption, relay, world persistence or founding of towns in multiplayer yet.
 
 ## Hosting and joining
@@ -62,7 +62,7 @@ The server world is built with `start_game` as a **spectator** game (all towns p
 
 ### Joining sequence (`NetPlay`)
 
-1. The client connects; on `connected_to_server` it sends `_hello(name)`.
+1. The client connects; on `connected_to_server` it sends `_hello(name, token)`; the token is a random secret kept in `user://net.cfg` (`NetPlay._my_token`).
 2. The host starts a 5 second timer for every new peer (`HELLO_WAIT`). A peer that has not said hello by then is disconnected, so silent connections cannot fill the slots.
 3. On hello the host cleans the name, makes it unique, adds the player to `players` (`{"name", "ping"}`), pushes the roster to everyone, and sends `_welcome` to the new client.
 4. If the host has towns (`serve` was called), `NetWorld.assign` gives the player a town and the host sends the world meta `{"n": town count, "mine": index}`.
@@ -76,7 +76,7 @@ If every town is already taken, `mine` is -1 and the client joins as a **spectat
 
 ### Claims
 
-`NetPlay.claims` maps a player **name** to the town index they last ran. On hello, `NetWorld.assign(towns, peer, claims[name])`:
+`NetPlay.claims` maps a player's **rejoin token** (not the display name, and never sent to other players) to the town index they last ran. A hello without a valid token (16-64 characters) gets no claim. If the same token says hello while an older peer with that token is still connected, the old peer is disconnected and its town released first, so a fast reconnect returns to the same town. On hello, `NetWorld.assign(towns, peer, claims[token])`:
 
 - if the remembered town is still free (`owner == 0`) the player gets it back;
 - otherwise the player gets the first free town (lowest index) and the claim is updated.
@@ -138,7 +138,7 @@ The empire commands are described in detail on [empire](empire.md).
 
 ## Snapshots
 
-- `NetPlay.broadcast()` is called by `Main._process` once for every **simulated** second (when its `dacc` counter passes 1.0). It sends one reliable RPC `_state(index, bytes)` per town to every peer. Nothing is sent when there are no clients.
+- `NetPlay.broadcast()` is called by `Main._process` once for every **simulated** second (when its `dacc` counter passes 1.0). It sends one reliable RPC `_state(index, bytes)` per town to each client, then `_round(n)`, which the client answers with `_ack(n)`. A client more than `LAG` (4) rounds behind is skipped (only the tiny `_round` ping is sent) and catches up when it answers; more than `KICK_LAG` (60) rounds behind and it is disconnected. Nothing is sent when there are no clients.
 - Because it is tied to simulated seconds, the rate follows the game speed: about once per real second at 1x, faster at 3x and 8x, and not at all while the host is paused.
 - `NetWorld.pack(town)` is `var_to_bytes(town.to_dict())` compressed with gzip. `City.to_dict` writes the keys of `City.SAVE_KEYS` plus the citizen list and army, which is also exactly what a save contains for a town. Every town is sent in full each time; there are no diffs.
 - `NetWorld.unpack` decompresses with a hard cap of 4 MiB (`decompress_dynamic(4 << 20, ...)`) because the sender is untrusted, and accepts only a Dictionary. `City.from_dict` accepts only `SAVE_KEYS`, `cit`, `v` and `army`.
@@ -171,7 +171,7 @@ The proposal lands in the other player's petitions as an offer ("Sign it", "Decl
 From the code and `docs/MULTIPLAYER.md`:
 
 - One town per player; founding towns is disabled in multiplayer (`Main.found_town`), and so are empire-wide commands in practice.
-- No password, no authentication, no encryption; a name is the only identity (see Claims). Anyone who can reach the port can join, up to the player limit.
+- No password, no authentication, no encryption; the rejoin token only keeps a seat; it is not a login (see Claims). Anyone who can reach the port can join, up to the player limit.
 - No relay, server list or NAT punch-through; the host must be reachable (port forwarding or a VPN).
 - The dedicated server's world is not saved. A player-hosted game never writes the single-player save.
 - Full snapshots for every town once per simulated second, with no diffs; large towns and many players are untested.
@@ -194,7 +194,7 @@ From the code and `docs/MULTIPLAYER.md`:
 ## Open questions
 
 - **Weather and other `Signals`.** The `Signals` object is ticked inside the simulation loop and is not in `City.to_dict`, so a client's weather overlay and ambient sound presumably do not follow the host's. I did not test it.
-- **Claim identity.** Claims are keyed by display name only. A different person who joins under a name after its owner left receives that town; the design note in `docs/MULTIPLAYER.md` mentions a "name/token", but there is no token in the code.
+- **Claim identity.** Fixed: claims are keyed by a per-install secret token. The token is stored unencrypted in `user://net.cfg` and sent over unencrypted UDP, so it stops casual seat stealing only.
 - **IPv6 and host names.** `Lobby._join` splits the address on `:`, so an IPv6 literal cannot be entered; whether host names resolve was not checked.
 - **Failed listen.** `Main.host_game` ignores the return value of `NetPlay.host`; on failure the "Could not listen" text goes to the headline while the already-started world stays on screen with the host as owner.
 - **Name length.** `_unique` can append a number after the 20 character cut, so a name can be up to a few characters longer than `NAME_MAX`.
