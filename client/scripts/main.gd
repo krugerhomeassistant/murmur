@@ -99,9 +99,12 @@ func _capture_args() -> void:
 	var a := OS.get_cmdline_user_args()
 	if not "--capture" in a or a.find("--capture") + 1 >= a.size():
 		return
-	var dir := ProjectSettings.globalize_path(a[a.find("--capture") + 1])
+	capture(a[a.find("--capture") + 1], float(a[a.find("--every") + 1]) if "--every" in a and a.find("--every") + 1 < a.size() else 0.25)
+
+
+func capture(path: String, every := 0.25) -> void:
+	var dir := ProjectSettings.globalize_path(path)
 	DirAccess.make_dir_recursive_absolute(dir)
-	var every := float(a[a.find("--every") + 1]) if "--every" in a and a.find("--every") + 1 < a.size() else 0.25
 	var t := Timer.new()
 	t.wait_time = maxf(every, 0.05)
 	var n := [0]
