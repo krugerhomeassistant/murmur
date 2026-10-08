@@ -4,3 +4,5 @@ Workflow: feature branch, CHANGELOG [Unreleased] entry, PR, CI (`hygiene`, `smok
 Standing rule: the repo must always look professional and be accurate. README claims (paths, features, numbers) must be true and measured; run `python3 scripts/check_repo.py` before every PR; keep CHANGELOG, docs/ and README in sync with every change.
 Benchmark standard: windowed, 8 towns, 8x speed, all overlays on; report fps/p99/CPU/GPU/RAM/VRAM and hardware.
 Release rule: performance pass (profile, fix, re-run the standard benchmark, update the README table) is always the LAST step before a release; see `docs/RELEASING.md`.
+
+Authorship: never sign work. No `Co-Authored-By`/`Claude-Session` trailers on commits and no "Generated with" or session links in PR descriptions (owner's standing instruction).

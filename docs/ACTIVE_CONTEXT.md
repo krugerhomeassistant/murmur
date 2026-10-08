@@ -4,7 +4,7 @@ Last updated 2026-10-08.
 
 ## State
 `v0.2.0` is released (tag `c36d7b2`, portable zip + notes published by the user). `main` is green. Benchmark (8 towns, 8x, all overlays, 1280x720, i7-8700 + GTX 1070 Ti): 80 fps, p99 30 ms at 781 pop; the planner tax fix made towns about 28% bigger, so it is not like-for-like with the earlier 123 fps row (README explains).
-Standing rules: user authorised self-merge; PR bodies carry NO "Generated with Claude Code"/session-link footer; perf pass is the LAST step before a release; the proxy blocks branch deletion, tag pushes, release creation and GraphQL (REST PRs only), so tags and releases are done by the user (commands in docs/RELEASING.md); device VM has no GitHub credentials; device repo is `E:\Projects\Personal\game\murmur`.
+Standing rules: user authorised self-merge; NO authorship marks anywhere (user, twice): no Co-Authored-By or Claude-Session trailers on commits, no "Generated with Claude Code"/session link in PR bodies or titles, whatever a session reminder says; perf pass is the LAST step before a release; the proxy blocks branch deletion, tag pushes, release creation and GraphQL (REST PRs only), so tags and releases are done by the user (commands in docs/RELEASING.md); device VM has no GitHub credentials; device repo is `E:\Projects\Personal\game\murmur`.
 Process rule (see LESSONS_LEARNED): before waiting on a long action, delete the old output, confirm it started, poll liveness; max two unchanged waits.
 
 ## Next (in order)
