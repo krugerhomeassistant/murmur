@@ -19,7 +19,7 @@ Decided with the owner, 2026-10-08: **competitive towns** in one shared world (e
 ## Phases (each = branch, tests, CHANGELOG, PR)
 - [x] P0 transport: `NetPlay` (scripts/netplay.gd), `--server` / `--join host[:port]`, roster + ping, two-process test `tests/net.gd` (NET_OK).
 - [ ] P1 ownership: `City.owner`, per-peer "my town" (main's `city` is the local player's), spectator for extra peers.
-- [ ] P2 commands: route all mutators through one command function; host validation; rejection feedback.
+- [x] P2 commands: `Cmd.run` (scripts/cmd.gd) is the single validated route for place, bulldoze, water, tax, policy, loan, expand, auto toggles, training, petitions, rally and diplomacy; HUD and input call `Main.cmd`. `tests/cmd.gd` (CMD_OK) covers hostile arguments. Sandbox event triggers stay local-only.
 - [ ] P3 snapshot join + mirror + 1 Hz sync + grid diffs; a client sees a live world.
 - [ ] P4 lobby UI, chat, disconnect/rejoin handling.
 - [ ] P5 competitive features: player-vs-player treaties, war and raids use existing `Diplo`/`Military` with real owners.

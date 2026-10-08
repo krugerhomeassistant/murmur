@@ -334,7 +334,7 @@ func _top() -> void:
             m.sfx.vol = clampf(m.sfx.vol + (0.1 if id == 7 else -0.1), 0.0, 1.0)
             m.headline = "Volume %d%%" % int(m.sfx.vol * 100.0)
         else:
-            m.city.auto_mode = id
+            m.cmd("auto_mode", [id])
             auto_opt.select(id))
 
 
@@ -465,7 +465,7 @@ func _right() -> void:
         sl.size_flags_vertical = Control.SIZE_SHRINK_CENTER
         sl.tooltip_text = k[2]
         tax_sliders[k[0]] = sl
-        sl.value_changed.connect(func(v: float) -> void: m.city.set("tax_" + String(k[0]), v / 100.0))
+        sl.value_changed.connect(func(v: float) -> void: m.cmd("tax", [String(k[0]), v / 100.0]))
         h.add_child(sl)
     _hdr(bu, "INCOME AND EXPENSES  /s")
     budget = _rich(bu, 0)
@@ -479,7 +479,7 @@ func _right() -> void:
     for k in Civics.LOANS.size():
         var L: Dictionary = Civics.LOANS[k]
         var b := _btn(bu, "%s: get $%d, repay $%d over %d days" % [L["n"], L["amt"], int(float(L["amt"]) * (1.0 + float(L["rate"]))), L["days"]], func() -> void:
-            m.headline = "Loan approved: +$%d." % L["amt"] if m.city.take_loan(k) else "The bank says no (3 loans max, or the city is too small: pop %d needed)." % L["minpop"])
+            m.headline = "Loan approved: +$%d." % L["amt"] if m.cmd("loan", [k]) else "The bank says no (3 loans max, or the city is too small: pop %d needed)." % L["minpop"])
         b.tooltip_text = "Repayments come out of income every second until it is paid off."
     loans_l = _wrap(bu, 20)
     # Services
@@ -526,7 +526,7 @@ func _right() -> void:
     for d in 4:
         var dn: int = d
         var eb := _btn(lh, "", func() -> void:
-            if not m.city.expand(dn):
+            if not m.cmd("expand", [dn]):
                 m.headline = "Annexing needs $%d, or you have reached the edge of the map." % int(m.city.expand_cost()))
         eb.tooltip_text = "Buy a strip of land on this side. Each purchase costs more. New land is empty and ready for roads and zones."
         exp_btns.append(eb)
@@ -535,7 +535,7 @@ func _right() -> void:
     exp_chk.button_pressed = true
     exp_chk.focus_mode = Control.FOCUS_NONE
     exp_chk.tooltip_text = "The planner buys more land by itself when it runs out of room beside roads (needs 1.5x the price in the treasury)."
-    exp_chk.toggled.connect(func(on: bool) -> void: m.city.auto_expand = on)
+    exp_chk.toggled.connect(func(on: bool) -> void: m.cmd("auto_expand", [on]))
     rg.add_child(exp_chk)
     dipl_box = VBoxContainer.new()
     dipl_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -549,7 +549,7 @@ func _right() -> void:
     auto_opt.add_item("Zones + roads", 2)
     auto_opt.select(2)
     auto_opt.tooltip_text = "When demand rises, the planner zones free plots next to roads (and extends roads) at the city's own cost. Zones only: it never lays roads."
-    auto_opt.item_selected.connect(func(i: int) -> void: m.city.auto_mode = i)
+    auto_opt.item_selected.connect(func(i: int) -> void: m.cmd("auto_mode", [i]))
     po.add_child(auto_opt)
     var ap := CheckButton.new()
     ap.text = "Auto-policies (council decides)"
@@ -557,7 +557,7 @@ func _right() -> void:
     ap.focus_mode = Control.FOCUS_NONE
     ap.tooltip_text = "The council switches policies on when the city needs them (crime, waste, pollution, deficit...) and off again when the problem passes. Turn off to run policies yourself."
     auto_chk = ap
-    ap.toggled.connect(func(on: bool) -> void: m.city.auto_policy = on)
+    ap.toggled.connect(func(on: bool) -> void: m.cmd("auto_policy", [on]))
     po.add_child(ap)
     _hdr(po, "POLICIES (continuous cost or saving)")
     for k in Catalog.POLICIES:
@@ -565,7 +565,7 @@ func _right() -> void:
         cb.text = Catalog.POLICIES[k]["n"]
         cb.focus_mode = Control.FOCUS_NONE
         cb.tooltip_text = Catalog.describe_policy(k).replace("[b]", "").replace("[/b]", "").replace("[color=#9aa88f]", "").replace("[/color]", "")
-        cb.toggled.connect(func(on: bool) -> void: m.city.set_policy(k, on))
+        cb.toggled.connect(func(on: bool) -> void: m.cmd("policy", [k, on]))
         po.add_child(cb)
         pol_btns[k] = cb
     # Events
@@ -921,7 +921,7 @@ func _army() -> void:
     army_chk.text = "Auto-train troops (T)"
     army_chk.focus_mode = Control.FOCUS_NONE
     army_chk.tooltip_text = "Barracks and bases train units while you can afford them. Units cost upkeep; unpaid troops desert."
-    army_chk.toggled.connect(func(on: bool) -> void: m.city.train_on = on)
+    army_chk.toggled.connect(func(on: bool) -> void: m.cmd("train", [on]))
     body.add_child(army_chk)
     army_l = _rich(body, 0)
     _hdr(body, "TRAINING PRIORITY (0 off, 1 slow, 2 normal, 3 fast)")
@@ -950,7 +950,7 @@ func _army() -> void:
 
 func _set_prio(k: String, d: int) -> void:
     var w := Military.weights(m.city)
-    m.city.train_w[k] = clampi(int(w[k]) + d, 0, 3)
+    m.cmd("train_w", [k, clampi(int(w[k]) + d, 0, 3)])
 
 
 func _army_refresh(c: City) -> void:
@@ -982,7 +982,7 @@ func _mayor() -> void:
     appr_bar.size_flags_vertical = Control.SIZE_SHRINK_CENTER
     top.add_child(appr_bar)
     rally_b = _btn(top, "Rally $%d" % int(Civics.RALLY_COST), func() -> void:
-        m.headline = "" if m.city.rally() else "Rallies only in the last 7 days before an election, once per campaign, and they cost $%d." % int(Civics.RALLY_COST))
+        m.headline = "" if m.cmd("rally") else "Rallies only in the last 7 days before an election, once per campaign, and they cost $%d." % int(Civics.RALLY_COST))
     rally_b.tooltip_text = "Hold a campaign rally: +7% approval. Once per election, only in the last week."
     elect_l = _wrap(body, 0)
     var mt := TabContainer.new()
@@ -1093,7 +1093,7 @@ func _rebuild_dipl(c: City) -> void:
         _act_btn(h1, "Gift $100", pp, "gift", "Send aid: they like you +16%, you like them a little more. They keep half the money.")
         _act_btn(h1, "Trade pact $200", pp, "pact", "Needs 15% relation. +25% power/water imports and commuters, and their opinion drifts up.")
         _act_btn(h1, "Alliance $400", pp, "alliance", "Needs a pact and 55% relation. +40% trade and +25% defence coverage for both.")
-        var emb := _btn(h2, "Embargo", func() -> void: m.headline = Diplo.act(m.city, pp, "lift" if Diplo.treaty(m.city, pp) == "embargo" else "embargo"))
+        var emb := _btn(h2, "Embargo", func() -> void: m.headline = m.say("diplo", [m.towns.find(pp), "lift" if Diplo.treaty(m.city, pp) == "embargo" else "embargo"]))
         emb.tooltip_text = "Cut all trade and commuting. They resent it a lot."
         _act_btn(h2, "Demand tribute", pp, "tribute", "Only works if your military is clearly stronger. They pay up to $150 and resent it.")
         _act_btn(h2, "Peace $150", pp, "peace", "Envoys and apologies: +25% their opinion. Lifts an embargo.")
@@ -1117,7 +1117,7 @@ func _side_text(c: City, p: City) -> String:
 
 
 func _act_btn(par: Node, text: String, pp: City, what: String, tip: String) -> void:
-    var b := _btn(par, text, func() -> void: m.headline = Diplo.act(m.city, pp, what))
+    var b := _btn(par, text, func() -> void: m.headline = m.say("diplo", [m.towns.find(pp), what]))
     b.tooltip_text = tip
 
 
@@ -1160,8 +1160,8 @@ func _rebuild_decisions(c: City) -> void:
         elif kind == "demand":
             yes_t = "Pay $%d" % int(p["amount"])
             no_t = "Refuse"
-        _btn(h, yes_t, func() -> void: m.city.answer(idx, true))
-        _btn(h, no_t, func() -> void: m.city.answer(idx, false))
+        _btn(h, yes_t, func() -> void: m.cmd("answer", [idx, true]))
+        _btn(h, no_t, func() -> void: m.cmd("answer", [idx, false]))
     _hdr(dec_box, "PROMISES YOU MADE")
     if c.promises.is_empty():
         _wrap(dec_box, 0).text = "None. Kept promises raise approval; broken ones hurt badly."

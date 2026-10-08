@@ -373,7 +373,7 @@ func _unhandled_input(e: InputEvent) -> void:
 				follow = not follow
 				headline = "Auto-follow %s." % ("on" if follow else "off")
 			KEY_T:
-				city.train_on = not city.train_on
+				cmd("train", [not city.train_on])
 				headline = "Auto-train troops %s." % ("on" if city.train_on else "off")
 			KEY_F3:
 				perf_on = not perf_on
@@ -404,6 +404,16 @@ func cell() -> Vector2i:
 	return Vector2i(floori(m.x), floori(m.y))
 
 
+## Every player action goes through Cmd (validated; the multiplayer host runs the same call for clients).
+func cmd(n: String, a: Array = []) -> Variant:
+	return Cmd.run(towns, city, n, a)
+
+
+func say(n: String, a: Array) -> String:
+	var r: Variant = cmd(n, a)
+	return r if r is String else ""
+
+
 func _paint(click: bool) -> void:
 	_dirty_cell(cell())
 	var c := cell()
@@ -417,17 +427,17 @@ func _paint(click: bool) -> void:
 			if click:
 				_select(c)
 		BULLDOZE:
-			if city.bulldoze(c.x, c.y):
+			if cmd("bulldoze", [c.x, c.y]):
 				sfx.cue("bulldoze")
 		WATER_ADD:
-			city.set_water(c.x, c.y, 1)
+			cmd("water", [c.x, c.y, 1])
 		WATER_DEL:
-			city.set_water(c.x, c.y, 0)
+			cmd("water", [c.x, c.y, 0])
 		_:
 			if not city.unlocked(tool):
 				if click:
 					headline = "%s unlocks at population %d." % [Catalog.DEFS[tool]["n"], Catalog.DEFS[tool]["unlock"]]
-			elif city.place(c.x, c.y, tool):
+			elif cmd("place", [c.x, c.y, tool]):
 				sfx.cue("place")
 			elif click and not city.owns(c.x, c.y):
 				headline = "That land isn't yours yet. Annex it from the Region tab."
