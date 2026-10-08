@@ -22,6 +22,7 @@ Everything is drawn with code (no art assets), the whole game is data-driven.
 | | |
 |---|---|
 | **Towns that grow themselves** | Zone beside roads and the planner builds homes, shops, farms, factories and services as needs arise. Or take the wheel and place everything. |
+| **Wiki** | A complete reference for every building, unit, policy and event and the rules behind them, kept in step with the code by CI: [docs/wiki](docs/wiki/README.md). |
 | **Multi-window** | Every HUD window can pop out into its own OS window ("Out" button) for multi-monitor play; layout is remembered. |
 | **Empire view** | Run many towns at once: one window with every town's population, money, mood and alerts, one-click settings for all of them, and money transfers between your towns. Spectating opens it automatically. |
 | **A living region** | Up to eight neighbouring towns trade power, water and commuters over border roads. Each runs on its own planner and has a temper. |
@@ -77,7 +78,7 @@ Headless profilers (`tests/regionbench.gd`, `bench.gd`, `stageprof.gd`) are seco
 | `client/tests/` | Headless tests (the ones CI runs are listed in `.github/workflows/ci.yml`), profilers and the media tools `showcase.gd` / `reel.gd` |
 | `.github/` | CI workflow, issue and PR templates |
 | `docs/` | Design, plan, lessons, architecture ([index](docs/README.md)) |
-| `docs/WIKI.md` | Design and rules, the source of truth |
+| [`docs/wiki/`](docs/wiki/README.md) | The full wiki: every building, unit, policy and event, and the mechanics behind them |
 | `docs/PLAN.md` | Roadmap with checkboxes |
 | `docs/ARCHITECTURE.md`, `docs/LESSONS_LEARNED.md` | How it fits together, what bit us |
 | `CHANGELOG.md`, `CONTRIBUTING.md`, `docs/RELEASING.md` | Process (Keep a Changelog, SemVer, `scripts/bump.py`) |

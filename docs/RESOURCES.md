@@ -2,7 +2,7 @@
 
 ## Project files
 - `GAME_DESIGN.md`: vision, feeds→city mapping, sim rules, roadmap
-- `PLAN.md`, `WIKI.md`, `LESSONS_LEARNED.md`, `RESOURCES.md`, `TOOLING_AND_MCP.md`, `ACTIVE_CONTEXT.md`, `ARCHITECTURE.md`
+- `PLAN.md`, `wiki/` (the wiki, see wiki/README.md), `LESSONS_LEARNED.md`, `RESOURCES.md`, `TOOLING_AND_MCP.md`, `ACTIVE_CONTEXT.md`, `ARCHITECTURE.md`
 - `server/` (Phase 1+), `client/` (Godot project, Phase 2+)
 - User PC: `E:\Projects\Personal\game\murmur\`; tools in `C:\Users\king-\workspace\tools\` (Godot 4.7.2, Blender 5.2.2)
 
