@@ -6,6 +6,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 ## [Unreleased]
 
 ### Added
+- Empire window (Windows > Empire (all towns); opens by itself when spectating): every town's population, coins, net income, mood and alerts at a glance (sortable, "Go" to visit), empire totals, one-click settings for all your towns (auto-growth, policies, annexing, troop training, tax rates), "+$100" gifts between your towns and "Balance treasuries". New validated commands `send`, `balance` and `apply_all` (multiplayer-safe: they only touch towns of the same owner). `tests/empire.gd`.
 - `World` (`scripts/world.gd`): deterministic endless terrain generator (sea, rivers, sand, plains, forest, hills, rock, ore) for the upcoming endless map; `tests/world.gd`. Not used by towns yet.
 - Founding a town is a map action: Towns menu > Found a new town, then click any free plot (green = affordable, red = blocked or too dear; Esc cancels). The price is $300 plus $120 per plot of distance from the nearest town, and plots with too much water are refused. Not available in multiplayer yet.
 - The land between and around the towns is drawn from the endless world (rivers, lakes, coast, forest, hills, rock, ore), generated a few milliseconds per frame near the camera, and the camera may roam 10 plots past the outermost town (it was clamped to the towns).

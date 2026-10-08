@@ -62,6 +62,26 @@ static func run(towns: Array[City], t: City, name: String, a: Array) -> Variant:
 				return true
 		"rally":
 			return t.rally()
+		"send":  # coins to another of your towns
+			if _ints(a, 2) and a[0] >= 0 and a[0] < towns.size() and towns[a[0]] != t and a[1] > 0 and a[1] <= 1000000:
+				return Empire.send(t, towns[a[0]], a[1])
+		"balance":  # even out the treasuries of all your towns
+			if _ints(a, 1) and a[0] >= 0 and a[0] <= 5000:
+				return Empire.rebalance(Empire.mine(towns, t), float(a[0]))
+		"apply_all":  # one setting on every one of your towns: [key, value]; tax is [ "tax", "r"|"c"|"i", rate ]
+			if a.size() >= 2 and a[0] is String and a[0] in Empire.BULK:
+				var n := 0
+				for o in Empire.mine(towns, t):
+					var args: Array = a.slice(1)
+					var key: String = a[0]
+					if key == "tax":
+						if args.size() != 2:
+							return null
+					elif args.size() != 1:
+						return null
+					if run(towns, o, key, args) != null:
+						n += 1
+				return n
 		"diplo":
 			if a.size() == 2 and a[0] is int and a[1] is String and a[1] in DIPLO and a[0] >= 0 and a[0] < towns.size() and towns[a[0]] != t:
 				return Diplo.act(t, towns[a[0]], a[1])
