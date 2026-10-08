@@ -38,6 +38,7 @@ jobs:
           timeout 600 godot --headless --path client -s tests/ai.gd | tee a.txt && grep -q AI_OK a.txt
           timeout 600 godot --headless --path client -s tests/farms.gd | tee f.txt && grep -q FARMS_OK f.txt
           timeout 600 godot --headless --path client -s tests/pmine.gd | tee p.txt && grep -q PMINE_OK p.txt
+          timeout 600 godot --headless --path client -s tests/growth.gd | tee g.txt && grep -q GROWTH_OK g.txt
   netplay:
     runs-on: ubuntu-latest
     timeout-minutes: 20
