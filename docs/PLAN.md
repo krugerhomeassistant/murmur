@@ -135,7 +135,7 @@ Goal: Murmur, a cozy interactive city-builder (Godot) with an optional Live Data
 - STANDING RULE: README/docs must never claim anything untrue or stale; scripts/check_repo.py runs in CI (hygiene job).
 
 ## Empire / endless world (user, 2026-10-08): NEXT MAJOR FEATURE, design in docs/EMPIRE_DESIGN.md
-- [ ] E1 Endless procedural world: `world.gd` generator + chunk cache, plots anchored by world position (replace `gpos`), fog of war, found-a-town on the map with distance cost (replaces flat $300), claim adjacent land, save v2 + migration, `tests/world.gd`.
+- [ ] E1 Endless procedural world: [x] `world.gd` generator + chunk cache + `tests/world.gd` (determinism, no chunk seams, terrain mix); plots anchored by world position (replace `gpos`), fog of war, found-a-town on the map with distance cost (replaces flat $300), claim adjacent land, save v2 + migration, `tests/world.gd`.
 - [ ] E2 Empire mode (upgraded spectator): dashboard, bulk policies, planner delegate with approve/veto queue, empire treasury, sim level of detail.
 - [ ] E3 Group multiplayer: owner + group per town, shared group economy, group diplomacy/war, join mid-game. Prereqs: rejoin token, snapshot backpressure.
 - [ ] E4 Economy depth: goods chains, regional prices, trade routes, upkeep, loans.
