@@ -1,6 +1,6 @@
 # Market
 
-Five goods are traded: crops, food, goods, ore and metal. Each good has its own price with its own base (crops 0.6, food 1.5, goods 2.0, ore 0.8, metal 3.0) and moves on its own supply and demand; the five never share a price. There are two levels: the **world price** of each good (the outside market, set by all towns together) and each town's **local price** (scarcity inside the town, between selling abroad at 80% and buying abroad at 120% of the world price). Linked towns also trade goods with each other when the price gap pays for freight. Implementation: `client/scripts/market.gd` (class `Market`), owned by `Signals` (`sig.mk`), used by `City._trade`. Test: `client/tests/market.gd`.
+Six goods are traded: crops, food, goods, ore, metal and arms. Each good has its own price with its own base (crops 0.6, food 1.5, goods 2.0, ore 0.8, metal 3.0) and moves on its own supply and demand; the six never share a price. There are two levels: the **world price** of each good (the outside market, set by all towns together) and each town's **local price** (scarcity inside the town, between selling abroad at 80% and buying abroad at 120% of the world price). Linked towns also trade goods with each other when the price gap pays for freight. Implementation: `client/scripts/market.gd` (class `Market`), owned by `Signals` (`sig.mk`), used by `City._trade`. Test: `client/tests/market.gd`.
 
 ## Price formation
 Every sim second `Market.tick` closes a window. For each good:
@@ -12,7 +12,7 @@ target = BASE[good] * signal * clamp((D / S) ^ 0.6, 0.35, 3.0)
 price += (target - price) * min(0.12 * window, 1)
 ```
 
-`signal` is `1 + 0.3 * market` from `Signals` (the world market signal, -1..1). Base prices: crops 0.6, food 1.5, goods 2.0, ore 0.8, metal 3.0. The outside world keeps prices bounded and stops one idle town from moving a price alone. A good nobody trades stays at base.
+`signal` is `1 + 0.3 * market` from `Signals` (the world market signal, -1..1). Base prices: crops 0.6, food 1.5, goods 2.0, ore 0.8, metal 3.0, arms 4.0. The outside world keeps prices bounded and stops one idle town from moving a price alone. A good nobody trades stays at base.
 
 The price is sampled into a history every 10 s (90 samples, 15 minutes) for the Market window. Clients of a multiplayer game receive prices and last-window supply and demand inside every town snapshot (`City.to_dict` key `mk`) and keep their own history.
 
@@ -52,6 +52,9 @@ Windows > Market (`Hud._market_win`). Columns: price, change against base, units
 
 ## Save and multiplayer
 `Main.save_game` stores `sig.mk.to_dict()`; a new game starts with a fresh `Market`. `Market.from_dict` clamps prices, so a hostile snapshot cannot inject absurd values.
+
+## Arms supply chain
+Armouries (military building, cost 420) turn up to 0.25 metal/s into 2x arms; the metal comes from the town's own stock or the metal market, and ore from its own mines or the ore market, so a town without a mine buys. Training a unit now costs `cost*0.6` coins (labour) plus `ceil(cost/25)` arms: the town uses its own arms first, then buys the rest abroad at `price*1.2` and reports the demand to the market. Arms with no armoury or metal are simply bought, so war makes arms and metal prices rise. The planner builds an armoury when arms stock is low or the town is threatened (`City._plan_service`). Test: `client/tests/arms.gd`.
 
 ## Where in the code
 | Topic | Code |

@@ -9,7 +9,7 @@ enum Id {
     PARK, PLAYGROUND, PLAZA, CINEMA, MUSEUM, STADIUM, THEME,
     BUS, TRAIN, WIND, SOLAR, COAL, WATER, LANDFILL, RECYCLE,
     MARKET, BANK, MALL, HOTEL, TOWNHALL, WIRE, PIPE, LIGHT, COURT, PRISON, COTTAGE, TOWNHOUSE, TENEMENT, CONDO, CHURCH, BAR, UNION_HALL, CHAMBER, BASE, BARRACKS, RADAR, MILL, WAREHOUSE, DEPOT, SEWAGE, SEWER, PORT, NAVYARD, FISHDOCK,
-    ORCHARD, RANCH, MINE, FOUNDRY, GREENHOUSE, FISHFARM,
+    ORCHARD, RANCH, MINE, FOUNDRY, GREENHOUSE, FISHFARM, ARMOURY,
 }
 
 const CATS := [
@@ -354,6 +354,10 @@ const DEFS := {
         "r": 0, "prov": {}, "jobs": 8, "poll": [3, 0.3], "chain": "foundry", "shape": "chimney",
         "desc": "Smelts ore into metal, up to 2 ore a second. Metal sells for far more than ore, and factories turn it into extra goods.",
         "tip": "Needs a mine. One foundry per 3-4 mine plots."},
+    Id.ARMOURY: {"n": "Armoury", "cat": "mil", "kind": "svc", "cost": 420, "up": 1.5, "unlock": 160, "col": Color("6b6a52"), "g": "Ar",
+        "r": 0, "prov": {}, "jobs": 10, "poll": [3, 0.3], "chain": "arms", "shape": "fort",
+        "desc": "Turns metal into arms (up to 0.25 metal a second becomes 0.5 arms). Every soldier, tank and plane costs arms to train: make them from your own metal, or buy them abroad at a premium that rises in wartime.",
+        "tip": "Needs metal: a foundry, or a metal supplier across the border. Build it next to your barracks."},
     Id.WAREHOUSE: {"n": "Warehouse", "cat": "trade", "kind": "svc", "cost": 120, "up": 0.4, "unlock": 30, "col": Color("8a7a6a"), "g": "Wh",
         "r": 0, "prov": {}, "jobs": 3, "chain": "store",
         "desc": "Adds 250 units of storage for crops, food and goods. Stock above 80% of capacity is sold off cheaply as exports; without space, harvests and factory output are wasted.",

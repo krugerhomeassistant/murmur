@@ -2,7 +2,7 @@
 
 # Buildings and tiles
 
-65 placeable things in 12 categories. `unlock` is the population (peak) at which the Build menu offers it. Costs are coins; `upkeep` is coins per second before the town-size and policy multipliers (see [Economy](economy.md)).
+66 placeable things in 12 categories. `unlock` is the population (peak) at which the Build menu offers it. Costs are coins; `upkeep` is coins per second before the town-size and policy multipliers (see [Economy](economy.md)).
 
 How to read an entry: **Radius** is the service reach in tiles (Manhattan diamond); **Provides** lists the city-stat coverage it adds (see [City stats](stats.md)); **Output** is the network supply it adds (power, water, sewage units); **Jobs** is staff; **Pollution** is `[radius, strength]`; **Tourism** is visitor income strength; **Visited** means citizens walk there as a leisure destination; **Grant** is a free income (coins per second, scaled by `RATE`).
 
@@ -1093,6 +1093,7 @@ The seat of government. Covered homes gain +4% mood and the city loses less when
 | [Military base](#military-base) | 800 | 4 | 150 | svc |
 | [Barracks](#barracks) | 350 | 1.5 | 150 | svc |
 | [Radar post](#radar-post) | 250 | 1 | 160 | svc |
+| [Armoury](#armoury) | 420 | 1.5 | 160 | svc |
 
 ### Naval yard
 
@@ -1165,6 +1166,23 @@ Watches the skies: 60% defence coverage within 20 tiles, 4 jobs and a small gran
 | Map colour / letter | `#7a8a9a` / `Ra` |
 
 *Tip:* Two radars plus a base give full defence.
+
+### Armoury
+
+Turns metal into arms (up to 0.25 metal a second becomes 0.5 arms). Every soldier, tank and plane costs arms to train: make them from your own metal, or buy them abroad at a premium that rises in wartime.
+
+| | |
+|---|---|
+| Id | `ARMOURY` |
+| Cost / upkeep | 420 / 1.5 per s |
+| Unlocks at | 160 population |
+| Kind | svc |
+| Jobs | 10 |
+| Pollution | radius 3, strength 0.3 |
+| Production chain | arms |
+| Map colour / letter | `#6b6a52` / `Ar` |
+
+*Tip:* Needs metal: a foundry, or a metal supplier across the border. Build it next to your barracks.
 
 ## Industry & trade
 

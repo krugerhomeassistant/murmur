@@ -34,5 +34,5 @@ The values the rules are built on, read from the code at generation time.
 | `market_world` | 1.5 |
 | `market_sens` | 0.6 |
 | `market_follow` | 0.12 |
-| `market_base` | {"crops": 0.6, "food": 1.5, "goods": 2.0, "ore": 0.8, "metal": 3.0} |
+| `market_base` | {"crops": 0.6, "food": 1.5, "goods": 2.0, "ore": 0.8, "metal": 3.0, "arms": 4.0} |
 | `weather_penalty` | {"clear": 0.0, "rain": 0.05, "heatwave": 0.1, "storm": 0.2, "snow": 0.05, "fog": 0.02} |
