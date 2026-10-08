@@ -110,13 +110,13 @@ Goal: Murmur, a cozy interactive city-builder (Godot) with an optional Live Data
 - [ ] Install notes: godot-claude-skills live in .claude/skills (done).
 - [ ] Threading (perf): no threads today. Tick off-screen towns on WorkerThreadPool with a start-of-tick snapshot of partner net_own/net_dem/treaty state (the only cross-town reads); join before Diplo.second. Keep only if the 6-8 town benchmark improves.
 
-## World view (user, 2026-10-07) - IN PROGRESS (branch feat/world-view)
-- [ ] One continuous world: every town drawn at its grid offset; pan/scroll between towns, no toggling. The "map" is just this view zoomed out (live), replacing RegionMap overlay.
-- [ ] Viewed town = town under camera centre (HUD follows); clicking another town glides the camera to it
-- [ ] Far-zoom LOD 3: per-town live thumbnail textures + town name labels (cheap at 8 towns)
-- [ ] Visible off-screen towns tick faster (0.25 s batches) so they look alive
-- [ ] M = fit-the-whole-world toggle; update README controls, WIKI, benchmark second scenario (world view)
-- [ ] Links must be real: a border link needs a road in the town's biggest connected road network reaching the border; planner towns lay that road themselves (`_plan_gate`); no more "linked" without roads (user screenshot, spectator mode).
+## World view (user, 2026-10-07) - DONE (merged)
+- [x] One continuous world: every town drawn at its grid offset; pan/scroll between towns, no toggling. The "map" is just this view zoomed out (live), replacing RegionMap overlay.
+- [x] Viewed town = town under camera centre (HUD follows); clicking another town glides the camera to it
+- [x] Far-zoom LOD 3: per-town live thumbnail textures + town name labels (cheap at 8 towns)
+- [x] Visible off-screen towns tick faster (0.25 s batches) so they look alive
+- [x] M = fit-the-whole-world toggle; update README controls, WIKI, benchmark second scenario (world view)
+- [x] Links must be real: a border link needs a road in the town's biggest connected road network reaching the border; planner towns lay that road themselves (`_plan_gate`); no more "linked" without roads (user screenshot, spectator mode).
 - [x] REAL ARMIES done (feat/armies): trained units (infantry/tanks/jets) with hp, range, damage; fight on the front, occupation forces surrender; T toggles auto-training. 
 - [x] AI ARMIES done (feat/ai-armies): threat-driven military building, counter-training, naval yards for river enemies.
 - [ ] Perf: Military.fight is O(n^2) per pair (6 ms at 110 units a side, army cap 150); spatial bucketing by gpos when the spike pass starts.
@@ -126,8 +126,8 @@ Goal: Murmur, a cozy interactive city-builder (Godot) with an optional Live Data
 - Do NOT drop the other backlog above (mining planner, v0.2.0, screenshots, lint in CI (done), spike work, threading, ferries, farm variants); this sits alongside it.
 
 ## Multiplayer: design decided 2026-10-08, see docs/MULTIPLAYER.md (competitive, 2-8 players, LAN/direct IP + dedicated server)
-- [ ] Research + decide model before any code: (a) co-op shared world (one host sim, clients send build/diplomacy commands, host streams state) vs (b) each player runs own town(s) in the one world with diplomacy/war between players vs (c) async/visit. Godot 4 high-level multiplayer (ENet/WebSocket, RPC) is the likely base.
-- [ ] Prereqs to check: sim uses randf()/global RNG and wall-clock (Time.get_ticks_msec) in places, so it is not deterministic: host-authoritative state sync is the realistic route, not lockstep. Saves already serialise towns (`to_dict`), a snapshot format exists. World view already has one human-owned town flag (`human`), so multi-owner needs per-town owner id and per-player HUD.
+- [x] (done: competitive towns, one ENet code path; phases P0-P6 shipped, see MULTIPLAYER.md) Research + decide model before any code: (a) co-op shared world (one host sim, clients send build/diplomacy commands, host streams state) vs (b) each player runs own town(s) in the one world with diplomacy/war between players vs (c) async/visit. Godot 4 high-level multiplayer (ENet/WebSocket, RPC) is the likely base.
+- [x] Prereqs checked: sim uses randf()/global RNG and wall-clock (Time.get_ticks_msec) in places, so it is not deterministic: host-authoritative state sync is the realistic route, not lockstep. Saves already serialise towns (`to_dict`), a snapshot format exists. World view already has one human-owned town flag (`human`), so multi-owner needs per-town owner id and per-player HUD.
 
 ## Priority notes (user, 2026-10-07)
 - [x] BENCHMARK STANDARD: real windowed run (not headless), 8 towns, 8x speed, ALL overlays on; report fps/p99/CPU/GPU/RAM/VRAM for that. README table must use it. Headless sim numbers are secondary only.
@@ -146,3 +146,11 @@ Rules: keep `Military` deterministic enough for `tests/war.gd`; the host simulat
 
 ## Known issues
 - [ ] Planner stall: an isolated early town (no policy, ~0.3 mood) can sit under the `mood < 0.38` zone gate for 600 sim-s with 2000 coins and never grow (about 7% of fresh towns, seen in `City.selfcheck`). CI now allows 3 fresh towns; the real fix is to have `_plan_service` raise mood first when the gate is the blocker.
+## Audit 2026-10-08 follow-ups (not yet done)
+- [ ] Rejoin token: claims are keyed by name only, so anyone can take a dropped player's town by using their name; also a fast rejoin gets a different town while the old peer lingers.
+- [ ] Snapshot backpressure: reliable per-second snapshots can queue without bound for a stalled client.
+- [ ] Server: password, bind address, kick/ban, world persistence; `SECURITY.md` should say the dedicated server is not hardened.
+- [ ] Tests missing: save/load round trip, elections/game-over, diplomacy single-player, events, hud/setup wiring, net abuse (silent peers, command floods).
+- [ ] CI: cache the Godot binary, `set -o pipefail`, export job, tag-triggered release workflow (smoke step once hung 25 min on a runner; per-step timeouts now exist).
+- [ ] UX: hotkey help (F1), settings and pause menu, volume persistence, multiple save slots, UI scale, colour-blind overlays.
+- [ ] Planner economy: utilities lag demand (score ignores output), overbuilt jobs vs housing, annexation unbounded (all 6144 cells at pop 78), `to_dict` omits a few runtime fields.
