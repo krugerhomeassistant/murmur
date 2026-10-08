@@ -39,6 +39,7 @@ var overlay := ""
 var cam: Camera2D
 var mod: CanvasModulate
 var hud: Hud
+var net: NetPlay
 var sfx: Sfx
 const SAVE := "user://murmur_save.bin"
 var last_day := -1
@@ -72,9 +73,24 @@ func _ready() -> void:
 	hud.set_anchors_preset(Control.PRESET_FULL_RECT)
 	hud.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	layer.add_child(hud)
+	net = NetPlay.new()
+	net.name = "Net"
+	get_tree().root.add_child.call_deferred(net)
 	open_setup()
+	_net_args.call_deferred()
 	if "--benchmark" in OS.get_cmdline_user_args():
 		run_benchmark(true)
+
+
+## `--server [--port N]` hosts a dedicated game, `--join host[:port]` joins one (transport only until multiplayer phase 3).
+func _net_args() -> void:
+	var a := OS.get_cmdline_user_args()
+	var port := int(a[a.find("--port") + 1]) if "--port" in a and a.find("--port") + 1 < a.size() else NetPlay.PORT
+	if "--server" in a:
+		print("Murmur server: ", "listening on UDP %d" % port if net.host(port, "Server", true) else "failed to start")
+	elif "--join" in a and a.find("--join") + 1 < a.size():
+		var hp: PackedStringArray = a[a.find("--join") + 1].split(":")
+		net.join(hp[0], int(hp[1]) if hp.size() > 1 else NetPlay.PORT, "Player")
 
 
 func run_benchmark(quit_after := false) -> void:

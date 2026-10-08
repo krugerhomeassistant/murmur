@@ -6,6 +6,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 ## [Unreleased]
 
 ### Changed
+- Multiplayer phase 0: `--server`/`--join` flags, lobby player table with ping, two-process test.
 - Multiplayer design doc (docs/MULTIPLAYER.md): host-authoritative, competitive towns, 2-8 players, LAN/direct IP and dedicated server.
 - Release process documented end to end (docs/RELEASING.md); performance pass is the last step before every release.
 - Perf: land value recompute splats coverage and pollution fields once per pass (headless 8-town profile: land stage 5.0 s to 2.5 s over 30000 steps, worst step 19 to 14 ms).
