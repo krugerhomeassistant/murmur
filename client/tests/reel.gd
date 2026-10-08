@@ -1,6 +1,6 @@
 extends Node
 ## Scripted flyover that records the README GIF frames (see scripts/MEDIA.md). Needs a built showcase town as `m.city`.
-## world pull-in -> street level at 8x -> overlays -> border war -> pull back out. `out` gets numbered PNGs.
+## world pull-in -> street level at 8x -> overlays -> far side of town -> pull back out (loops). `_war()` is kept for a battle shot. `out` gets numbered PNGs.
 var m: Node
 var out := ""
 var fps := 24.0
@@ -29,24 +29,20 @@ func _process(d: float) -> void:
 	t += d
 	var far := home + Vector2(300, 100)
 	var east: Vector2 = home + Vector2(420, -200)
-	var fight := _front()
+	var west: Vector2 = home + Vector2(-380, 120)
 	if t < 3.0:  # pull in from the world map
 		m.speed = 8.0
 		_cam(far, home, 0.28, 2.0, t / 3.0)
-	elif t < 7.0:  # drift along the main street at 8x
-		_cam(home, east, 2.0, 2.0, (t - 3.0) / 4.0)
-	elif t < 11.0:  # overlays, a fresh one every 0.7 s
-		m.overlay = OVERLAYS[mini(int((t - 7.0) / 0.7), OVERLAYS.size() - 1)]
-		_cam(east, home - Vector2(300, 150), 2.0, 1.2, (t - 7.0) / 4.0)
-	elif t < 15.0:  # war at the border
+	elif t < 8.0:  # drift along the main street at 8x
+		_cam(home, east, 2.0, 2.4, (t - 3.0) / 5.0)
+	elif t < 12.0:  # overlays, a fresh one every 0.7 s
+		m.overlay = OVERLAYS[mini(int((t - 8.0) / 0.7), OVERLAYS.size() - 1)]
+		_cam(east, home, 2.4, 1.3, (t - 8.0) / 4.0)
+	elif t < 17.0:  # the other side of town, close in
 		m.overlay = ""
-		if t - d < 11.0:
-			_war()
-		m.speed = 3.0
-		_cam(home - Vector2(300, 150), fight, 1.2, 0.8, (t - 11.0) / 1.5)
-	elif t < 18.0:  # pull back out to the start frame so the GIF loops
-		m.speed = 8.0
-		_cam(fight, far, 0.8, 0.28, (t - 15.0) / 3.0)
+		_cam(home, west, 1.3, 2.4, (t - 12.0) / 5.0)
+	elif t < 20.0:  # pull back out to the start frame so the GIF loops
+		_cam(west, far, 2.4, 0.28, (t - 17.0) / 3.0)
 	else:
 		done = true
 		return
@@ -56,10 +52,6 @@ func _process(d: float) -> void:
 		get_viewport().get_texture().get_image().save_png("%s/f%04d.png" % [out, n])
 		n += 1
 
-
-func _front() -> Vector2:
-	var l := Military.line(m.city, m.towns[1])
-	return (l[0] + l[1]) * 0.5
 
 func _war() -> void:
 	var a: City = m.city
