@@ -297,7 +297,6 @@ The Region tab shows imports, commuters in and trade income for every town. Trea
 ## Open questions
 
 - `docs/EMPIRE_DESIGN.md` describes fog of war, claiming land next to a town, free off-grid placement and a sparse player-edit diff for the world. None of these exist in the code read here.
-- `Main.found_town_at` creates the town with `human = true` and never calls `set_start` or sets `ev_scale`; whether founded towns are meant to ignore the chosen land size and difficulty is not documented.
 - Old saves without a world seed: `found_block` skips the water check and `_new_town` skips `apply_world`, and `found_town_at` does not call `set_start`, so a town founded in such a save looks like it has no river. I did not check whether `City.new` leaves that terrain flat intentionally.
 - On a multiplayer client `Main.world` is not part of the host's `NetWorld.meta` (only `n` and `mine`), and I found no code that sets it from the host; the land drawn between towns by `WorldLayer` on a client would then come from whatever world the client had locally. See [multiplayer](multiplayer.md).
 - The `Main._site_ok` footprint (13 x 3 tiles at `OX + 18, OY + 15`) is derived from `City.seed_start` by reading the coordinates; the code does not name it as the seed layout.

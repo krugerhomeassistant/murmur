@@ -161,9 +161,9 @@ While `wars() > 0` (`City.wars`, counting `treaty == "war"` entries):
 | Purchased ceasefire | `Diplo.act(.., "peace")` after at least 3 war counters; 150 coins | treaty cleared, opinions +0.10 / +0.30 | `Diplo.act` |
 | Proposal accepted | multiplayer counterpart accepts a ceasefire offer | treaty cleared | `Diplo.resolve` |
 | Stalemate | `war_n >= 30` (600 s of war) and fewer than 6 units in total on both sides | treaty cleared, "armies spent, agree to a ceasefire" | end of `Military.fight` |
-| Cancel | `leave` also clears any treaty, including war (no war check) | treaty cleared, -0.05 / -0.15 | `Diplo.act` |
+| Cancel | `leave` cancels a treaty; during a war it is refused ("a war is ended with a peace treaty") | treaty cleared, -0.05 / -0.15 | `Diplo.act` |
 
-The `leave` verb checks only that there is a treaty (`t != ""`), and a war is stored in the same field, so it can end a war immediately at the cost of a small opinion drop (see Open questions).
+The `leave` verb refuses to end a war; only `peace` does (150 coins, three war counters).
 
 Annexing: `Diplo.surrender` calls `w.can_expand(k)` and `l.cede(opposite side)`; if both succeed, `w.expand(k, true)` gives the winner a free strip of land (`City.expand(k, true)`) and the loser loses the matching strip.
 
@@ -365,8 +365,6 @@ Known limits listed by the design: units go home instantly when peace comes, def
 
 ## Open questions
 
-- `Diplo._battle` (abstract battles every 20 to 35 s, wins counted, reparations) is not in the code. The HUD tooltip on "Declare WAR" and the `act` return text still describe a battle-based war ("Battles every 20-35 s ... Three more wins than the other side ends it"). Real fights replaced it, so the tooltip is out of date.
-- The `leave` verb can cancel a war (it clears any non-empty treaty) without cost or a minimum duration, while `peace` requires 150 coins and three war counters. This may be an unintended loophole.
 - `a.war_t` is the war counter timer and it lives on the lower-indexed town. If that town is at war with two neighbours, the timer is decremented once per war per second, so both wars' counters advance faster (about every 10 s instead of 20). The documentation above assumes one war.
 - `Diplo.act` rejects any verb when `coins < cost`; with a cost of 0 that only fails for a town with negative coins, so a town in debt may be unable to declare war or cancel treaties. Not tested.
 - The stalemate ceasefire counts `army.size()` of both sides, including units that are at home and not committed to this war; it is not specific to the pair of towns in a multi-war game.

@@ -175,6 +175,8 @@ static func act(a: City, b: City, what: String) -> String:
 		"leave":
 			if t == "":
 				return "No treaty to cancel."
+			if t == "war":
+				return "A war is ended with a peace treaty, not cancelled."
 			sign_treaty(a, b, "")
 			_shift(a, b, -0.05, -0.15)
 			return "Treaty with %s cancelled." % b.town_name

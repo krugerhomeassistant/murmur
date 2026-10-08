@@ -108,7 +108,7 @@ func _net_args() -> void:
 		start_game({"name": "Server", "towns": n, "river": 3, "spectate": true, "mp": true, "guide": false})
 		if "--speed" in a and a.find("--speed") + 1 < a.size():
 			speed = clampf(float(a[a.find("--speed") + 1]), 0.5, 8.0)
-		net.serve(towns)
+		net.serve(towns, {"seed": world.seed, "rivers": world_rivers} if world != null else {})
 		print("Murmur server: ", "listening on UDP %d with %d towns at %.1fx" % [port, n, speed] if net.host(port, "Server", true) else "failed to start")
 		var seen := {}
 		net.roster_changed.connect(func() -> void:
@@ -312,7 +312,7 @@ func host_game(port: int, towns_n: int, pname: String) -> void:
 		if t != city:
 			t.human = false
 	city.owner = 1
-	net.serve(towns)
+	net.serve(towns, {"seed": world.seed, "rivers": world_rivers} if world != null else {})
 	net.host(port, pname)
 	_ensure_chat()
 	headline = "Hosting on UDP %d. Friends join with your address; each takes a free town." % port
@@ -327,6 +327,8 @@ func _net_world(meta: Dictionary) -> void:
 	mirror_ready = false
 	towns = NetWorld.mirror(sig, int(meta["n"]))
 	net_mine = int(meta["mine"])
+	world = World.new(int(meta["seed"])) if meta.has("seed") else null  # same land between towns as the host
+	world_rivers = bool(meta.get("rivers", true))
 	city = towns[maxi(net_mine, 0)]
 	_begin()
 	_ensure_chat()
@@ -381,8 +383,12 @@ func _net_failed(reason: String) -> void:
 	headline = reason
 
 
+var ephemeral := false  # benchmark worlds never touch the player's save
+
+
 func start_game(o: Dictionary) -> void:
-	if not o.get("mp", false):
+	ephemeral = bool(o.get("temp", false))
+	if not o.get("mp", false) and not ephemeral:
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(SAVE))
 	_fresh(o)
 	_begin()
@@ -433,7 +439,7 @@ func _sync_world_layer() -> void:
 
 
 func save_game() -> void:
-	if remote or (net != null and net.active):
+	if remote or ephemeral or (net != null and net.active):
 		return  # a networked world is never written over your single-player save
 	var f := FileAccess.open(SAVE, FileAccess.WRITE)
 	if f == null:
@@ -525,8 +531,15 @@ func found_town_at(g: Vector2i) -> bool:
 			why = "Founding there costs $%d." % int(cost)
 		else:
 			city.coins -= cost
+			var spec := spectating()
 			var t := _new_town("", g)
 			t.coins = 300.0
+			t.ev_scale = city.ev_scale  # same difficulty as the rest of the game
+			if spec:  # spectating stays spectating: the new town runs on the planner like the others
+				t.human = false
+				t.auto_mode = 2
+				t.auto_policy = true
+				t.auto_expand = true
 			headline = "%s founded! Neighbouring towns now trade power, water and commuters." % t.town_name
 			found_mode = false
 			return true
@@ -848,7 +861,8 @@ func _process(delta: float) -> void:
 			follow_t = 0.0
 			switch_town((towns.find(city) + 1) % towns.size())
 	var p0 := Time.get_ticks_usec()
-	var v := Vector2(
+	var typing := get_viewport().gui_get_focus_owner() is LineEdit
+	var v := Vector2.ZERO if typing else Vector2(
 		float(Input.is_key_pressed(KEY_D) or Input.is_key_pressed(KEY_RIGHT)) - float(Input.is_key_pressed(KEY_A) or Input.is_key_pressed(KEY_LEFT)),
 		float(Input.is_key_pressed(KEY_S) or Input.is_key_pressed(KEY_DOWN)) - float(Input.is_key_pressed(KEY_W) or Input.is_key_pressed(KEY_UP)))
 	cam.position += v * 700.0 * delta / cam.zoom.x

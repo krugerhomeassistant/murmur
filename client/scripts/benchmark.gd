@@ -35,7 +35,7 @@ func _ready() -> void:
 	seed(20261007)
 	m.bench_seed = 20261007
 	m.open_setup()
-	m.start_game({"name": "Bench", "towns": 8, "mood": 1, "diff": 1, "land": 1, "river": 3, "auto": 2, "policy": true, "expand": true, "guide": false, "spectate": true})
+	m.start_game({"name": "Bench", "towns": 8, "mood": 1, "diff": 1, "land": 1, "river": 3, "auto": 2, "policy": true, "expand": true, "guide": false, "spectate": true, "temp": true})
 	for _i in FAST_FORWARD:  # same cadence as the main loop: viewed town every step, others in 0.5 s batches
 		m.sig.tick(0.1)
 		if _i % 10 == 0:
