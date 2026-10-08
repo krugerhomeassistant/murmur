@@ -95,7 +95,7 @@ Bottom: the message line (`Main.headline`). In multiplayer the chat lines sit ab
 
 **World events** (`Hud._top`): submenus Weather, Economy, Social, Disaster and Civic list every world event; entries that cost or require an action by you are marked "(you)", and hovering shows the description. Choosing one calls `City.trigger` on the viewed town (Fire calls `City.ignite`); a failure shows "Could not trigger X (not enough coins?)." These are sandbox triggers, not commands. All events are on [events](events.md).
 
-**Windows**: check items Build menu, City panel, Hover details, Mayor's office, Army, Empire (all towns); "Reset window layout".
+**Windows**: check items Build menu, City panel, Hover details, Mayor's office, Army, Empire (all towns), Market; "Reset window layout".
 
 **Towns**: one entry per town as `> Name  (pop N)` with `>` on the viewed town (click to glide there); "Whole world (M)"; "Found a new town (from $300)" (see [world](world.md#founding-a-town)).
 

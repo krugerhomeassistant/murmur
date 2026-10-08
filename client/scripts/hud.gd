@@ -51,7 +51,7 @@ var over_panel: PanelContainer
 var over_l: Label
 var hover_text := ""
 var tick_n := 0
-const WIN_KEYS := ["build", "info", "detail", "mayor", "army", "empire"]
+const WIN_KEYS := ["build", "info", "detail", "mayor", "army", "empire", "market"]
 const UI_FILE := "user://ui.cfg"
 var wins := {}
 var win_open := {}
@@ -90,6 +90,7 @@ func _ready() -> void:
     _mayor()
     _army()
     _empire()
+    _market_win()
     maptip = PanelContainer.new()
     maptip.mouse_filter = Control.MOUSE_FILTER_IGNORE
     maptip.z_index = 100
@@ -273,6 +274,7 @@ func _top() -> void:
     wm.add_check_item("Mayor's office", 3)
     wm.add_check_item("Army", 4)
     wm.add_check_item("Empire (all towns)", 5)
+    wm.add_check_item("Market", 6)
     wm.add_separator()
     wm.add_item("Reset window layout", 9)
     wm.about_to_popup.connect(func() -> void:
@@ -862,6 +864,7 @@ func _process(_d: float) -> void:
     if tick_n % 6 != 0:
         return
     _empire_refresh(c)
+    _market_refresh(c)
     for id in tool_btns:
         if Catalog.DEFS.has(id):
             var open: bool = c.unlocked(id)
@@ -1033,6 +1036,79 @@ func _empire() -> void:
     bb.tooltip_text = "Rich towns (over $600) give half of what they hold above $400; towns under $200 are topped up. No money is created."
     win_open["empire"] = false
     (wins["empire"] as PanelContainer).visible = false
+
+
+var mk_grid: GridContainer
+var mk_cells := {}  # good -> {"price", "vs", "sup", "dem", "line", "you"}
+var mk_note: Label
+const MK_NAMES := {"crops": "Crops", "food": "Food", "goods": "Goods", "ore": "Ore", "metal": "Metal"}
+
+
+func _market_win() -> void:
+    var body := _win("market", "Market", Vector2(180, 90), Vector2(560, 260))
+    mk_note = _lbl(body, 540)
+    mk_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    mk_grid = GridContainer.new()
+    mk_grid.columns = 7
+    mk_grid.add_theme_constant_override("h_separation", 10)
+    body.add_child(mk_grid)
+    for h in ["Good", "Price", "vs base", "Offered/s", "Wanted/s", "Last 15 min", "Your town"]:
+        _hdr(mk_grid, h)
+    for k in Market.GOODS:
+        var cell := {"nm": _lbl(mk_grid, 56), "price": _lbl(mk_grid, 52), "vs": _lbl(mk_grid, 56), "sup": _lbl(mk_grid, 66), "dem": _lbl(mk_grid, 66)}
+        (cell["nm"] as Label).text = MK_NAMES[k]
+        var line := Control.new()
+        line.custom_minimum_size = Vector2(120, 24)
+        var gk: String = k
+        line.draw.connect(func() -> void: _spark(line, gk))
+        mk_grid.add_child(line)
+        cell["line"] = line
+        cell["you"] = _lbl(mk_grid, 150)
+        mk_cells[k] = cell
+    _hdr(body, "One price per good, set by everyone's offers and needs (towns only trade through this market). Dear goods are worth making; cheap goods are held back.")
+    win_open["market"] = false
+    (wins["market"] as PanelContainer).visible = false
+
+
+func _spark(line: Control, k: String) -> void:
+    var h: Array = m.sig.mk.hist[k]
+    var r := Rect2(Vector2.ZERO, line.size)
+    line.draw_rect(r, Color(0, 0, 0, 0.18))
+    if h.size() < 2:
+        return
+    var lo := float(Market.BASE[k]) * Market.LOW
+    var hi := float(Market.BASE[k]) * Market.HIGH
+    var by := r.size.y - (float(Market.BASE[k]) - lo) / (hi - lo) * r.size.y
+    line.draw_line(Vector2(0, by), Vector2(r.size.x, by), Color(1, 1, 1, 0.25))
+    var pts := PackedVector2Array()
+    for i in h.size():
+        pts.append(Vector2(r.size.x * i / float(Market.HIST - 1), r.size.y - clampf((float(h[i]) - lo) / (hi - lo), 0.0, 1.0) * r.size.y))
+    line.draw_polyline(pts, Color("e8c860"), 1.5)
+
+
+func _market_refresh(c: City) -> void:
+    if not bool(win_open["market"]):
+        return
+    var mk: Market = m.sig.mk
+    var sell: Array[String] = []
+    var glut: Array[String] = []
+    for k in Market.GOODS:
+        var cell: Dictionary = mk_cells[k]
+        var rt := mk.ratio(k)
+        (cell["price"] as Label).text = "$%.2f" % float(mk.price[k])
+        (cell["vs"] as Label).text = "%s %d%%" % ["+" if rt >= 1.0 else "-", absi(roundi((rt - 1.0) * 100.0))]
+        (cell["sup"] as Label).text = "%.1f" % float(mk.last_sup[k])
+        (cell["dem"] as Label).text = "%.1f" % float(mk.last_dem[k])
+        (cell["line"] as Control).queue_redraw()
+        var sold := float((c.flow.get("sold", {}) as Dictionary).get(k, 0.0))
+        var bought := float((c.flow.get("bought", {}) as Dictionary).get(k, 0.0))
+        var wanted := float((c.flow.get("want", {}) as Dictionary).get(k, 0.0))
+        (cell["you"] as Label).text = "stock %d, sell %.1f, buy %.1f" % [int(c.stock.get(k, 0.0)), sold, maxf(bought, wanted if k in ["food", "goods"] else bought)]
+        if rt > 1.25 and float(c.flow.get(k, 0.0)) > 0.0:
+            sell.append(MK_NAMES[k])
+        if rt < 0.8:
+            glut.append(MK_NAMES[k])
+    mk_note.text = ("Worth selling: %s.  " % ", ".join(sell) if not sell.is_empty() else "") + ("Glut (cheap, held back): %s.  " % ", ".join(glut) if not glut.is_empty() else "") + ("Prices are near their base values." if sell.is_empty() and glut.is_empty() else "")
 
 
 func _chk(p: Node, text: String, key: String) -> CheckButton:
@@ -1473,8 +1549,8 @@ func _reset_wins() -> void:
     var vs := get_viewport_rect().size
     for k in wins:
         var p: PanelContainer = wins[k]
-        p.visible = k != "detail" and k != "army" and k != "empire"
-        win_open[k] = k != "army" and k != "empire"
+        p.visible = k != "detail" and k != "army" and k != "empire" and k != "market"
+        win_open[k] = k != "army" and k != "empire" and k != "market"
         p.set_deferred("size", Vector2.ZERO)
     (wins["build"] as PanelContainer).position = Vector2(8, 44)
     (wins["info"] as PanelContainer).position = Vector2(maxf(vs.x - 396.0, 200.0), 44)
@@ -1482,6 +1558,7 @@ func _reset_wins() -> void:
     (wins["mayor"] as PanelContainer).position = Vector2(200, 44)
     (wins["army"] as PanelContainer).position = Vector2(220, 80)
     (wins["empire"] as PanelContainer).position = Vector2(160, 70)
+    (wins["market"] as PanelContainer).position = Vector2(180, 90)
     _clamp_all.call_deferred()
     _save_ui()
 

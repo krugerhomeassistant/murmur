@@ -297,6 +297,8 @@ Practical consequences: too many jobs and too few citizens lowers `emp` and reve
 
 ## Goods chain, stock and flow
 
+> The fixed unit prices below are now base prices: the live price of each good comes from the shared [market](market.md). Import and export lines use `Signals.mk.price`.
+
 `City._trade(market)` (line 3235) runs inside `_money` every second. It keeps `stock = {crops, food, goods, ore, metal}`, a storage `cap`, and reports `flow` (per-second values for the UI and for `food_local`).
 
 Storage and trade infrastructure:

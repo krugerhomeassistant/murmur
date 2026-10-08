@@ -58,7 +58,8 @@ func _init() -> void:
 			"start_h": City.START_H, "expand": City.EXPAND, "army_max": Military.ARMY_MAX,
 			"rank_dmg": Military.RANK_DMG, "rank_hp": Military.RANK_HP, "aggro": Military.AGGRO,
 			"found_cost": 300.0, "found_step": 120.0, "explore": 10, "port": NetPlay.PORT,
-			"max_players": NetPlay.MAX_PLAYERS, "weather_penalty": City.WEATHER_PENALTY,
+			"max_players": NetPlay.MAX_PLAYERS, "market_low": Market.LOW, "market_high": Market.HIGH,
+			"market_world": Market.WORLD, "market_sens": Market.SENS, "market_follow": Market.FOLLOW, "market_base": Market.BASE, "weather_penalty": City.WEATHER_PENALTY,
 		},
 	}
 	var args := OS.get_cmdline_user_args()
