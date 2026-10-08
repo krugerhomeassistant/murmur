@@ -887,21 +887,16 @@ func draw_fx(node: CanvasItem) -> void:
 		for b in a.partners:
 			if towns.find(b) < ai or Diplo.treaty(a, b) != "war" or not (vis.get(a, false) or vis.get(b, false)):
 				continue
-			var l := Military.line(a, b)
-			var ln := maxf(l[0].distance_to(l[1]), 600.0)
-			var u := (l[1] - l[0]).normalized()
-			var nv := Vector2(-u.y, u.x)
 			for side in 2:
 				var c: City = a if side == 0 else b
 				var foe: City = b if side == 0 else a
 				var col := Color("5b8de0") if side == 0 else Color("d9382a")
-				var dir := 1.0 if side == 0 else -1.0
-				var base: Vector2 = l[0] if side == 0 else l[1]
+				var zone := Military.terr_px(foe)
 				for un in c.army:
-					if un["tgt"] != foe.town_name:
+					if un["tgt"] != foe.town_name or not un.has("p"):
 						continue
-					var pos := base + u * dir * float(un["s"]) + nv * float(un["l"]) * 70.0 * sz
-					var ang := u.angle() + (0.0 if side == 0 else PI)
+					var pos: Vector2 = un["p"]
+					var ang := float(un.get("h", 0.0))
 					var fresh: bool = now - int(un.get("ft", -9999)) < 700
 					match String(un["k"]):
 						"inf", "gren", "snip", "medic":
@@ -962,24 +957,23 @@ func draw_fx(node: CanvasItem) -> void:
 					if float(un["hp"]) < mx * 0.99:
 						node.draw_rect(Rect2(pos + Vector2(-8, -10) * sz, Vector2(16 * sz, 2.0 * sz)), Color(0, 0, 0, 0.6))
 						node.draw_rect(Rect2(pos + Vector2(-8, -10) * sz, Vector2(16 * sz * float(un["hp"]) / mx, 2.0 * sz)), Color("6fd06f") if float(un["hp"]) / mx > 0.4 else Color("e0a030"))
-					if not fresh and float(un["s"]) >= ln - 80.0 and String(un["k"]) in ["inf", "gren", "snip", "ltank", "tank", "htank", "art"]:  # unopposed at the enemy's edge: shell the town
+					if not fresh and zone.has_point(pos) and String(un["k"]) in ["inf", "gren", "snip", "ltank", "tank", "htank", "art"]:  # unopposed at the enemy's edge: shell the town
 						var cyc := int((now + int(float(un["l"]) * 700.0 + 1000.0)) / 900)
 						if (now + int(float(un["l"]) * 700.0 + 1000.0)) % 900 < 160:
 							var rr := float(hash([un["l"], cyc]) % 1000) / 1000.0
 							var rr2 := float(hash([cyc, un["l"]]) % 1000) / 1000.0
-							var tp: Vector2 = pos + u * dir * (60.0 + rr * 260.0) + nv * (rr2 - 0.5) * 220.0
+							var tp: Vector2 = pos + Vector2.from_angle(ang) * (60.0 + rr * 260.0) + Vector2.from_angle(ang + PI / 2.0) * (rr2 - 0.5) * 220.0
 							node.draw_line(pos, tp, Color(1.0, 0.55, 0.2, 0.9) if un["k"] == "art" else Color(1.0, 0.9, 0.4, 0.9), (3.0 if un["k"] == "art" else 1.5) * sz)
 							node.draw_circle(tp, (8.0 if un["k"] == "art" else 4.0) * sz, Color(1.0, 0.7, 0.25, 0.8))
 					if fresh:  # tracer to the unit it fired at
-						var tgp := float(un["fg"])
-						var tpos: Vector2 = l[0] + u * tgp + nv * float(un["fl"]) * 70.0 * sz
+						var tpos: Vector2 = un.get("fp", pos)
 						node.draw_line(pos, tpos, Color(1.0, 0.45, 0.2, 0.9) if un["k"] == "art" else (Color(1, 1, 1, 0.9) if un["k"] == "snip" else Color(1.0, 0.9, 0.4, 0.9)), (3.0 if un["k"] == "art" else 1.5) * sz)
 						node.draw_circle(pos + Vector2.from_angle(ang) * 10.0 * sz, 3.0 * sz, Color(1.0, 0.8, 0.3, 0.9))
 			for e in Military.booms:
 				if e["a"] != a.town_name or e["b"] != b.town_name:
 					continue
 				var ph := clampf((now - int(e["t"])) / 1500.0, 0.0, 1.0)
-				var bp: Vector2 = l[0] + u * float(e["g"]) + nv * float(e["l"]) * 70.0 * sz
+				var bp: Vector2 = e["p"]
 				node.draw_circle(bp, (8.0 + 24.0 * ph) * sz, Color(1.0, 0.55 - 0.3 * ph, 0.1, (1.0 - ph) * 0.85))
 				node.draw_circle(bp + Vector2(0, -18.0 * ph * sz), (5.0 + 14.0 * ph) * sz, Color(0.25, 0.25, 0.25, (1.0 - ph) * 0.55))
 	_draw_blasts(node)
