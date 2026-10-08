@@ -83,6 +83,7 @@ func _ready() -> void:
 	net.world.connect(_net_world)
 	net.state.connect(_net_state)
 	net.failed.connect(_net_failed)
+	net.reply.connect(_net_reply)
 	open_setup()
 	_net_args.call_deferred()
 	_capture_args.call_deferred()
@@ -291,6 +292,11 @@ func _mp_test() -> void:
 			return
 	print("MP_CLIENT_FAIL tax_r=%s" % city.tax_r)
 	get_tree().quit(1)
+
+
+func _net_reply(_c: String, r: Variant) -> void:
+	if r is String and r != "":
+		headline = r  # diplomacy answers, e.g. "Proposal sent to Ashby."
 
 
 func _net_failed(reason: String) -> void:
