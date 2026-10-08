@@ -82,7 +82,7 @@ Headless profilers (`tests/regionbench.gd`, `bench.gd`, `stageprof.gd`) are seco
 
 ## Roadmap
 
-Ferries, animated-tile splitting for even cheaper redraws, balance passes on diplomacy and the mayor's office, more art polish. See [`docs/PLAN.md`](docs/PLAN.md).
+Next, in order ([design](docs/EMPIRE_DESIGN.md)): an endless procedural world with founding and claiming on the map, an empire mode to run a group of towns, group-vs-group multiplayer with a shared economy, then deeper economy, infrastructure and military variety (war design: [docs/WAR_DESIGN.md](docs/WAR_DESIGN.md)). Full checklist in [`docs/PLAN.md`](docs/PLAN.md).
 
 ## Contributing
 
