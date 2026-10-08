@@ -47,5 +47,8 @@ func _init() -> void:
 	a.rel[c.town_name] = 0.9
 	c.rel[a.town_name] = 0.9
 	ok = ok and Diplo.act(a, c, "pact").begins_with("Trade pact signed") and Diplo.treaty(a, c) == "pact"
+	NetWorld.release(ts, 12)  # a player leaves and comes back: they get their own town, not just the first free one
+	ok = ok and b.owner == 0 and not b.human and NetWorld.assign(ts, 99, 1) == 1 and b.owner == 99 and b.human
+	ok = ok and NetWorld.assign(ts, 98, 1) != 1  # taken: falls back to another free town or none
 	print("PVP_OK" if ok else "PVP_FAIL")
 	quit(0 if ok else 1)

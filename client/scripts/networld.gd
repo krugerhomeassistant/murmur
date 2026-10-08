@@ -14,7 +14,11 @@ static func unpack(b: PackedByteArray) -> Dictionary:
 
 
 ## Gives `peer` the first free town and makes it player-controlled; returns its index, or -1 when every town is taken.
-static func assign(towns: Array[City], peer: int) -> int:
+static func assign(towns: Array[City], peer: int, prefer := -1) -> int:
+	if prefer >= 0 and prefer < towns.size() and towns[prefer].owner == 0:  # a returning player gets their old town back
+		towns[prefer].owner = peer
+		towns[prefer].human = true
+		return prefer
 	for i in towns.size():
 		if towns[i].owner == 0:
 			towns[i].owner = peer

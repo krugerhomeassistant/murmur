@@ -36,6 +36,8 @@ func _host(net: NetPlay) -> void:
 	towns[0].human = true
 	net.serve(towns)
 	var port := 20000 + randi() % 20000
+	var heard := []
+	net.chat.connect(func(who: String, text: String) -> void: heard.append(who + ": " + text))
 	net.host(port, "Boss")
 	DirAccess.remove_absolute(OUT)
 	var pid := OS.create_process(OS.get_executable_path(), ["--headless", "--path", ProjectSettings.globalize_path("res://"), "-s", "tests/netsync.gd", "--", "--client", "--port", str(port)])
@@ -56,7 +58,7 @@ func _host(net: NetPlay) -> void:
 		if towns[i].owner != 0 and towns[i].owner != 1:
 			mine = i
 	# the client built a road on its own town; town 0 (the host's) must not have received the client's forbidden command
-	var ok := done == "CLIENT_OK" and mine == 1
+	var ok := done == "CLIENT_OK" and mine == 1 and "Tester: hello there" in heard
 	print("NETSYNC_OK" if ok else "NETSYNC_FAIL client=%s mine=%d" % [done, mine])
 	net.stop()
 	quit(0 if ok else 1)
@@ -93,6 +95,7 @@ func _client(net: NetPlay, port: int) -> void:
 			var p := ctr + Vector2i(dx, dy)
 			if spot.x < 0 and me.at(p.x, p.y) == T.EMPTY and me.owns(p.x, p.y):
 				spot = p
+	net.say("hello there")
 	net.command(mine[0], "place", [spot.x, spot.y, T.ROAD])
 	var octr: Vector2i = (mirror[other] as City).terr.get_center()
 	net.command(other, "place", [octr.x, octr.y, T.ROAD])  # someone else's town: must be refused

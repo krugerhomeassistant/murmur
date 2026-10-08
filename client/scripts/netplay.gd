@@ -13,12 +13,14 @@ signal joined  ## client: accepted by the host
 signal failed(reason: String)
 signal world(meta: Dictionary)  ## client: the world layout and which town is yours
 signal state(idx: int, d: Dictionary)  ## client: a town snapshot arrived
+signal chat(who: String, text: String)
 signal reply(cmd: String, result: Variant)  ## client: the host's answer to a command
 
 var players := {}  ## peer id -> {"name": String, "ping": int ms}; host-owned, mirrored to clients
 var dedicated := false
 var active := false
 var towns: Array[City] = []  ## host: the simulated towns (set with serve)
+var claims := {}  ## host: player name -> the town they last ran, so a rejoin returns to it
 var _acc := 0.0
 
 
@@ -91,6 +93,34 @@ func _on_gone(id: int) -> void:
 		_push()
 
 
+## Chat line to everyone.
+func say(text: String) -> void:
+	text = text.strip_edges().substr(0, 140)
+	if text == "" or not active:
+		return
+	if is_host():
+		_relay(1, text)
+	else:
+		_say.rpc_id(1, text)
+
+
+func _relay(id: int, text: String) -> void:
+	var who: String = players[id]["name"] if players.has(id) else "Server"
+	chat.emit(who, text)
+	_chat.rpc(who, text)
+
+
+@rpc("any_peer", "reliable")
+func _say(text: String) -> void:
+	if multiplayer.is_server() and players.has(multiplayer.get_remote_sender_id()):
+		_relay(multiplayer.get_remote_sender_id(), text.strip_edges().substr(0, 140))
+
+
+@rpc("authority", "reliable")
+func _chat(who: String, text: String) -> void:
+	chat.emit(who, text)
+
+
 ## Host: the towns clients mirror and command.
 func serve(ts: Array[City]) -> void:
 	towns = ts
@@ -157,7 +187,10 @@ func _hello(pname: String) -> void:
 	_push()
 	_welcome.rpc_id(id)
 	if not towns.is_empty():
-		_world.rpc_id(id, NetWorld.meta(towns, NetWorld.assign(towns, id)))
+		var mine := NetWorld.assign(towns, id, int(claims.get(players[id]["name"], -1)))
+		if mine >= 0:
+			claims[players[id]["name"]] = mine
+		_world.rpc_id(id, NetWorld.meta(towns, mine))
 
 
 func _unique(n: String) -> String:
