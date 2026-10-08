@@ -9,6 +9,9 @@ const DIPLO := ["gift", "pact", "alliance", "embargo", "lift", "peace", "tribute
 
 
 static func run(towns: Array[City], t: City, name: String, a: Array) -> Variant:
+	for v in a:  # NaN or INF in a number would slip through clampf and poison the town's money
+		if v is float and not is_finite(v):
+			return null
 	match name:
 		"place":
 			if _ints(a, 3) and t.inside(a[0], a[1]) and Catalog.DEFS.has(a[2]):
@@ -17,7 +20,7 @@ static func run(towns: Array[City], t: City, name: String, a: Array) -> Variant:
 			if _ints(a, 2) and t.inside(a[0], a[1]):
 				return t.bulldoze(a[0], a[1])
 		"water":
-			if _ints(a, 3) and t.inside(a[0], a[1]) and (a[2] == 0 or a[2] == 1):
+			if _ints(a, 3) and t.inside(a[0], a[1]) and t.owns(a[0], a[1]) and (a[2] == 0 or a[2] == 1):
 				return t.set_water(a[0], a[1], a[2])
 		"tax":
 			if a.size() == 2 and a[0] is String and a[0] in TAX and (a[1] is float or a[1] is int):

@@ -22,6 +22,8 @@ var active := false
 var towns: Array[City] = []  ## host: the simulated towns (set with serve)
 var claims := {}  ## host: player name -> the town they last ran, so a rejoin returns to it
 var _acc := 0.0
+var _bucket := {}  ## host: peer id -> [tokens, last refill time]
+const HELLO_WAIT := 5.0  ## a peer that has not said hello by then is dropped, so silent connections cannot fill the slots
 
 
 ## Starts a game server on `port`. dedicated = true: the host process plays no town.
@@ -78,16 +80,43 @@ func my_id() -> int:
 	return multiplayer.get_unique_id() if active else 1
 
 
+## Control characters (newlines, tabs, ANSI escapes) become spaces so one chat line or name cannot fake another or forge a log line.
+static func _plain(t: String) -> String:
+	var out := ""
+	for i in t.length():
+		out += " " if t.unicode_at(i) < 32 or t.unicode_at(i) == 127 else t[i]
+	return out.strip_edges()
+
+
 static func _clean(n: String) -> String:
-	n = n.strip_edges().replace("\n", " ")
+	n = _plain(n)
+	if n.to_lower() == "server":
+		n = "Player"
 	return n.substr(0, NAME_MAX) if n != "" else "Player"
 
 
-func _on_peer(_id: int) -> void:
-	pass  # the player joins the table once it sends its name (_hello)
+## Host: token bucket per peer so one client cannot pin the host with a command loop (30 per second, bursts of 60).
+func _allow(id: int, cost := 1.0) -> bool:
+	var now := Time.get_ticks_msec() / 1000.0
+	var b: Array = _bucket.get(id, [60.0, now])
+	b[0] = minf(float(b[0]) + (now - float(b[1])) * 30.0, 60.0)
+	b[1] = now
+	_bucket[id] = b
+	if float(b[0]) < cost:
+		return false
+	b[0] = float(b[0]) - cost
+	return true
+
+
+func _on_peer(id: int) -> void:
+	# the player joins the table once it sends its name (_hello); silent peers are dropped
+	get_tree().create_timer(HELLO_WAIT).timeout.connect(func() -> void:
+		if active and multiplayer.is_server() and not players.has(id) and multiplayer.get_peers().has(id):
+			multiplayer.multiplayer_peer.disconnect_peer(id))
 
 
 func _on_gone(id: int) -> void:
+	_bucket.erase(id)
 	NetWorld.release(towns, id)
 	if players.erase(id):
 		_push()
@@ -95,7 +124,7 @@ func _on_gone(id: int) -> void:
 
 ## Chat line to everyone.
 func say(text: String) -> void:
-	text = text.strip_edges().substr(0, 140)
+	text = _plain(text).substr(0, 140)
 	if text == "" or not active:
 		return
 	if is_host():
@@ -112,8 +141,9 @@ func _relay(id: int, text: String) -> void:
 
 @rpc("any_peer", "reliable")
 func _say(text: String) -> void:
-	if multiplayer.is_server() and players.has(multiplayer.get_remote_sender_id()):
-		_relay(multiplayer.get_remote_sender_id(), text.strip_edges().substr(0, 140))
+	var id := multiplayer.get_remote_sender_id()
+	if multiplayer.is_server() and players.has(id) and _allow(id, 20.0):  # a line costs 20 tokens: about 1.5 per second sustained
+		_relay(id, _plain(text).substr(0, 140))
 
 
 @rpc("authority", "reliable")
@@ -155,6 +185,8 @@ func _cmd(idx: int, cname: String, args: Array) -> void:
 	if not multiplayer.is_server():
 		return
 	var sender := multiplayer.get_remote_sender_id()
+	if not players.has(sender) or not _allow(sender):
+		return
 	var r: Variant = _run(sender, idx, cname, args)
 	_reply.rpc_id(sender, cname, r if (r == null or r is bool or r is String or r is int) else true)
 
@@ -221,7 +253,9 @@ func _roster(p: Dictionary) -> void:
 
 @rpc("any_peer", "unreliable")
 func _ping(t: int) -> void:
-	_pong.rpc_id(multiplayer.get_remote_sender_id(), t)
+	var id := multiplayer.get_remote_sender_id()
+	if players.has(id):
+		_pong.rpc_id(id, t)
 
 
 @rpc("authority", "unreliable")

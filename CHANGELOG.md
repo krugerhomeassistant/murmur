@@ -5,6 +5,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+### Security
+- Multiplayer hardening from the audit: NaN/INF numbers are refused (a NaN tax gave unlimited money and poisoned every client), per-peer command and chat rate limits, silent connections are dropped after 5 s, chat lines and names lose control characters, "Server" is reserved, `water` respects territory, snapshots accept only known keys and at most 4 MB.
+
 ### Fixed
 - Rivers meet at town borders: outside its own territory a river now runs straight at the border height instead of drifting, so neighbouring towns no longer show a gap (new worlds only).
 - Attackers standing unopposed at an enemy's edge visibly shell its buildings.
@@ -12,6 +15,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 - Cars keep to the right-hand lane and pedestrians use the pavements, so traffic no longer piles up on the road centreline.
 
 ### Changed
+- CI jobs have time limits.
 - Town growth no longer re-floods the utility networks: only demand is recomputed, about 10x cheaper per growth step (`tests/netbench.gd`).
 - Benchmark: `-- --benchmark --war` runs the standard scenario with four wars going.
 - CI: multiplayer tests run as their own parallel job.

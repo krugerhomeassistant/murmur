@@ -32,5 +32,13 @@ func _init() -> void:
 	ok = ok and Cmd.run(ts, c, "diplo", [0, "gift"]) == null  # cannot target yourself
 	ok = ok and Cmd.run(ts, c, "diplo", [9, "gift"]) == null and Cmd.run(ts, c, "diplo", [0, "set_coins"]) == null
 	ok = ok and Cmd.run(ts, c, "set", ["coins", 1e9]) == null and Cmd.run(ts, c, "", []) == null  # no generic setter
+	var tr0: float = c.tax_r
+	ok = ok and Cmd.run(ts, c, "tax", ["r", NAN]) == null and Cmd.run(ts, c, "tax", ["r", INF]) == null and c.tax_r == tr0  # NaN would slip through clampf
+	var far := Vector2i(-1, -1)  # a cell outside the owned territory
+	for i in City.W * City.H:
+		if not c.owns(i % City.W, i / City.W):
+			far = Vector2i(i % City.W, i / City.W)
+			break
+	ok = ok and far.x >= 0 and Cmd.run(ts, c, "water", [far.x, far.y, 1]) != true and c.water[far.y * City.W + far.x] == 0
 	print("CMD_OK" if ok else "CMD_FAIL")
 	quit(0 if ok else 1)
