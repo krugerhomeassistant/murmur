@@ -18,9 +18,10 @@ Decided with the owner, 2026-10-08: **competitive towns** in one shared world (e
 
 ## Phases (each = branch, tests, CHANGELOG, PR)
 - [x] P0 transport: `NetPlay` (scripts/netplay.gd), `--server` / `--join host[:port]`, roster + ping, two-process test `tests/net.gd` (NET_OK).
-- [ ] P1 ownership: `City.owner`, per-peer "my town" (main's `city` is the local player's), spectator for extra peers.
+- [x] P1 ownership (core): `City.owner` (saved), `NetWorld.assign/release`; the Main/HUD side (per-peer "my town", spectators) lands with P3b. [ ] original scope: `City.owner`, per-peer "my town" (main's `city` is the local player's), spectator for extra peers.
 - [x] P2 commands: `Cmd.run` (scripts/cmd.gd) is the single validated route for place, bulldoze, water, tax, policy, loan, expand, auto toggles, training, petitions, rally and diplomacy; HUD and input call `Main.cmd`. `tests/cmd.gd` (CMD_OK) covers hostile arguments. Sandbox event triggers stay local-only.
-- [ ] P3 snapshot join + mirror + 1 Hz sync + grid diffs; a client sees a live world.
+- [x] P3a snapshots: host sends each town's `to_dict` gzip-compressed once a second (about 4 KB per town measured, so no diffing yet); `NetWorld` (scripts/networld.gd) packs/unpacks, `NetPlay.broadcast/command`; client mirrors via `from_dict`; commands carry the town index and the host rejects non-owners. `tests/netsync.gd` (NETSYNC_OK) covers join, mirror, command, refusal.
+- [ ] P3b game integration: host `Main` serves its towns and broadcasts, client `Main` runs a no-sim mirror world, viewed town = own town, lobby screen.
 - [ ] P4 lobby UI, chat, disconnect/rejoin handling.
 - [ ] P5 competitive features: player-vs-player treaties, war and raids use existing `Diplo`/`Military` with real owners.
 - [ ] P6 dedicated server polish: CLI flags, config, logging, docs, optional Docker image.

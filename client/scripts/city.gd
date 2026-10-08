@@ -148,6 +148,7 @@ var terr := Rect2i(OX, OY, START_W, START_H)
 var cells := PackedInt32Array()  # indices of owned cells: every whole-map loop runs over these
 var expansions := 0
 var auto_expand := true
+var owner := 0  # multiplayer: peer id that controls this town (0 = planner/nobody)
 var human := true  # false = run by the planner alone, cannot be lost
 var temper := 0.0  # baseline attitude to other towns
 var rel := {}  # town_name -> this town's opinion (-1..1)
@@ -3197,7 +3198,7 @@ func to_dict() -> Dictionary:
 	for k in ["town_name", "grid", "lvl", "build", "wire", "pipe", "sewer", "lamp", "water", "ore", "coins", "mood", "tax_r", "tax_c", "tax_i", "clock", "day",
 			"policies", "auto_mode", "auto_policy", "peak", "announced", "next_id", "recent", "active", "approval", "rep", "favor",
 			"petitions", "promises", "pet_recent", "kept", "broken", "next_election", "elections_won", "rally_used", "last_vote",
-			"season", "stock", "exported", "loans", "done_ms", "disasters_survived", "burned", "hist_coins", "hist_pop", "ruins", "offline", "lamp", "terr", "expansions", "auto_expand", "human", "temper", "rel", "treaty", "ev_scale", "gpos", "war_n", "war_sc", "occ", "train_on", "train_t", "train_w"]:
+			"season", "stock", "exported", "loans", "done_ms", "disasters_survived", "burned", "hist_coins", "hist_pop", "ruins", "offline", "lamp", "terr", "expansions", "auto_expand", "human", "owner", "temper", "rel", "treaty", "ev_scale", "gpos", "war_n", "war_sc", "occ", "train_on", "train_t", "train_w"]:
 		d[k] = get(k)
 	d["army"] = army.map(func(u: Dictionary) -> Dictionary: return {"k": u["k"], "hp": u["hp"], "tgt": u["tgt"], "s": u["s"], "l": u["l"], "mx": u.get("mx", u["hp"]), "xp": u.get("xp", 0.0), "rk": u.get("rk", 0)})
 	return d
