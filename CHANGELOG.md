@@ -13,6 +13,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 - The land between and around the towns is drawn from the endless world (rivers, lakes, coast, forest, hills, rock, ore), generated a few milliseconds per frame near the camera, and the camera may roam 10 plots past the outermost town (it was clamped to the towns).
 
 ### Fixed
+- Planner stall: a tiny low-mood town no longer sits under the zoning mood gate forever; it now builds a service to lift mood first and small towns (pop < 40) use a lower gate (0 stalls in 96 fresh towns, was about 5%).
 - Planner towns could never link a border: the border road was laid as a straight line and gave up for good at the first building in the way (`tests/spectate.gd` failed about 1 run in 4). It now finds a route around buildings, preferring dry land.
 
 ### Changed
