@@ -2,9 +2,9 @@
 
 ## Stack
 - **Client (the game):** Godot 4.7.2, GDScript, 2D, GL Compatibility renderer. Single-player works with no server and no network.
-- **Server (later, Phase 5+):** Node 24 LTS, ESM, dependency `ws`. Aggregates firehose feeds into signals; hosts Live cities. Move to Node 26 after it enters LTS (2026-10-28).
+- **Live-data server (not built, Phase 5+; unrelated to multiplayer, which is host-authoritative ENet, see MULTIPLAYER.md):** Node 24 LTS, ESM, dependency `ws`. Aggregates firehose feeds into signals; hosts Live cities. Move to Node 26 after it enters LTS (2026-10-28).
 - **Assets (art phase):** Blender 5.2.2 via MCP, exported glTF.
-- **Persistence:** client `user://city.json`; server `state.json` (atomic write) later.
+- **Persistence:** client `user://murmur_save.bin` (single slot); server `state.json` (atomic write) later.
 
 ## Core design: the signal seam
 ```

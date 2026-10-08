@@ -21,7 +21,7 @@ A cozy city-builder you steer while the world around it changes. Base game is of
 - Location (later): player-picked, coarse (~25 km), filter-only, never displayed or kept past the session.
 
 ## Controls (prototype)
-Left click / drag: place. Keys 1-6: Road, House, Shop, Workshop, Park, Bulldoze. Space: pause. Buttons: tax, world events, festival, speed.
+Left click / drag: place. Keys 1-6: Road, Residential, Commercial, Industrial, Park, Fire station; B: Bulldoze; F follow; Tab next town; Enter chat (multiplayer); F9 benchmark. Space: pause. Buttons: tax, world events, festival, speed.
 
 ## Economy numbers
 See GAME_DESIGN.md section 4. Tuned after playtest; final values recorded here.

@@ -2,7 +2,7 @@
 <!-- one or two sentences -->
 
 ## Checklist
-- [ ] `godot --headless --path client -s tests/smoke.gd` prints SMOKE_OK
+- [ ] the headless tests CI runs (see CONTRIBUTING) print their `*_OK` line, `check_repo.py` prints REPO_OK
 - [ ] CHANGELOG `[Unreleased]` updated
 - [ ] PLAN / WIKI / LESSONS_LEARNED updated if relevant
 - [ ] README, docs and screenshots still match reality (`python3 scripts/check_repo.py` passes)

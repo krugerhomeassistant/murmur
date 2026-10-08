@@ -17,7 +17,7 @@
 - X/Twitter API: paid. GitHub REST `/events`: 60 req/h. Colyseus etc.: not needed. Database: not needed yet.
 
 ## Custom scripts
-None yet. Selfcheck: `City.selfcheck()` run at startup (prints `SELFCHECK_OK`).
+`scripts/check_repo.py` (docs/links/version hygiene, CI), `scripts/bump.py` (release bump), `scripts/MEDIA.md` (retaking README media with `client/tests/showcase.gd` and `reel.gd`). Selfcheck: `City.selfcheck()` (`--selfcheck` or `tests/smoke.gd`, prints `SELFCHECK_OK`).
 
 ## v7 workflow notes
 - godot-ai: `filesystem_manage scan` before `project_run`; `game_eval` aborts ~8s -> long runs in a Thread, read back later.

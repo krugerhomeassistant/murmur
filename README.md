@@ -37,7 +37,7 @@ Everything is drawn with code (no art assets), the whole game is data-driven.
 2. In the Godot project manager, import the `client/` folder. On Windows you can instead double-click `Open Murmur in Godot.bat` in the repo root: it uses the `GODOT` environment variable (full path to the Godot exe) if set, otherwise `godot` from your PATH.
 3. Press Play.
 
-Controls: WASD or arrows pan, wheel zooms, right/middle-drag pans, Space pauses, **M** zooms out to the whole region and back, **T** toggles auto-training troops, **F3** shows the performance overlay. All towns sit in one continuous map: pan or scroll to the next town, or click it.
+Controls: WASD or arrows pan, wheel zooms, right/middle-drag pans, Space pauses, **M** zooms out to the whole region and back, **T** toggles auto-training troops, **F3** shows the performance overlay, **B** bulldozes, **F** follows the active town, **Tab** switches town, **Enter** chats in multiplayer, **F9** runs the benchmark. All towns sit in one continuous map: pan or scroll to the next town, or click it.
 
 ## Built to stay fast
 
@@ -72,7 +72,7 @@ Headless profilers (`tests/regionbench.gd`, `bench.gd`, `stageprof.gd`) are seco
 | Path | What |
 |---|---|
 | `client/scripts/` | The game: `catalog` (data), `city` (sim), `diplomacy`, `civics`, `events`, `art` (all drawing), `main`, `hud`, `setup` |
-| `client/tests/` | Smoke test and profilers (run headless in CI) |
+| `client/tests/` | Headless tests (the ones CI runs are listed in `.github/workflows/ci.yml`), profilers and the media tools `showcase.gd` / `reel.gd` |
 | `.github/` | CI workflow, issue and PR templates |
 | `docs/` | Design, plan, lessons, architecture ([index](docs/README.md)) |
 | `docs/WIKI.md` | Design and rules, the source of truth |

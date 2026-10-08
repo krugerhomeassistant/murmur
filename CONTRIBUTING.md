@@ -9,7 +9,10 @@ Open `client/` in Godot 4.7 (or `Open Murmur in Godot.bat`) and press Play.
 ## Checks (same as CI)
 
 ```bash
-godot --headless --path client -s tests/smoke.gd   # prints SMOKE_OK
+python3 scripts/check_repo.py                       # prints REPO_OK
+cd client && gdlint scripts tests                  # pip install gdtoolkit==4.5.0
+# each test prints NAME_OK; CI runs: smoke netcache rivers spectate mining war ai farms pmine growth net cmd netsync mp pvp
+godot --headless --path client -s tests/smoke.gd
 ```
 
 ## Workflow
