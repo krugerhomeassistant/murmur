@@ -123,7 +123,7 @@ Goal: Murmur, a cozy interactive city-builder (Godot) with an optional Live Data
 - [x] WARSHIPS + RAID DAMAGE done (feat/navy): patrol boat/destroyer/transport on shared rivers, bombers and raids destroy border buildings with visible blasts and smoke.
 - [x] UNIT VARIETY done (feat/unit-variants): 13 types, vet ranks, Army window with training priorities.
 - [x] WAR VISUALS v1 done (infantry/tanks/jets/blasts on the front); still to do: warships on shared rivers, buildings visibly damaged by raids (user asked "no armies, tanks, planes, boats fighting?"): war is currently abstract (Diplo._battle every 20-35 s, soldier dots only at your border). Add visible armies marching across the shared border in the world view, tanks/planes by military tier, naval units on shared rivers (navy yards exist), battle effects and damage to buildings, so a declared war is something you see.
-- Do NOT drop the other backlog above (mining planner, v0.2.0, screenshots, lint in CI, spike work, threading, ferries, farm variants); this sits alongside it.
+- Do NOT drop the other backlog above (mining planner, v0.2.0, screenshots, lint in CI (done), spike work, threading, ferries, farm variants); this sits alongside it.
 
 ## Multiplayer: design decided 2026-10-08, see docs/MULTIPLAYER.md (competitive, 2-8 players, LAN/direct IP + dedicated server)
 - [ ] Research + decide model before any code: (a) co-op shared world (one host sim, clients send build/diplomacy commands, host streams state) vs (b) each player runs own town(s) in the one world with diplomacy/war between players vs (c) async/visit. Godot 4 high-level multiplayer (ENet/WebSocket, RPC) is the likely base.

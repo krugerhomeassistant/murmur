@@ -27,3 +27,6 @@ None yet. Selfcheck: `City.selfcheck()` run at startup (prints `SELFCHECK_OK`).
 
 ## Godot Claude Skills (installed 2026-10-07)
 Source: https://github.com/alexmeckes/godot-claude-skills (MIT, v1.0.0, commit below). Copied to `.claude/skills/`: `godot-code-gen`, `godot-live-edit`, `godot-interactive`, `godot-scene-design`, `godot-shader`. Pure markdown (reviewed, no scripts). They describe a `godot-mcp` workflow; this project uses the `godot-ai` MCP, so treat the tool names as guidance, not literal. Update by re-copying `skills/*` from upstream.
+
+## gdtoolkit
+`gdlint` runs in CI (`client/gdlintrc` disables style-only rules). Locally: `pip install gdtoolkit==4.5.0 && cd client && gdlint scripts tests`.
