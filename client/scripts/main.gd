@@ -60,6 +60,7 @@ const CAR_COLS := [Color("c0392b"), Color("2e86c1"), Color("f4f1e8"), Color("2c3
 
 func _ready() -> void:
 	RenderingServer.set_default_clear_color(Color("5d7552"))
+	get_window().title = "Murmur " + BuildInfo.label()
 	has_save = load_game()
 	if not has_save:
 		_fresh({})
@@ -97,6 +98,9 @@ func _ready() -> void:
 	_capture_args.call_deferred()
 	if "--benchmark" in OS.get_cmdline_user_args():
 		run_benchmark(true)
+	if "--build-info" in OS.get_cmdline_user_args():
+		print("Murmur ", BuildInfo.label())  # lets scripts and CI check which build an exported file is
+		get_tree().quit()
 
 
 ## `--server [--port N]` hosts a dedicated game, `--join host[:port]` joins one (transport only until multiplayer phase 3).
