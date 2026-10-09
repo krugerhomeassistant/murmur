@@ -2249,6 +2249,11 @@ func _plan_service(force := false) -> bool:
 		var prov: Dictionary = d.get("prov", {})
 		var ch: String = d.get("chain", "")
 		var lim: int = 4 + pop / 25 if d.has("out") else 1 + pop / (60 if not prov.is_empty() else 150)
+		if (force or mood < 0.4) and not prov.is_empty():
+			for mk in prov:  # a small unhappy town must be allowed more than one station of the service it lacks, or it stays small forever
+				if String(Catalog.METRICS[mk]["kind"]) == "need" and float(cov.get(mk, 0.0)) < 0.5:
+					lim += 1 + int((0.5 - float(cov.get(mk, 0.0))) * 4.0)
+					break
 		if ch == "mill":
 			lim = 1 + farm_jobs / 30
 		if ch == "arms":
