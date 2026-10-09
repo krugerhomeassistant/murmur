@@ -14,3 +14,4 @@
 | [MULTIPLAYER.md](MULTIPLAYER.md) | Multiplayer design and phases |
 | [EMPIRE_DESIGN.md](EMPIRE_DESIGN.md) | Endless world, empire mode, group multiplayer, economy and infrastructure roadmap |
 | [WAR_DESIGN.md](WAR_DESIGN.md) | War rework phases and status |
+| [DOMINATION_DESIGN.md](DOMINATION_DESIGN.md) | End goal (conquest or hegemony), faster growth, more frequent war, depth order, readability split |
