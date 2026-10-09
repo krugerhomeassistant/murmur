@@ -659,6 +659,9 @@ func cell() -> Vector2i:
 
 
 ## Every player action goes through Cmd (validated; the multiplayer host runs the same call for clients).
+var pool_t := 0
+
+
 func cmd(n: String, a: Array = []) -> Variant:
 	if net != null and net.active:  # multiplayer: the host decides (and refuses commands for towns you don't own)
 		if city.owner != net.my_id():
@@ -897,6 +900,10 @@ func _process(delta: float) -> void:
 				dacc -= 1.0
 				Diplo.second(towns, city.rng)
 				Market.link_trade(towns)
+				pool_t += 1
+				if pool_t >= 10:
+					pool_t = 0
+					Empire.auto_pool(towns)
 				net.broadcast()
 			var batched := 0
 			for t in towns:
