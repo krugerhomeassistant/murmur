@@ -159,7 +159,7 @@ If `sup < dem` after the local supply, `_net` goes through `partners` (the other
 take = min( max(partner.net_own - partner.net_dem, 0) * 0.6 * Diplo.tmult(self, partner), dem - sup )
 ```
 
-`Diplo.tmult` is 0 for embargo, war, or when the two towns are not road-linked at their shared border; otherwise it is `clamp(0.6 + 0.5 * avg_opinion, 0.2, 1.3)` and then x1.25 for a pact or x1.4 for an alliance. Imported amounts are stored in `imports[m]`. In `City._money`, imports of power and water cost `0.4 * RATE` per unit and a town earns `0.2 * RATE` per unit for what each partner imports. Sewage can be imported by the same code, but no money is exchanged for it.
+`Diplo.tmult` is 0 for embargo, war, or when the two towns are not road-linked at their shared border; otherwise it is `clamp(0.6 + 0.5 * avg_opinion, 0.2, 1.3)` and then x1.25 for a pact or x1.4 for an alliance. Imported amounts are stored in `imports[m]`. In `City._net`, each partner's share of an import is recorded in `imp_pay` at `UTIL_PRICE` (0.3) `* RATE` per unit; `City._money` charges the buyer and credits that same amount to the seller. Sewage can be imported by the same code, but no money is exchanged for it.
 
 ### Sewage and the river
 
@@ -408,7 +408,7 @@ A Mine can only be placed where `ore > 0`. Its output scales with `mine_yield`, 
 - Avenue upkeep: the catalog says 0.2 and the Buildings page shows 0.2, but `City._money` charges 0.12 per avenue tile. Is the catalog value stale or the budget line?
 - Line upkeep is 0.015 per tile in both the catalog and the budget (fixed).
 - Sewage description no longer claims sickness; `City._sickness` does not read sewage coverage.
-- Regional trade credit: in `City._money`, a town earns `0.2 * RATE` for each unit that every partner imports (`p.imports`), not only the units it exported. With three or more towns this may over-credit a town. Not verified against intent.
+- Regional trade credit: fixed. Power and water are paid per partner at one price (`imp_pay`), so the seller earns exactly what the buyer pays and nothing is over-credited.
 - `City._hit` writes `lvl[i] = 0` for non-zone buildings, which has no visible effect; the buildings are listed in `ruins` and `_rebuild` only restores them if they were erased. Intended behaviour for damaged services is unclear.
 - A lamp placed by the player can be 2 tiles from another (only adjacency is refused), while the planner keeps lamps 3 apart. Probably intentional.
 - Jobs are assigned by Manhattan distance, regardless of road connectivity, so workers can be assigned to unreachable workplaces. No handling beyond the 5-second retry was found.

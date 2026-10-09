@@ -373,8 +373,8 @@ take    = min(max(surplus, 0) * 0.6 * Diplo.tmult(self, partner), demand - suppl
 and the money (`_money`):
 
 ```
-trade_net = -(imports.power + imports.water) * 0.4 * RATE            # you pay for what you import
-            + sum over partners of (partner.imports.power + partner.imports.water) * 0.2 * RATE   # you earn for what you export
+trade_net = -sum(imp_pay)                                  # you pay each partner UTIL_PRICE (0.3) * RATE per unit taken from it
+            + sum over partners of partner.imp_pay[you]    # you earn exactly what each partner pays you
 ```
 
 `Diplo.tmult` (diplomacy.gd) is 0 for embargo, war or an unlinked border; otherwise `clamp(0.6 + 0.5 * avg_relation, 0.2, 1.3)`, times 1.25 under a trade pact or 1.4 under an alliance. A border link needs a road from each town reaching the shared edge (`City._road_net` sets `gate`). The same multiplier governs commuters.
@@ -430,7 +430,7 @@ Each item follows directly from the formulas above.
 8. Build a Warehouse and a Trade depot (or Port) to sell surplus continuously; the Foundry and a Mine turn ore into metal worth 3 per unit.
 9. Add tourism buildings (stadium, theme park, museum, hotel) together with the Tourism campaign; keep mood high because tourism scales with it.
 10. Cut waste in upkeep: avoid services nobody needs, since each pays `up * (1 + pop/60) * RATE`; use Austerity when mood allows; do not let crime run (it costs `0.3 * crime * pop * RATE` per second plus the mood penalty).
-11. Trade power and water surplus with neighbours at a good relation (earns 0.2 per imported unit times `RATE`).
+11. Trade power and water surplus with neighbours at a good relation (the buyer pays 0.3 per unit times `RATE` and the seller earns the same).
 12. Take a loan only if the new buildings return more than the interest; the repayment is a fixed line item.
 13. Use Fast-track permits during booms to cut construction time to 5 s.
 

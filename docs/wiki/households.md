@@ -28,6 +28,9 @@ wealth  += net wage - bills          (unemployed citizens earn nothing)
 ## Policy and planner
 The policy [Cost-of-living payments](policies.md) gives every broke household 0.12 coins per second (upkeep 2.0). Planner towns switch it on when more than 30% of households are broke, the treasury is over 250 and income over 1; they switch it off under 10% broke or when income drops under 0.2.
 
+## Landlords and the savings tax
+Each second every household pays rent (`RENT` times its home's tier). The rents are pooled and paid out equally to the households whose savings are in the top quarter (at least 4 residents are needed), so rent moves wealth upward and is conserved (`hh.rent` collected, `hh.rent_got` paid). The well-off already spend and invest away 0.4% per second of savings above 150; the town now taxes a share `clamp(5 * residential tax rate, 0, 1)` of that outflow into the treasury (budget line "Savings tax", `City.hh_tax`), so a 10% rate takes half and a 0% rate none. Test: `client/tests/landlords.gd`.
+
 ## Where to see it
 City panel (Economy tab): "Households: average savings, median, broke and comfortable shares, prices, wages, real wage". Event feed: price events.
 
@@ -43,6 +46,6 @@ City panel (Economy tab): "Households: average savings, median, broke and comfor
 
 ## Open questions
 - Town income (`City._money`) is still the aggregate formula; households do not pay it individually, only scale it.
-- Rent is a sink: no landlord receives it. Savings are not taxed and do not feed the commercial tax.
+- Landlords are simply the best-off quarter of households; there are no property deeds, so a home's owner is not a specific person. The savings tax is the only link from household savings to the treasury; savings do not feed the commercial tax.
 - Unemployed citizens get no income unless the payments policy is on.
 - No per-family view yet (households are single citizens, grouped only by home cell).

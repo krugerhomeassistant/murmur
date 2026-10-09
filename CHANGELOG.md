@@ -6,6 +6,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 ## [Unreleased]
 
 ### Added
+- Household second pass: the best-off quarter of households are landlords and split everyone's rent; the town taxes part of the well-off spending outflow ("Savings tax" budget line, scaled by the residential rate). `tests/landlords.gd`.
 - Service trade: a town short of health, police, fire, education or leisure coverage buys it from road-linked neighbours that have plenty, paying them (embargo and war stop it). Towns share by trade, not by automatic money top-ups. `tests/services.gd`.
 - Planner approve/veto queue: "Ask before planners build services" turns each planned service building into a decision (Build or Veto; a veto pauses that building for 10 days). `tests/propose.gd`.
 - Mayor's financial focus: five sliders in the Budget tab (industry, farming, mining, military, services) steer what planners zone and build and whether a town makes or buys ore, metal and arms; the council sets it from prices and threat unless you move a slider. `tests/focus.gd`.
@@ -21,6 +22,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 - The land between and around the towns is drawn from the endless world (rivers, lakes, coast, forest, hills, rock, ore), generated a few milliseconds per frame near the camera, and the camera may roam 10 plots past the outermost town (it was clamped to the towns).
 
 ### Fixed
+- Power and water between towns now cost the buyer exactly what the seller earns (0.3 per unit); before, the buyer paid 0.4 and the seller got 0.2 for each partner's imports, which lost money and could over-credit with three or more towns.
 - Multiplayer: a dropped player's town is reclaimed with a secret per-install rejoin token instead of the display name, and a fast reconnect takes over its old seat; the host no longer queues snapshots for a stalled client (it skips rounds, then disconnects it after a minute). `tests/token.gd`, `netsync`, `mp`.
 - Empire window column sorting was shifted by one column; founded towns now use the game's difficulty and stay planner-run while spectating; a dedicated server takes 8 clients; joining players draw the host's world between towns; WASD no longer pans the camera while typing; the benchmark (F9) no longer deletes your save; `leave` can no longer end a war for free; minimized windows come back minimized; the Declare WAR tooltip describes real fights.
 - Planner stall: a tiny low-mood town no longer sits under the zoning mood gate forever; it now builds a service to lift mood first and small towns (pop < 40) use a lower gate (0 stalls in 96 fresh towns, was about 5%).
