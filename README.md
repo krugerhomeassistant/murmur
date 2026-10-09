@@ -36,9 +36,15 @@ Everything is drawn with code (no art assets), the whole game is data-driven.
 
 ## Run it
 
-1. Install [Godot 4.7](https://godotengine.org/download) (the standard build, no .NET).
-2. In the Godot project manager, import the `client/` folder. On Windows you can instead double-click `Open Murmur in Godot.bat` in the repo root: it uses the `GODOT` environment variable (full path to the Godot exe) if set, otherwise `godot` from your PATH.
-3. Press Play.
+**Just play (Windows):** download `Murmur-windows-<commit>.zip` from the latest [Build workflow run](https://github.com/krugerhomeassistant/murmur/actions/workflows/build.yml) (Artifacts) or from a tagged [release](https://github.com/krugerhomeassistant/murmur/releases), unzip, double-click `Murmur.exe`. Nothing to install.
+
+**From source (any OS):**
+
+1. `git clone https://github.com/krugerhomeassistant/murmur` (or `git pull` to update).
+2. Install [Godot 4.7.2](https://godotengine.org/download) (standard build, no .NET) and set the `GODOT` environment variable to its exe, or put it on your PATH.
+3. Windows: double-click `Play Murmur.bat` (imports, then starts the game). Elsewhere: `godot --path client`. To edit, use `Open Murmur in Godot.bat` or import `client/` in the project manager.
+
+**Which build am I running?** The start menu and window title show `vX.Y.Z (commit abc1234)`; `godot --path client -- --build-info` prints it. Compare with the newest commit on `main`. If it is older, you are on an old checkout or an old portable zip. Troubleshooting: if scripts error out after a pull, run `godot --headless --path client --import --quit` once, or delete the `.godot` folder inside `client`.
 
 Controls: WASD or arrows pan, wheel zooms, right/middle-drag pans, Space pauses, **M** zooms out to the whole region and back, **T** toggles auto-training troops, **F3** shows the performance overlay, **B** bulldozes, **F** follows the active town, **Tab** switches town, **Enter** chats in multiplayer, **F9** runs the benchmark. Towns menu > *Found a new town* lets you click a free plot anywhere on the map (the price grows with distance). All towns sit in one continuous map: pan or scroll to the next town, or click it.
 

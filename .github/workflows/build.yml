@@ -1,0 +1,65 @@
+name: Build
+# Portable Windows build of every commit on main (download it from the run's Artifacts), and a GitHub release when a v* tag is pushed.
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  workflow_dispatch:
+env:
+  GODOT_VERSION: "4.7.2"
+defaults:
+  run:
+    shell: bash
+jobs:
+  windows:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write  # only used to attach the zip to a release on tag pushes
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Godot
+        run: |
+          wget -q "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip" -O godot.zip
+          unzip -q godot.zip && sudo mv "Godot_v${GODOT_VERSION}-stable_linux.x86_64" /usr/local/bin/godot
+      - name: Cache export templates
+        id: tpl
+        uses: actions/cache@v4
+        with:
+          path: ~/.local/share/godot/export_templates
+          key: godot-templates-windows-${{ env.GODOT_VERSION }}
+      - name: Install Windows export templates
+        if: steps.tpl.outputs.cache-hit != 'true'
+        run: |
+          wget -q "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_export_templates.tpz" -O templates.tpz
+          d=~/.local/share/godot/export_templates/${GODOT_VERSION}.stable
+          mkdir -p "$d"
+          unzip -q -j templates.tpz "templates/windows_release_x86_64.exe" "templates/windows_debug_x86_64.exe" "templates/version.txt" -d "$d"
+          rm templates.tpz
+      - name: Stamp and import
+        run: |
+          python3 scripts/stamp_build.py
+          godot --headless --path client --import || true
+      - name: Export Windows build
+        run: |
+          mkdir -p build
+          godot --headless --path client --export-release "Windows Desktop" ../build/Murmur.exe
+      - name: Check the exported file knows its commit
+        run: |
+          godot --headless --main-pack build/Murmur.exe -- --build-info | tee info.txt
+          grep -q "commit $(git rev-parse --short=7 HEAD)" info.txt
+      - name: Package
+        run: |
+          cp scripts/PORTABLE.txt build/README.txt
+          cd build && zip -q "../Murmur-windows.zip" Murmur.exe README.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Murmur-windows-${{ github.sha }}
+          path: Murmur-windows.zip
+          retention-days: 30
+      - name: Attach to the release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: Murmur-windows.zip
+          generate_release_notes: true

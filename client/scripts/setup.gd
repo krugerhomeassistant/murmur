@@ -46,6 +46,12 @@ func _ready() -> void:
 	sub.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	sub.add_theme_color_override("font_color", Color("9aa88f"))
 	v.add_child(sub)
+	var build := Label.new()
+	build.text = "Build " + BuildInfo.label()
+	build.add_theme_font_size_override("font_size", 12)
+	build.add_theme_color_override("font_color", Color("7d8a73"))
+	build.tooltip_text = "Which version of Murmur this is. If it is not the commit you expect, you are running an old copy."
+	v.add_child(build)
 	if has_save:
 		var cont := Button.new()
 		cont.text = "Continue saved game"

@@ -74,3 +74,4 @@ jobs:
           timeout 600 godot --headless --path client -s tests/netsync.gd | tee ns.txt && grep -q NETSYNC_OK ns.txt
           timeout 600 godot --headless --path client -s tests/mp.gd | tee mp.txt && grep -q MP_OK mp.txt
           timeout 600 godot --headless --path client -s tests/pvp.gd | tee pv.txt && grep -q PVP_OK pv.txt
+          timeout 600 godot --headless --path client -s tests/buildinfo.gd | tee bi.txt && grep -q BUILDINFO_OK bi.txt

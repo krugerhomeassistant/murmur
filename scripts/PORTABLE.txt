@@ -1,0 +1,11 @@
+Murmur (portable Windows build)
+
+1. Unzip anywhere.
+2. Double-click Murmur.exe. There is no installer and nothing else to install.
+
+The start menu shows "Build vX.Y.Z (commit abc1234)". If a feature you expect is missing, compare that
+commit with the latest one on https://github.com/krugerhomeassistant/murmur/commits/main .
+
+Saves, settings and window layout are kept in %APPDATA%\Godot\app_userdata\Murmur (delete it to reset everything).
+Controls and help: https://github.com/krugerhomeassistant/murmur/blob/main/docs/wiki/controls.md
+Multiplayer needs UDP port 7777 open on the host.

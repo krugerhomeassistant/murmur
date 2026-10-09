@@ -5,3 +5,5 @@ dist/
 *.import~
 .mcp.json
 client/benchmark_result.json
+client/build_info.json
+build/
