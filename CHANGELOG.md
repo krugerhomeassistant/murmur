@@ -6,7 +6,6 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 ## [Unreleased]
 
 ### Added
-- Shared empire treasury: a "Shared treasury" checkbox pools your towns; every 10 seconds rich pooled towns top up broke ones (no money created).
 - Planner approve/veto queue: "Ask before planners build services" turns each planned service building into a decision (Build or Veto; a veto pauses that building for 10 days). `tests/propose.gd`.
 - Mayor's financial focus: five sliders in the Budget tab (industry, farming, mining, military, services) steer what planners zone and build and whether a town makes or buys ore, metal and arms; the council sets it from prices and threat unless you move a slider. `tests/focus.gd`.
 - Arms supply chain: new good Arms and Armoury building (metal to arms). Training units costs coins plus arms; a town uses its own stock first and buys the rest from the market, so war moves ore, metal and arms prices. Planner builds armouries. `tests/arms.gd`.

@@ -109,9 +109,6 @@ Button "Balance treasuries (floor $200)" runs `balance [200]`. `Cmd.run` accepts
 
 Money is conserved. With the button's floor of 200, towns above $600 give half of what they hold above $400, and towns under $200 are topped up toward $200. Example: A holds $1,000 (offers 300) and B holds $50 (short 150): 150 moves, A ends with $850 and B with $200. Towns between the floor and 3 x floor are untouched. The window headline reads "Moved $N between your towns."; in multiplayer see Open questions.
 
-## Shared treasury (`City.pool`, `Empire.auto_pool`)
-The "Shared treasury" checkbox in ALL MY TOWNS (bulk command `pool`, saved per town) puts towns into their side's pool. Every 10 simulated seconds `Main` calls `Empire.auto_pool`: for each side, the pooled towns are passed to `Empire.rebalance` with `POOL_FLOOR` = 150, so a town above $450 offers half of what exceeds $300 and towns under $150 are topped up in proportion to need. Money is only moved, never created. Towns outside the pool are untouched. Test: `client/tests/empire.gd`.
-
 ## Spectator mode
 
 Start menu checkbox "Spectator: no mayor, watch towns run themselves" (`Setup.o_spec`, passed as `spectate`). In `Main._fresh`:
