@@ -6,6 +6,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 ## [Unreleased]
 
 ### Added
+- `tests/growth.gd`: growth baseline printout (time to 100 and 300 people), for tuning the planner and households.
 - Domination plan: `docs/DOMINATION_DESIGN.md` sets the end goal (conquest or hegemony), faster growth, more frequent war, the depth order and a `city.gd` split. Design only; no gameplay change yet.
 - Rivers v2: main rivers are domain-warped (meanders, loops), vary between 3 and 5 tiles wide, and thin tributaries run through wet country. Same seed gives the same land; old saves keep the seed so their rivers change shape.
 - Portable Windows build in CI (`build.yml`): every push to `main` produces `Murmur-windows-<commit>.zip`; tags attach it to the release. The start menu and window title show the build (`vX.Y.Z (commit abc1234)`), `-- --build-info` prints it, `Play Murmur.bat` imports and starts from source, README run steps rewritten. `tests/buildinfo.gd`.
