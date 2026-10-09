@@ -91,7 +91,7 @@ Headless profilers (`tests/regionbench.gd`, `bench.gd`, `stageprof.gd`) are seco
 
 ## Roadmap
 
-Next, in order ([design](docs/EMPIRE_DESIGN.md)): an endless procedural world with founding and claiming on the map, an empire mode to run a group of towns, group-vs-group multiplayer with a shared economy, then deeper economy, infrastructure and military variety (war design: [docs/WAR_DESIGN.md](docs/WAR_DESIGN.md)). Full checklist in [`docs/PLAN.md`](docs/PLAN.md).
+Next, in order ([design](docs/EMPIRE_DESIGN.md)): an endless procedural world with founding and claiming on the map, an empire mode to run a group of towns, group-vs-group multiplayer with a shared economy, then deeper economy, infrastructure and military variety (war design: [docs/WAR_DESIGN.md](docs/WAR_DESIGN.md)). Each city's end goal is world domination, by conquest or by peace: [docs/DOMINATION_DESIGN.md](docs/DOMINATION_DESIGN.md). Full checklist in [`docs/PLAN.md`](docs/PLAN.md).
 
 ## Contributing
 

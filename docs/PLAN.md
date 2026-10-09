@@ -134,6 +134,18 @@ Goal: Murmur, a cozy interactive city-builder (Godot) with an optional Live Data
 - [ ] REPO PROFESSIONALISM pass: screenshots/GIF in README, consistent docs structure, docs/ folder, CONTRIBUTING/CODE_OF_CONDUCT/SECURITY, release notes, badges accurate, remove dev clutter, LICENSE check, tidy PLAN/WIKI/LESSONS layout.
 - STANDING RULE: README/docs must never claim anything untrue or stale; scripts/check_repo.py runs in CI (hygiene job).
 
+## Domination plan (user, 2026-10-09): READ docs/DOMINATION_DESIGN.md
+- [ ] D1 Growth baseline: `tests/growth.gd`, measured time to 500 pop (3 runs), no behaviour change.
+- [ ] D2 Victory: conquest (70% of land for 3 years or last group) and hegemony (top score 5 years, 40% of land under treaty); Empire progress bar; game-over screen with the route.
+- [ ] D3 War drivers: AI ambition, border tension, war goals (tribute / land / total); war banner in Empire.
+- [ ] D4 Vassalage and peace scoring.
+- [ ] D5 Growth tuning, one gate per PR, A/B 3x each.
+- [ ] D6 Culture score (about five buildings, two civics).
+- [ ] D7 Split `city.gd` (housing, services, utilities, budget, war), behaviour unchanged, each a pure move.
+- [ ] D8 Depth layers (E4 goods and households, E5 infrastructure, E6 military, E3 group multiplayer) in table order.
+- [ ] D9 Perf pass, benchmark table, release.
+Found on 2026-10-09: the game has no victory condition at all, and war needs temper below -0.7 plus a 40% roll per event, which is why it feels rare.
+
 ## Empire / endless world (user, 2026-10-08): NEXT MAJOR FEATURE, design in docs/EMPIRE_DESIGN.md
 - [ ] E1 Endless procedural world: [x] `world.gd` generator + chunk cache + `tests/world.gd` (determinism, no chunk seams, terrain mix); [x] towns cut from the world (`City.apply_world`, start-site search, ground drawing, seed saved, `tests/worldtown.gd`, `tests/worldstart.gd`); [x] found a town on any free plot with a distance cost (`Main.found_town_at`, `tests/found.gd`), `WorldLayer` draws the wilderness, camera roams 10 plots past the towns; [ ] fog of war, claim adjacent land, multiplayer founding (needs a Cmd), nicer rivers (they form closed loops), free off-grid placement (maybe never: the plot grid keeps trade and gates simple); plots anchored by world position (replace `gpos`), fog of war, found-a-town on the map with distance cost (replaces flat $300), claim adjacent land, save v2 + migration, `tests/world.gd`.
 - [x] Pop-out (native OS) HUD windows for multi-screen play (`Hud._popout/_dock`, `tests/popout.gd`).
