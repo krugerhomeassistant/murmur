@@ -134,6 +134,9 @@ const SVC_FEE := 0.012  # coins per second per resident per coverage point bough
 var cov_own := {}  # coverage from this town's own buildings, before buying from neighbours
 var svc_in := {}
 var svc_buy := {}
+## Power and water bought from neighbours: partner name -> coins/s paid to it. The seller earns exactly what the buyer pays.
+const UTIL_PRICE := 0.3
+var imp_pay := {}
 var imports := {"power": 0.0, "water": 0.0, "sewage": 0.0}
 var net_own := {"power": 0.0, "water": 0.0, "sewage": 0.0}
 var trade_net := 0.0
@@ -202,6 +205,7 @@ var traded := {}  # units moved to (+) or from (-) linked towns since the last _
 var wage_ix := 1.0  # wage level; follows the cost of living with a lag
 var cpi := 1.0  # cost-of-living index: market price of the food and goods basket against its base (smoothed)
 var hh := {"avg": 0.0, "median": 0.0, "broke": 0.0, "rich": 0.0, "real": 1.0}  # household statistics, recomputed every second
+var hh_tax := 0.0  # savings tax collected from the well-off this second
 var hardship := 0.0  # share of households that cannot make ends meet
 var home_w := {}  # runtime: home cell -> [wealth sum, residents]
 var stock := {"crops": 0.0, "food": 0.0, "goods": 0.0, "ore": 0.0, "metal": 0.0, "arms": 0.0}
@@ -922,6 +926,7 @@ func _scan() -> void:
 ## Power and water networks: plants feed connected lines; buildings touching a live line share the supply.
 func _net() -> void:
 	var nets := 0
+	imp_pay.clear()
 	var nt := Time.get_ticks_usec()
 	for m in NETS:
 		var layer: PackedByteArray = _nl(m)
@@ -951,6 +956,8 @@ func _net() -> void:
 				if take > 0.0:
 					sup += take
 					imports[m] = float(imports[m]) + take
+					if m != "sewage":
+						imp_pay[p.town_name] = float(imp_pay.get(p.town_name, 0.0)) + take * UTIL_PRICE * RATE
 		nt = _pf("net_imports", nt)
 		net_sup[m] = sup
 		net_dem[m] = dem
@@ -1733,11 +1740,10 @@ func _money(market: float) -> void:
 	e_pol *= RATE
 	var e_staff := pop * 0.3 * RATE
 	trade_net = 0.0
-	for m in ["power", "water"]:
-		trade_net -= float(imports[m]) * 0.4 * RATE
+	for q in imp_pay:
+		trade_net -= float(imp_pay[q])
 	for p in partners:
-		for m in ["power", "water"]:
-			trade_net += float(p.imports[m]) * 0.2 * RATE
+		trade_net += float(p.imp_pay.get(town_name, 0.0))  # neighbours pay us for power and water
 		trade_net += float(p.svc_buy.get(town_name, 0.0))  # neighbours pay us for the coverage they use
 	for q in svc_buy:
 		trade_net -= float(svc_buy[q])
@@ -1748,7 +1754,7 @@ func _money(market: float) -> void:
 		e_loan += float(l["pay"])
 	budget_lines = [
 		["Residential tax", r_tax], ["Commercial tax", r_com], ["Industrial tax", r_ind], ["Office tax", r_off],
-		["Tourism", r_tour], ["Events", mod("income_add") * RATE], ["Military funding", grant_sum * RATE * mod("grant_mult")], ["Regional trade", trade_net],
+		["Tourism", r_tour], ["Events", mod("income_add") * RATE], ["Military funding", grant_sum * RATE * mod("grant_mult")], ["Regional trade", trade_net], ["Savings tax", hh_tax * RATE],
 		["Roads", -e_roads], ["Buildings", -e_zone], ["Services", -e_svc], ["Policies", -e_pol],
 		["City staff", -e_staff], ["Crime losses", -e_crime],
 		["Exports", tr[0]], ["Imports (food, goods)", -tr[1]], ["Loan repayments", -e_loan],
@@ -1864,17 +1870,23 @@ func _households() -> void:
 	var broke := 0
 	var rich := 0
 	var tot := 0.0
+	var rent_pool := 0.0
+	hh_tax = 0.0
 	for c in citizens:
 		var wage := 0.0
 		if c.work >= 0:
 			wage = net * float(WAGE_TIER.get(String(Catalog.DEFS[grid[c.work]].get("sector", "")), 1.0)) if grid[c.work] != T.EMPTY else net
-		var bills := 0.05 * pf + 0.03 * pg + RENT * float(Catalog.DEFS[grid[c.home]].get("tier", 1.0)) if grid[c.home] != T.EMPTY else 0.0
+		var rent := RENT * float(Catalog.DEFS[grid[c.home]].get("tier", 1.0)) if grid[c.home] != T.EMPTY else 0.0
+		var bills := 0.05 * pf + 0.03 * pg + rent
+		rent_pool += rent
 		c.wealth += wage - bills
 		if c.wealth < BROKE:
 			c.wealth = maxf(c.wealth, 0.0)
 			c.wealth += stipend  # cost-of-living payments reach the ones who ran out
 		elif c.wealth > 150.0:
-			c.wealth -= (c.wealth - 150.0) * 0.004  # the well-off spend and invest elsewhere
+			var out := (c.wealth - 150.0) * 0.004  # the well-off spend and invest elsewhere
+			c.wealth -= out
+			hh_tax += out * clampf(tax_r * 5.0, 0.0, 1.0)  # the town taxes part of it, more at higher residential rates
 		if c.wealth < BROKE:
 			broke += 1
 		elif c.wealth > 120.0:
@@ -1888,7 +1900,19 @@ func _households() -> void:
 	var n := citizens.size()
 	hardship = float(broke) / maxf(n, 1.0)
 	ws.sort()
-	hh = {"avg": tot / maxf(n, 1.0), "median": ws[n / 2] if n > 0 else 0.0, "broke": hardship, "rich": float(rich) / maxf(n, 1.0), "real": wage_ix / maxf(cpi, 0.01)}
+	# landlords: the best-off quarter of households own the rented homes and split everyone's rent
+	var rent_got := 0.0
+	if n >= 4 and rent_pool > 0.0:
+		var q: float = ws[n * 3 / 4]
+		var owners: Array[Citizen] = []
+		for c in citizens:
+			if c.wealth >= q:
+				owners.append(c)
+		for c in owners:
+			c.wealth += rent_pool / owners.size()
+		rent_got = rent_pool
+		tot += rent_pool
+	hh = {"avg": tot / maxf(n, 1.0), "median": ws[n / 2] if n > 0 else 0.0, "broke": hardship, "rich": float(rich) / maxf(n, 1.0), "real": wage_ix / maxf(cpi, 0.01), "rent": rent_pool, "rent_got": rent_got}
 
 
 ## Border links only count roads joined to the town's biggest road network, not stray tiles near the edge.
