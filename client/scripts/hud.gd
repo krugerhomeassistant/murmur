@@ -1021,7 +1021,6 @@ var emp_cells: Array = []  # per town: {"nm", "pop", "co", "inc", "mood", "fl", 
 var emp_sort := 0  # 0 order founded, 1 name, 2 pop, 3 coins, 4 net, 5 mood
 var emp_auto: OptionButton
 var emp_pol: CheckButton
-var emp_pool: CheckButton
 var emp_exp: CheckButton
 var emp_train: CheckButton
 var emp_taxl := {}
@@ -1055,8 +1054,6 @@ func _empire() -> void:
     emp_pol = _chk(r2, "Auto-policies", "auto_policy")
     emp_exp = _chk(r2, "Auto-annex", "auto_expand")
     emp_train = _chk(r2, "Auto-train troops", "train")
-    emp_pool = _chk(r2, "Shared treasury", "pool")
-    emp_pool.tooltip_text = "Pooled towns even out their money every 10 seconds: a town above $450 shares half of what exceeds $300, towns under $150 are topped up."
     var r3 := HBoxContainer.new()
     body.add_child(r3)
     _lbl(r3, 40).text = "Tax"
@@ -1219,7 +1216,6 @@ func _empire_refresh(c: City) -> void:
     emp_pol.set_pressed_no_signal(c.auto_policy)
     emp_exp.set_pressed_no_signal(c.auto_expand)
     emp_train.set_pressed_no_signal(c.train_on)
-    emp_pool.set_pressed_no_signal(c.pool)
     for k in emp_taxl:
         (emp_taxl[k] as Label).text = "%s %d%%" % [{"r": "Res", "c": "Com", "i": "Ind"}[k], int(float(c.get("tax_" + k)) * 100.0)]
 

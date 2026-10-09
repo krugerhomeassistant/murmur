@@ -109,9 +109,6 @@ Button "Balance treasuries (floor $200)" runs `balance [200]`. `Cmd.run` accepts
 
 Money is conserved. With the button's floor of 200, towns above $600 give half of what they hold above $400, and towns under $200 are topped up toward $200. Example: A holds $1,000 (offers 300) and B holds $50 (short 150): 150 moves, A ends with $850 and B with $200. Towns between the floor and 3 x floor are untouched. The window headline reads "Moved $N between your towns."; in multiplayer see Open questions.
 
-## Shared treasury (`City.pool`, `Empire.auto_pool`)
-The "Shared treasury" checkbox in ALL MY TOWNS (bulk command `pool`, saved per town) puts towns into their side's pool. Every 10 simulated seconds `Main` calls `Empire.auto_pool`: for each side, the pooled towns are passed to `Empire.rebalance` with `POOL_FLOOR` = 150, so a town above $450 offers half of what exceeds $300 and towns under $150 are topped up in proportion to need. Money is only moved, never created. Towns outside the pool are untouched. Test: `client/tests/empire.gd`.
-
 ## Spectator mode
 
 Start menu checkbox "Spectator: no mayor, watch towns run themselves" (`Setup.o_spec`, passed as `spectate`). In `Main._fresh`:
@@ -194,5 +191,5 @@ Headless runs (and platforms without sub-window support) fall back to embedded G
 - **Sides depend on the viewed town.** Offline, `Main.cmd` does not check that the viewed town is yours, and `Empire.same_side` compares `human` flags. Viewing a neighbour (`human = false`) makes the planner towns "your towns" for totals, bulk changes and sending.
 - **Founding while spectating.** A founded town is created with `human = true` (`Main.found_town_at`), so after founding one `Main.spectating()` is false: Tab and auto-follow stop and the sides split. This follows from the code; I did not run it.
 - **Multiplayer feedback.** On a client `Main.cmd` returns null, so the Balance button always shows "Nothing to balance." even when the host moved money; on the host or offline a no-op shows "Moved $0 between your towns.".
-- **Planner delegate, shared treasury, simulation level of detail.** `docs/EMPIRE_DESIGN.md` (E2) lists an approve/veto queue for the planner, a shared empire treasury, drill-down control and reduced-rate simulation for many towns as not done. I found none of them in the code.
+- **Simulation level of detail.** Reduced-rate simulation for many towns (E2) is not done. Towns share only by trade (goods, power, water, services), never by automatic money transfers: a shared-treasury auto top-up was built and removed on purpose. Manual Send and Balance remain.
 - **Refresh rate.** The window refreshes every sixth frame (`tick_n % 6` in `Hud._process`), which is about ten times a second at 60 frames per second and slower on a slow machine.

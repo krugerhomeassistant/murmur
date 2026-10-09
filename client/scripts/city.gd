@@ -122,13 +122,18 @@ var auto_policy := true
 ## Mayor's financial focus: weight 0-2 per sector (1 = neutral). Steers what planners zone and build, and whether the town makes (mines, foundries, armouries) or buys ore, metal and arms.
 const FOCUS := ["industry", "farming", "mining", "military", "services"]
 var focus := {"industry": 1.0, "farming": 1.0, "mining": 1.0, "military": 1.0, "services": 1.0}
-var pool := false  # joins the empire's shared treasury (Empire.auto_pool)
 var ask_build := false  # planners propose service buildings as decisions instead of building them
 var vetoed := {}  # building id (as text) -> day until which the planner does not propose it again
 var auto_focus := true  # the council sets focus from prices and threat; moving a slider turns it off
 var crime := 0.0
 var town_name := "Murmur"
 var partners: Array = []  # other towns in the region (City)
+## Services bought from neighbours: metric -> coverage points added to this town's average, and partner name -> coins/s paid to it.
+const SHARED := ["health", "police", "fire", "edu", "leisure"]
+const SVC_FEE := 0.012  # coins per second per resident per coverage point bought
+var cov_own := {}  # coverage from this town's own buildings, before buying from neighbours
+var svc_in := {}
+var svc_buy := {}
 var imports := {"power": 0.0, "water": 0.0, "sewage": 0.0}
 var net_own := {"power": 0.0, "water": 0.0, "sewage": 0.0}
 var trade_net := 0.0
@@ -906,6 +911,7 @@ func _scan() -> void:
 			for h in homes:
 				sum += cov_at(cell(h), m)
 			cov[m] = sum / maxi(homes.size(), 1) if not homes.is_empty() else 0.0
+			cov_own[m] = cov[m]
 		var ps := 0.0
 		for h in homes:
 			ps += minf(1.0, poll_at(cell(h)))
@@ -1667,8 +1673,39 @@ func _second() -> void:
 			hist_pop.pop_front()
 
 
+## Buys missing service coverage (health, police, fire, education, leisure) from road-linked neighbours that have plenty of their own.
+## A neighbour offers at most half of its coverage above 30%, scaled by relations (`Diplo.tmult`) and by its size relative to ours; we pay
+## `SVC_FEE` per resident per point, to that neighbour, and only while we can afford a minute of it. No coin is created.
+func _svc_trade() -> void:
+	svc_buy.clear()
+	for m in SHARED:
+		svc_in[m] = 0.0
+		if not cov_own.has(m) or homes.is_empty():
+			continue
+		cov[m] = cov_own[m]
+		var gap := 1.0 - float(cov_own[m])
+		if gap < 0.05 or pop < Catalog.need_pop(m):
+			continue
+		for p in partners:
+			if gap <= 0.0:
+				break
+			var t := Diplo.tmult(self, p)
+			if t <= 0.0 or not p.cov_own.has(m) or p.homes.is_empty():
+				continue
+			var offer := clampf(float(p.cov_own[m]) - 0.3, 0.0, 1.0) * 0.5 * minf(t, 1.0) * clampf(float(p.homes.size()) / float(homes.size()), 0.3, 1.0)
+			var take := minf(offer, gap)
+			var fee := take * pop * SVC_FEE * RATE
+			if take <= 0.001 or coins < fee * 60.0:
+				continue
+			gap -= take
+			svc_in[m] = float(svc_in[m]) + take
+			svc_buy[p.town_name] = float(svc_buy.get(p.town_name, 0.0)) + fee
+		cov[m] = minf(1.0, float(cov_own[m]) + float(svc_in[m]))
+
+
 func _money(market: float) -> void:
 	_households()
+	_svc_trade()
 	var econ := 1.0 + 0.5 * market
 	var prodm := (1.0 - 0.2 * _need("health")) * (1.0 - 0.25 * _need("power")) * (1.0 - 0.15 * _need("water")) * mod("prod_mult")
 	var wise := 1.0 + 0.3 * float(cov["edu"])
@@ -1701,6 +1738,9 @@ func _money(market: float) -> void:
 	for p in partners:
 		for m in ["power", "water"]:
 			trade_net += float(p.imports[m]) * 0.2 * RATE
+		trade_net += float(p.svc_buy.get(town_name, 0.0))  # neighbours pay us for the coverage they use
+	for q in svc_buy:
+		trade_net -= float(svc_buy[q])
 	var e_crime := crime * pop * 0.3 * RATE
 	var tr := _trade(market)
 	var e_loan := 0.0
@@ -3492,7 +3532,7 @@ func _trade(_market: float) -> Array:
 const SAVE_KEYS := ["town_name", "grid", "lvl", "build", "wire", "pipe", "sewer", "lamp", "water", "ore", "ground", "coins", "mood", "tax_r", "tax_c", "tax_i", "clock", "day",
 	"policies", "auto_mode", "auto_policy", "peak", "announced", "next_id", "recent", "active", "approval", "rep", "favor",
 	"petitions", "promises", "pet_recent", "kept", "broken", "next_election", "elections_won", "rally_used", "last_vote",
-	"season", "wage_ix", "price_loc", "stock", "exported", "loans", "done_ms", "disasters_survived", "burned", "hist_coins", "hist_pop", "ruins", "offline", "lamp", "terr", "expansions", "auto_expand", "human", "owner", "temper", "rel", "treaty", "ev_scale", "gpos", "war_n", "war_sc", "occ", "train_on", "train_t", "train_w", "focus", "auto_focus", "ask_build", "vetoed", "pool"]
+	"season", "wage_ix", "price_loc", "stock", "exported", "loans", "done_ms", "disasters_survived", "burned", "hist_coins", "hist_pop", "ruins", "offline", "lamp", "terr", "expansions", "auto_expand", "human", "owner", "temper", "rel", "treaty", "ev_scale", "gpos", "war_n", "war_sc", "occ", "train_on", "train_t", "train_w", "focus", "auto_focus", "ask_build", "vetoed"]
 
 func to_dict() -> Dictionary:
 	var cs: Array = []
