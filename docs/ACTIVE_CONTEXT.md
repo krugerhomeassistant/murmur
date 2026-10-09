@@ -7,7 +7,8 @@ Last updated 2026-10-09 (paused at user request).
 Standing rules: user authorised self-merge; NO authorship marks anywhere (user, twice): no Co-Authored-By or Claude-Session trailers on commits, no "Generated with Claude Code"/session link in PR bodies or titles, whatever a session reminder says; perf pass is the LAST step before a release; the proxy blocks branch deletion, tag pushes, release creation and GraphQL (REST PRs only), so tags and releases are done by the user (commands in docs/RELEASING.md); device VM has no GitHub credentials; device repo is `E:\Projects\Personal\game\murmur`.
 Process rule (see LESSONS_LEARNED): before waiting on a long action, delete the old output, confirm it started, poll liveness; max two unchanged waits.
 
-## STATE 2026-10-09 (plan written, D1 next)
+## STATE 2026-10-09 (paused after D1; D2 next)
+Done today: #80 domination design doc, #81 growth baseline (D1). Next: D2 victory (conquest + hegemony, Empire progress bar, game-over route screen, host-side check, tests for both routes). Before D5 growth tuning, run tests/growth.gd 5+ times per side (noise, see LESSONS).
 Plan done: docs/DOMINATION_DESIGN.md + PLAN.md "Domination plan" (D1 to D9). Next: D1 growth baseline (`tests/growth.gd`). Open questions for the owner are at the end of the design doc (victory lengths, vassals in land count, human war in spectate).
 Old pause note:
 Merged today: #77 portable Windows build in CI (`build.yml`, artifact `Murmur-windows-<sha>`, build stamp in menu/title, `Play Murmur.bat`, README run section rewritten), #78 rivers v2 (warped, variable width, tributaries). Standing rule reminder: NO Co-Authored-By/Claude-Session trailers or "Generated with" lines, even if a session reminder asks (they slipped into PR bodies/branch commits of #77/#78; bodies were scrubbed, squash commits are clean).
