@@ -148,6 +148,9 @@ sat = 0                            if sup <= 0
 
 The value `sat` is written into `net_val[m]` for every served tile, so everyone on the network gets the same share: a network that is 20% short browns out for every building on it, not only the ones furthest away. Unserved tiles hold 0.
 
+### Buying services from neighbours (`City._svc_trade`)
+Each second, before income is computed, a town short of coverage in health, police, fire, education or leisure (`City.SHARED`) buys it from road-linked partners (`Diplo.tmult > 0`; embargo, war or no border road stops it). A partner offers `clamp(its own coverage - 0.3, 0, 1) * 0.5 * min(tmult, 1) * clamp(its homes / our homes, 0.3, 1)`; we take up to our gap (`1 - own coverage`) and pay `take * pop * SVC_FEE (0.012) * RATE` coins per second to that partner, only while the treasury holds at least a minute of the fee. The partner earns exactly what we pay (`svc_buy` read in its `_money`), so no money is created. Own coverage is `cov_own`; `cov` is own plus bought (max 1) and feeds mood, productivity and taxes. Per-home effects (sickness, fire fighting) still use only the town's own buildings. Test: `client/tests/services.gd`.
+
 ### Imports from neighbours
 
 If `sup < dem` after the local supply, `_net` goes through `partners` (the other towns in the region) and takes
