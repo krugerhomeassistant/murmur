@@ -7,7 +7,7 @@ extends RefCounted
 enum K { SEA, RIVER, SAND, PLAIN, FOREST, HILL, ROCK }
 
 const SEA_LEVEL := 0.36
-const PAD := 3  # river lines need the field one tile past the chunk, then a one-tile dilation
+const PAD := 4  # river lines need the field one tile past the chunk, then up to a two-tile dilation
 const MAX_CHUNKS := 512
 
 var seed := 0
@@ -56,7 +56,7 @@ static func _fbm(x: float, y: float, s: int, oct: int) -> float:
 
 
 const STEP := 4  # slow fields are sampled every STEP tiles and interpolated, 16x cheaper; chunk sizes must be multiples of it
-enum F { ELEV, MOIST, RIVER }
+enum F { ELEV, MOIST, RIVER, TRIB, WIDTH }
 
 
 ## Field value at a lattice point (world tile gx*STEP, gy*STEP). Rivers follow the 0.5 level line of RIVER.
@@ -68,7 +68,14 @@ func _lat(f: int, gx: int, gy: int) -> float:
 			return _fbm(x / 110.0, y / 110.0, seed, 4)
 		F.MOIST:
 			return _fbm(x / 90.0, y / 90.0, seed + 101, 3)
-	return _fbm(x / 90.0, y / 90.0, seed + 211, 2)
+		F.TRIB:
+			return _fbm(x / 45.0, y / 45.0, seed + 509, 2)
+		F.WIDTH:
+			return _fbm(x / 60.0, y / 60.0, seed + 613, 2)
+	# domain warp: bends the main rivers into meanders instead of smooth contours
+	var wx := _fbm(x / 35.0, y / 35.0, seed + 401, 2) - 0.5
+	var wy := _fbm(x / 35.0, y / 35.0, seed + 402, 2) - 0.5
+	return _fbm((x + wx * 60.0) / 90.0, (y + wy * 60.0) / 90.0, seed + 211, 2)
 
 
 ## Interpolated field over the w*h tiles starting at (x0, y0), row-major.
@@ -104,19 +111,36 @@ func elevation(x: int, y: int) -> float:
 	return _grid(F.ELEV, x, y, 1, 1)[0]
 
 
-func _gen(cx: int, cy: int) -> Dictionary:
-	var n := csize + 2 * PAD
-	var rf := _grid(F.RIVER, cx * csize - PAD, cy * csize - PAD, n, n)
-	var side := PackedByteArray()
-	side.resize(n * n)
-	for q in n * n:
-		side[q] = 1 if rf[q] >= 0.5 else 0
-	var line := PackedByteArray()  # cells where the level line crosses toward +x or +y
+## Cells where the 0.5 level line of f crosses toward +x or +y.
+func _line(f: PackedFloat64Array, n: int) -> PackedByteArray:
+	var line := PackedByteArray()
 	line.resize(n * n)
 	for j in n - 1:
 		for i in n - 1:
-			if side[j * n + i] != side[j * n + i + 1] or side[j * n + i] != side[(j + 1) * n + i]:
+			var s := f[j * n + i] >= 0.5
+			if s != (f[j * n + i + 1] >= 0.5) or s != (f[(j + 1) * n + i] >= 0.5):
 				line[j * n + i] = 1
+	return line
+
+
+## True when padded cell (i, j) lies on a main river (1 tile each side, 2 where the width field is high) or a tributary.
+func _wet(main: PackedByteArray, trib: PackedByteArray, wet: PackedFloat64Array, wide: PackedFloat64Array, n: int, i: int, j: int) -> bool:
+	var r := 2 if wide[j * n + i] > 0.6 else 1
+	for dj in range(-r, r + 1):
+		for di in range(-r, r + 1):
+			if main[(j + dj) * n + i + di] == 1:
+				return true
+	return trib[j * n + i] == 1 and wet[j * n + i] > 0.5
+
+
+func _gen(cx: int, cy: int) -> Dictionary:
+	var n := csize + 2 * PAD
+	var x0 := cx * csize - PAD
+	var y0 := cy * csize - PAD
+	var main := _line(_grid(F.RIVER, x0, y0, n, n), n)
+	var trib := _line(_grid(F.TRIB, x0, y0, n, n), n)
+	var wet := _grid(F.MOIST, x0, y0, n, n)  # tributaries only run through wet country, so they start and end at springs
+	var wide := _grid(F.WIDTH, x0, y0, n, n)
 	var k := PackedByteArray()
 	k.resize(csize * csize)
 	var o := PackedByteArray()
@@ -135,10 +159,7 @@ func _gen(cx: int, cy: int) -> Dictionary:
 			else:
 				var river := false
 				if e > SEA_LEVEL + 0.02 and e < 0.64:  # springs rise at the foot of the hills
-					for dj in range(-1, 2):
-						for di in range(-1, 2):
-							if line[(j + PAD + dj) * n + i + PAD + di] == 1:
-								river = true
+					river = _wet(main, trib, wet, wide, n, i + PAD, j + PAD)
 				if river:
 					kind = K.RIVER
 				elif e < SEA_LEVEL + 0.03:

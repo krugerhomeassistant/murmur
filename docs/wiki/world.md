@@ -49,7 +49,9 @@ The header comment of `world.gd` states the rule: only integer hashing and `+ - 
 |---|---|---|
 | `ELEV` | `_fbm(x / 110, y / 110, seed, 4)` | Elevation. Feature size about 110 tiles. |
 | `MOIST` | `_fbm(x / 90, y / 90, seed + 101, 3)` | Moisture, decides forest against plain. |
-| `RIVER` | `_fbm(x / 90, y / 90, seed + 211, 2)` | Only its 0.5 level line is used: rivers follow it. |
+| `RIVER` | `_fbm` at `(x + 60 * wx) / 90`, `wx` a 35-tile fbm (domain warp) | Only its 0.5 level line is used: main rivers follow it, bent into meanders by the warp. |
+| `TRIB` | `_fbm(x / 45, y / 45, seed + 509, 2)` | 0.5 level line: tributaries, kept only where moisture is above 0.5 (wet country), so they start and end in the land. |
+| `WIDTH` | `_fbm(x / 60, y / 60, seed + 613, 2)` | Above 0.6 the main river is about 5 tiles wide instead of 3. |
 
 The design document mentions a temperature field; the code has none.
 
@@ -81,12 +83,11 @@ Consequences, all read from the code:
 
 Rivers are generated per chunk with a padded field, so they stay continuous across chunk borders:
 
-1. The `RIVER` field is sampled over `csize + 2 * PAD` tiles square (`PAD` = 3), starting `PAD` tiles before the chunk.
-2. Each cell is marked 1 if the field is at least 0.5, else 0 (`side`).
-3. A cell is on the **line** if its side differs from the cell to its +x neighbour or its +y neighbour.
-4. A tile in the chunk is a river tile if any line cell lies in the 3 by 3 block around it (this is the "one-tile dilation" mentioned at `PAD`), subject to the elevation limits in the table above.
+1. `RIVER`, `TRIB`, `WIDTH` and `MOIST` are sampled over `csize + 2 * PAD` tiles square (`PAD` = 4), starting `PAD` tiles before the chunk.
+2. A cell is on a **line** if its side of 0.5 differs from its +x or +y neighbour (`World._line`).
+3. A tile is a river tile if a main line cell lies within 1 tile (2 where `WIDTH` > 0.6), or it is itself a tributary line cell with moisture above 0.5 (`World._wet`), subject to the elevation limits above.
 
-So a river is the 0.5 contour of a smooth noise field, widened to about 3 tiles. The README gives river coverage as about 2.5 percent of tiles; `client/tests/world.gd` only asserts that water (sea plus river) is between 12 and 40 percent and rivers between 1 and 10 percent over a sparse sample of four seeds.
+Main rivers are warped contours (long meanders, loops, several river systems per map); tributaries are thin one-tile streams that only exist in wet country. `tests/world.gd` proves the result is identical for different chunk sizes (no seam) and asserts water between 12 and 40 percent and rivers between 1 and 10 percent over four seeds.
 
 ### Ore
 
