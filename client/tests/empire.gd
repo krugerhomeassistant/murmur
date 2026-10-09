@@ -73,6 +73,20 @@ func _init() -> void:
 	m.start_game({"name": "T", "towns": 3, "river": 0, "mood": 1, "diff": 1, "land": 1, "auto": 2, "policy": true, "expand": true, "guide": false, "spectate": true})
 	for i in 40:
 		await process_frame
+	var pt := _towns(3, false)
+	pt[0].coins = 2000.0
+	pt[1].coins = 10.0
+	pt[2].coins = 2000.0
+	pt[0].pool = true
+	pt[1].pool = true  # pt[2] stays out of the pool
+	var psum := _sum(pt)
+	Empire.auto_pool(pt)
+	if absf(_sum(pt) - psum) > 0.001 or pt[1].coins <= 10.0 or pt[2].coins != 2000.0 or pt[0].coins >= 2000.0:
+		ok = false
+		print("FAIL shared treasury")
+	if Cmd.run(pt, pt[0], "apply_all", ["pool", false]) != 3 or pt[0].pool:
+		ok = false
+		print("FAIL pool bulk")
 	var w: PanelContainer = m.hud.wins["empire"]
 	if not w.visible or m.hud.emp_cells.size() != 3:
 		ok = false

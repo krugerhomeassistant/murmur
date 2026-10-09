@@ -3,7 +3,8 @@ extends RefCounted
 ## Running several towns as one: who is on your side, a roll-up of their state, and moving money between them.
 ## Pure rules (no UI); `Cmd` calls these so the multiplayer host validates them like any other command.
 
-const BULK := ["auto_mode", "auto_policy", "auto_expand", "train", "tax"]  # what "apply to all my towns" may change
+const POOL_FLOOR := 150.0  ## shared treasury: no pooled town is left below this while another has plenty
+const BULK := ["auto_mode", "auto_policy", "auto_expand", "train", "tax", "pool"]  # what "apply to all my towns" may change
 
 
 ## Same player: same peer in multiplayer; offline, all human-run towns (or all planner towns when spectating).
@@ -85,3 +86,16 @@ static func rebalance(list: Array[City], floor_: float) -> float:
 	for t in short:
 		t.coins += moved * short[t] / need
 	return moved
+
+
+## Shared treasury: every few seconds the pooled towns of each side even out (see `rebalance`). Planner-run empires rely on it so a rich town feeds a broke one.
+static func auto_pool(towns: Array[City]) -> void:
+	var seen := {}
+	for t in towns:
+		if t.pool and t.over == "" and not seen.has(t):
+			var list: Array[City] = []
+			for o in mine(towns, t):
+				seen[o] = true
+				if o.pool:
+					list.append(o)
+			rebalance(list, POOL_FLOOR)

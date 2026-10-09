@@ -122,6 +122,7 @@ var auto_policy := true
 ## Mayor's financial focus: weight 0-2 per sector (1 = neutral). Steers what planners zone and build, and whether the town makes (mines, foundries, armouries) or buys ore, metal and arms.
 const FOCUS := ["industry", "farming", "mining", "military", "services"]
 var focus := {"industry": 1.0, "farming": 1.0, "mining": 1.0, "military": 1.0, "services": 1.0}
+var pool := false  # joins the empire's shared treasury (Empire.auto_pool)
 var ask_build := false  # planners propose service buildings as decisions instead of building them
 var vetoed := {}  # building id (as text) -> day until which the planner does not propose it again
 var auto_focus := true  # the council sets focus from prices and threat; moving a slider turns it off
@@ -3491,7 +3492,7 @@ func _trade(_market: float) -> Array:
 const SAVE_KEYS := ["town_name", "grid", "lvl", "build", "wire", "pipe", "sewer", "lamp", "water", "ore", "ground", "coins", "mood", "tax_r", "tax_c", "tax_i", "clock", "day",
 	"policies", "auto_mode", "auto_policy", "peak", "announced", "next_id", "recent", "active", "approval", "rep", "favor",
 	"petitions", "promises", "pet_recent", "kept", "broken", "next_election", "elections_won", "rally_used", "last_vote",
-	"season", "wage_ix", "price_loc", "stock", "exported", "loans", "done_ms", "disasters_survived", "burned", "hist_coins", "hist_pop", "ruins", "offline", "lamp", "terr", "expansions", "auto_expand", "human", "owner", "temper", "rel", "treaty", "ev_scale", "gpos", "war_n", "war_sc", "occ", "train_on", "train_t", "train_w", "focus", "auto_focus", "ask_build", "vetoed"]
+	"season", "wage_ix", "price_loc", "stock", "exported", "loans", "done_ms", "disasters_survived", "burned", "hist_coins", "hist_pop", "ruins", "offline", "lamp", "terr", "expansions", "auto_expand", "human", "owner", "temper", "rel", "treaty", "ev_scale", "gpos", "war_n", "war_sc", "occ", "train_on", "train_t", "train_w", "focus", "auto_focus", "ask_build", "vetoed", "pool"]
 
 func to_dict() -> Dictionary:
 	var cs: Array = []
