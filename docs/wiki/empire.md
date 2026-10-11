@@ -175,6 +175,17 @@ Windows menu > "Reset window layout" (`Hud._reset_wins`) docks every popped wind
 
 Headless runs (and platforms without sub-window support) fall back to embedded Godot windows, as noted in `Hud._popout`.
 
+## Victory
+
+Towns belong to a **side** (`Victory.side`): all towns of one multiplayer owner or one offline human, otherwise each planner town alone. `Victory.second` runs once per sim second on the host and is synced in every snapshot and save (`Signals.vic`).
+
+| Route | Condition |
+|---|---|
+| Conquest | The side holds at least 70% of all claimed land (live towns) for 3 years, or is the only side left once two or more have existed. |
+| Hegemony | The side has the strictly top score for 5 years while its land plus the land of towns it has an alliance with is at least 40% of the whole. |
+
+Score is population + land / 100 + units exported / 50. A timer resets when its condition fails. After a win the Victory or Defeat panel names the route; "Keep playing" dismisses it and the game continues as a sandbox with the winner kept. The Empire window lists each side's land, allied land, score and progress. Constants are in [constants](constants.md); `tests/victory.gd` covers both routes, timer reset, last side standing, a lone town and hostile snapshot input.
+
 ## Where in the code
 
 | Topic | File and function |

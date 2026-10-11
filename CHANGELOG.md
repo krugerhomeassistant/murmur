@@ -6,6 +6,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 ## [Unreleased]
 
 ### Added
+- Victory (D2): a side wins by conquest (70% of all claimed land for 3 years, or the last side alive) or hegemony (top score for 5 years while its land plus its allies' land is at least 40%). The host checks once per sim second and syncs standings in every snapshot and save; the Empire window shows land, allied land, score and progress per side; a Victory or Defeat panel names the route and offers "Keep playing" (the game continues as a sandbox). `tests/victory.gd`.
 - Market window rebuilt as a trading screen: candlestick chart per good (10 s, 1 min and 5 min candles) with 5 and 20 period moving averages, volume and offered/wanted panes, hover readout, status (shortage, glut, balanced), high, low, average, change and volatility, price spread between towns, per-town local prices and a trade tape of town-to-town trades and price events. Candles are saved and rebuilt by multiplayer clients. `tests/marketwin.gd`.
 - `tests/growth.gd`: growth baseline printout (time to 100 and 300 people), for tuning the planner and households.
 - Domination plan: `docs/DOMINATION_DESIGN.md` sets the end goal (conquest or hegemony), faster growth, more frequent war, the depth order and a `city.gd` split. Design only; no gameplay change yet.

@@ -51,6 +51,9 @@ var codex_list: ItemList
 var codex_text: RichTextLabel
 var codex_ids: Array = []
 var over_panel: PanelContainer
+var win_panel: PanelContainer
+var win_l: Label
+var win_seen := ""  # winner whose panel was dismissed
 var over_l: Label
 var hover_text := ""
 var tick_n := 0
@@ -141,6 +144,21 @@ func _ready() -> void:
     over_l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     over_l.add_theme_font_size_override("font_size", 20)
     over_panel.add_child(over_l)
+    win_panel = PanelContainer.new()
+    win_panel.position = Vector2(400, 150)
+    win_panel.custom_minimum_size = Vector2(480, 120)
+    win_panel.visible = false
+    add_child(win_panel)
+    var wv := VBoxContainer.new()
+    win_panel.add_child(wv)
+    win_l = Label.new()
+    win_l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    win_l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    win_l.add_theme_font_size_override("font_size", 18)
+    wv.add_child(win_l)
+    _btn(wv, "Keep playing", func() -> void:
+        win_seen = m.sig.vic.winner
+        win_panel.visible = false)
 
 
 func _theme() -> Theme:
@@ -895,6 +913,11 @@ func _process(_d: float) -> void:
     over_panel.visible = c.over != ""
     if c.over != "":
         over_l.text = "GAME OVER\n%s\nPeak population %d.   Press R to restart." % [c.over, int(c.peak)]
+    var vic: Victory = m.sig.vic
+    var mine := vic.winner != "" and vic.winner == Victory.side(c)
+    win_panel.visible = vic.winner != "" and vic.winner != win_seen and c.over == ""
+    if win_panel.visible:
+        win_l.text = ("VICTORY\n" if mine else "DEFEAT\n") + vic.describe()
     if tick_n % 6 != 0:
         return
     _empire_refresh(c)
@@ -1016,6 +1039,7 @@ func _army_refresh(c: City) -> void:
 # ---------- empire: all your towns at a glance ----------
 
 var emp_tot: Label
+var emp_dom: Label
 var emp_grid: GridContainer
 var emp_cells: Array = []  # per town: {"nm", "pop", "co", "inc", "mood", "fl", "go", "send"}
 var emp_sort := 0  # 0 order founded, 1 name, 2 pop, 3 coins, 4 net, 5 mood
@@ -1030,6 +1054,8 @@ func _empire() -> void:
     var body := _win("empire", "Empire (all your towns)", Vector2(160, 70), Vector2(600, 400))
     emp_tot = _lbl(body, 0)
     emp_tot.add_theme_font_size_override("font_size", 13)
+    emp_dom = _lbl(body, 0)
+    emp_dom.add_theme_font_size_override("font_size", 12)
     var sc := ScrollContainer.new()
     sc.size_flags_vertical = Control.SIZE_EXPAND_FILL
     sc.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
@@ -1339,6 +1365,17 @@ func _tax_all(k: String, d: float) -> void:
     m.cmd("apply_all", ["tax", k, clampf(snappedf(float(m.city.get("tax_" + k)) + d, 0.01), 0.0, 0.5)])
 
 
+## The standings as text: land share, allied share, score and progress to each victory.
+func _domination() -> String:
+    var v: Victory = m.sig.vic
+    var out := "DOMINATION: conquest = %d%% of the land for %d years; hegemony = top score and %d%% allied for %d years\n" % [int(Victory.CONQUEST_SHARE * 100.0), int(Victory.CONQUEST_YEARS), int(Victory.ALLY_SHARE * 100.0), int(Victory.HEGEMONY_YEARS)]
+    if v.winner != "":
+        out += v.describe() + "\n"
+    for r: Dictionary in v.rows:
+        out += "%s%s  towns %d  land %d%%  allied %d%%  score %d   conquest %d%%  hegemony %d%%\n" % ["> " if r["side"] == Victory.side(m.city) else "   ", r["name"], r["towns"], int(float(r["land"]) * 100.0), int(float(r["allied"]) * 100.0), int(r["score"]), int(float(r["con"]) * 100.0), int(float(r["heg"]) * 100.0)]
+    return out.strip_edges()
+
+
 func _empire_sort(col: int) -> void:
     emp_sort = col
     emp_cells.clear()  # rebuild in the new order
@@ -1349,6 +1386,7 @@ func _empire_refresh(c: City) -> void:
         return
     var mine := Empire.mine(m.towns, c)
     var tt := Empire.totals(mine)
+    emp_dom.text = _domination()
     emp_tot.text = "%d of your towns   pop %d   treasury $%d   net %+.1f/s" % [tt["towns"], tt["pop"], int(tt["coins"]), tt["income"]]
     var rows: Array = []
     for t in m.towns:
