@@ -174,7 +174,8 @@ var owner := 0  # multiplayer: peer id that controls this town (0 = planner/nobo
 var human := true  # false = run by the planner alone, cannot be lost
 var temper := 0.0  # baseline attitude to other towns
 var rel := {}  # town_name -> this town's opinion (-1..1)
-var treaty := {}  # town_name -> "", "pact", "alliance", "embargo"
+var treaty := {}  # town_name -> "", "pact", "alliance", "embargo", "vassal"
+var liege := ""  # town_name of the overlord when this town is a vassal
 var dipl_t := 70.0
 var gpos := Vector2i.ZERO  # position in the region (towns are laid out on a grid)
 var gate := [0, 0, 0, 0]  # road tiles at the border facing N, E, S, W (a link needs one)
@@ -3563,7 +3564,7 @@ func _trade(_market: float) -> Array:
 const SAVE_KEYS := ["town_name", "grid", "lvl", "build", "wire", "pipe", "sewer", "lamp", "water", "ore", "ground", "coins", "mood", "tax_r", "tax_c", "tax_i", "clock", "day",
 	"policies", "auto_mode", "auto_policy", "peak", "announced", "next_id", "recent", "active", "approval", "rep", "favor",
 	"petitions", "promises", "pet_recent", "kept", "broken", "next_election", "elections_won", "rally_used", "last_vote",
-	"season", "wage_ix", "price_loc", "stock", "exported", "loans", "done_ms", "disasters_survived", "burned", "hist_coins", "hist_pop", "ruins", "offline", "lamp", "terr", "expansions", "auto_expand", "human", "owner", "temper", "rel", "treaty", "ev_scale", "gpos", "war_n", "war_sc", "war_goal", "tension", "occ", "train_on", "train_t", "train_w", "focus", "auto_focus", "ask_build", "vetoed"]
+	"season", "wage_ix", "price_loc", "stock", "exported", "loans", "done_ms", "disasters_survived", "burned", "hist_coins", "hist_pop", "ruins", "offline", "lamp", "terr", "expansions", "auto_expand", "human", "owner", "temper", "rel", "treaty", "liege", "ev_scale", "gpos", "war_n", "war_sc", "war_goal", "tension", "occ", "train_on", "train_t", "train_w", "focus", "auto_focus", "ask_build", "vetoed"]
 
 func to_dict() -> Dictionary:
 	var cs: Array = []

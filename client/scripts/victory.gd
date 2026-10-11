@@ -6,7 +6,7 @@ extends RefCounted
 ##   hegemony   : the top score for HEGEMONY_YEARS while its land plus its allies' land is at least ALLY_SHARE of the whole.
 ## The check runs once per sim second on the host (`second`), the result rides in every snapshot (`brief`).
 ## A win does not stop the game (sandbox): the standings keep updating.
-## Pure rules, no scene: tests use it directly. Vassals (D4) will join the allied land; culture (D6) will join the score.
+## Pure rules, no scene: tests use it directly. Vassals count as allied land; culture (D6) will join the score.
 
 const CONQUEST_SHARE := 0.7
 const CONQUEST_YEARS := 3.0
@@ -69,7 +69,7 @@ func second(towns: Array[City]) -> void:
 		for t in towns:
 			if t.over == "" and side(t) != k:
 				for mine: City in s["list"]:
-					if Diplo.treaty(mine, t) == "alliance":
+					if Diplo.treaty(mine, t) in ["alliance", "vassal"]:
 						allied += land(t)
 						break
 		s["allied"] = allied / maxf(total, 1.0)
