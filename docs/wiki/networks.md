@@ -282,7 +282,7 @@ Events are listed in [Events](events.md); this is what the engine does with thei
 | Instant effect | Implementation |
 |---|---|
 | `ignite n` | `City.ignite` n times (scaled by the event's coverage factor) |
-| `damage f` | `City._damage`: each burnable building loses a level with probability f (zones only lose levels; the lvl write on other buildings has no effect) |
+| `damage f` | `City._damage`: each burnable building loses a level with probability f (only zones lose levels; other buildings are untouched) |
 | `destroy n` | `City._destroy`: n random burnable buildings are ruined |
 | `tornado` | Spawns `twister` at the left or right edge moving at speed 3 tiles/s; `City._twister` each frame: on each new tile it ruins burnable buildings in that tile (80%) and its 4 neighbours (30% each) and clears wire, pipe and sewer on each of those 5 tiles with 50% chance. When it leaves the map, a recovery offer is made. |
 | `blackout` | One random power plant is put in `offline` for 40 seconds. `_flood` skips offline sources, so its supply is lost until it returns ("The power plant is back online.") |
@@ -405,10 +405,10 @@ A Mine can only be placed where `ore > 0`. Its output scales with `mine_yield`, 
 
 ## Open questions
 
-- Avenue upkeep: the catalog says 0.2 and the Buildings page shows 0.2, but `City._money` charges 0.12 per avenue tile. Is the catalog value stale or the budget line?
+- Avenue upkeep is 0.12 per tile in both the catalog and the budget (fixed).
 - Line upkeep is 0.015 per tile in both the catalog and the budget (fixed).
 - Sewage description no longer claims sickness; `City._sickness` does not read sewage coverage.
 - Regional trade credit: fixed. Power and water are paid per partner at one price (`imp_pay`), so the seller earns exactly what the buyer pays and nothing is over-credited.
-- `City._hit` writes `lvl[i] = 0` for non-zone buildings, which has no visible effect; the buildings are listed in `ruins` and `_rebuild` only restores them if they were erased. Intended behaviour for damaged services is unclear.
+- `City._hit` now ignores non-zone buildings (they have no level to lose), so damage events no longer log ruins that did not happen.
 - A lamp placed by the player can be 2 tiles from another (only adjacency is refused), while the planner keeps lamps 3 apart. Probably intentional.
 - Jobs are assigned by Manhattan distance, regardless of road connectivity, so workers can be assigned to unreachable workplaces. No handling beyond the 5-second retry was found.

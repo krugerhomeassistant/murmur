@@ -28,6 +28,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 - The land between and around the towns is drawn from the endless world (rivers, lakes, coast, forest, hills, rock, ore), generated a few milliseconds per frame near the camera, and the camera may roam 10 plots past the outermost town (it was clamped to the towns).
 
 ### Fixed
+- Wiki-vs-code mismatches: "zones only" planner mode no longer lays roads (border, ore, avenue, street stubs) and auto-annex now works in it; Balance on a multiplayer client shows the host's answer (the reply carries the float); damage events no longer log ruins for non-zone buildings; the Transit text says "more than half coverage".
 - `tests/market.gd` no longer fails when a food-importing region's price sits just above base (it failed once in CI at 1.02 against a 1.05 threshold); it now checks the price is not below base.
 - Small unhappy planner towns could stall at about 40 people (one police station for the whole town, crime keeping mood under the immigration threshold); they may now build more of a service they badly lack. Seen as `tests/ai.gd` building only 3-6 military buildings in about a quarter of runs; now about 1 in 30.
 - Power and water between towns now cost the buyer exactly what the seller earns (0.3 per unit); before, the buyer paid 0.4 and the seller got 0.2 for each partner's imports, which lost money and could over-credit with three or more towns.

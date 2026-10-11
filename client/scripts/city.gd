@@ -1460,11 +1460,10 @@ func _ruin(i: int, rec := true) -> void:
 
 
 func _hit(i: int) -> void:
+	if not is_zone(grid[i]):
+		return  # only zones have levels to lose; a hit on anything else would just log a ruin that never happened
 	ruins.append([i, grid[i], lvl[i]])
-	if is_zone(grid[i]):
-		lvl[i] = maxi(0, lvl[i] - 1)
-	else:
-		lvl[i] = 0
+	lvl[i] = maxi(0, lvl[i] - 1)
 
 
 # ---------- per second ----------
@@ -2104,13 +2103,13 @@ func _planner() -> void:
 		_plan_policy()
 	if auto_mode == 0 or coins < 60.0:
 		return
-	if not human and _plan_gate():
+	if not human and auto_mode == 2 and _plan_gate():
 		return
-	if _plan_ore_road():
+	if auto_mode == 2 and _plan_ore_road():
 		return
 	if _plan_net():
 		return
-	if congestion > 0.25 and unlocked(T.AVENUE) and rng.randf() < 0.3 and _plan_traffic():
+	if auto_mode == 2 and congestion > 0.25 and unlocked(T.AVENUE) and rng.randf() < 0.3 and _plan_traffic():
 		return
 	if rng.randf() < 0.6 and _plan_service():
 		return
@@ -2167,11 +2166,10 @@ func _planner() -> void:
 		for i in cells:
 			if grid[i] == T.EMPTY and water[i] == 0 and _road_next_to(i) >= 0:
 				cand.append(i)
-	if t != T.MINE and auto_mode == 2 and (cand.size() < 6 or (roads + avenues < 14 + pop * 0.6 and rng.randf() < 0.25)):
-		if _extend_road():
-			return
-		if cand.size() < 6 and auto_expand and _expand_auto():
-			return
+	if t != T.MINE and auto_mode == 2 and (cand.size() < 6 or (roads + avenues < 14 + pop * 0.6 and rng.randf() < 0.25)) and _extend_road():
+		return
+	if t != T.MINE and cand.size() < 6 and auto_expand and _expand_auto():
+		return  # annexing needs no roads, so zones-only mode annexes too
 	if cand.is_empty():
 		return
 	cand.shuffle()

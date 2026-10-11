@@ -41,7 +41,7 @@ const METRICS := {
         "txt": "Libraries, museums and plazas. Covered homes gain up to +5% mood. Culture also draws visitors who spend money."},
     "transit": {"n": "Public transport", "kind": "need", "w": 0.06,
         "say": "Getting around this city is a nightmare.",
-        "txt": "Uncovered homes lower mood (up to -6%). Citizens in covered homes walk 30% faster to work and leisure."},
+        "txt": "Uncovered homes lower mood (up to -6%). Citizens in homes with more than half coverage walk 30% faster to work and leisure."},
     "power": {"n": "Electricity", "kind": "need", "w": 0.15,
         "say": "The lights keep going out.",
         "txt": "Uncovered homes lower mood (up to -15%) and reduce productivity by up to 25%. Power plants have a radius, so spread them and combine sources."},

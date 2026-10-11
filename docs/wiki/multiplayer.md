@@ -132,7 +132,7 @@ The empire commands are described in detail on [empire](empire.md).
 ### Rate limit and reply
 
 - A client command must come from a peer in the player table and pass a **token bucket** per peer (`NetPlay._allow`): 30 tokens per second refill, a burst of 60, each command costs 1. A command out of tokens is dropped silently.
-- The host answers with `_reply(name, result)`. The result is passed on if it is null, a bool, a String or an int; any other type (a float, for example from `balance`) becomes true. A client shows a String result (such as "Proposal sent to Ashby.") as the headline.
+- The host answers with `_reply(name, result)`. The result is passed on if it is null, a bool, a String, an int or a float; any other type becomes true. A client shows the `balance` float as "Moved $N between your towns." A client shows a String result (such as "Proposal sent to Ashby.") as the headline.
 - The host's own commands (`NetPlay.command` on the host) are not rate limited.
 - Over the wire a client command is a reliable RPC `_cmd(index, name, args)`.
 
