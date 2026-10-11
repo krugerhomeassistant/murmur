@@ -114,5 +114,5 @@ Each step is its own PR, updates PLAN.md and ACTIVE_CONTEXT.md, and ends with th
 Answered 2026-10-11: yes to 3 and 5 year lengths; vassals count as land if sensible (D4); humans may declare war in spectate mode.
 
 - Are 3 years (conquest) and 5 years (hegemony) the right lengths, or should they follow the game speed?
-- Should vassals count as land for the hegemony route, or only as allies?
+- Should vassals count as land for the hegemony route, or only as allies? **Answered:** vassals count as allied land for the hegemony route (implemented in D4).
 - Are human towns allowed to declare war on AI towns in spectate mode, or only in play mode?

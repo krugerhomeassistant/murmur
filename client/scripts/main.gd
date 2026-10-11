@@ -1160,7 +1160,7 @@ func _town_col(c: City) -> Color:
 	match Diplo.treaty(city, c):
 		"war":
 			return Color("d9382a")
-		"alliance":
+		"alliance", "vassal":
 			return Color("6fd0e8")
 		"pact":
 			return Color("9fd3a0")

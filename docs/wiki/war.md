@@ -6,7 +6,7 @@ Conventions: "per second" means once per simulated second. Function names are wr
 
 ## Summary
 
-- Towns of a region sit on a grid. Each has an opinion of every other town (`rel`, -1 to 1), a baseline `temper`, and a shared treaty state: none, pact, alliance, embargo or war.
+- Towns of a region sit on a grid. Each has an opinion of every other town (`rel`, -1 to 1), a baseline `temper`, and a shared treaty state: none, pact, alliance, embargo, war or vassal.
 - Opinions drift towards a target each second. Random neighbour events (festivals, spats, smuggling, tribute demands, raids) fire every 45 to 90 seconds.
 - A war is fought by real units. Barracks, bases, radar posts and naval yards give the unit room; towns train units automatically and units march across the real map, respecting water, and shoot each other every second.
 - A war ends by surrender (an occupation counter reaching the war goal's need: 15, 40 or 60), by a ceasefire you buy, by stalemate, or by treaty.
@@ -26,7 +26,7 @@ A road link needs a road tile on the border in both towns: `Diplo.linked(a, b)` 
 ```
 0                                   if embargo, war, or not linked
 clamp(0.6 + 0.5 * avg(a, b), 0.2, 1.3)
-  x 1.25 if pact,  x 1.4 if alliance
+  x 1.25 if pact,  x 1.4 if alliance or vassal
 ```
 
 It is used in `City._second` for commuters (`commuters_in = min(pop - employed, open_other_jobs * 0.4)` where open jobs are multiplied by `tmult`) and in the network solver for imports.
@@ -48,7 +48,7 @@ Every second `Diplo.second` moves each town's opinion of every other town by up 
 
 ```
 target = temper
-       + {none 0, pact +0.4, alliance +0.7, embargo -0.8, war -0.9}
+       + {none 0, pact +0.4, alliance +0.7, vassal +0.3, embargo -0.8, war -0.9}
        + min(0.3, 0.02 * (imports of power+water of both towns))
        - 0.2  if mil(other) > mil(self) + 0.5     (fear)
        - 0.1  if other.pop > 2 * self.pop         (envy)
@@ -88,8 +88,8 @@ The Region tab (City panel) has one block per neighbour; each button sends `Cmd.
 | `peace` (not in war) | 150 | none | +0.05, +0.25 | clears an embargo |
 | `tribute` | 0 | `mil(self) >= mil(other) + 0.3` | 0, -0.40 | other pays `min(max(coins*0.3, 0), 150)` |
 | `tribute` (too weak) | 0 | `mil(self) < mil(other) + 0.3` | -0.05, -0.15 | refused |
-| `war` | 0 | not already at war | -0.30, -0.60 | see War |
-| `leave` | 0 | any treaty | -0.05, -0.15 | cancels the treaty |
+| `war` | 0 | not already at war; not a vassal | -0.30, -0.60 | see War |
+| `leave` | 0 | any treaty | -0.05, -0.15 | cancels the treaty; a vassal cannot leave (see Vassals) |
 
 Details:
 
@@ -146,7 +146,7 @@ Planner towns do not build ports (`water` buildings) unless a naval yard is need
 
 `Diplo.declare(a, b, goal, why)` (the player's "war" action uses goal `land`) signs a `war` treaty on both sides, sets `war_n`, `war_sc`, `war_goal[other]` and tension to 0 / 0 / the goal / 0 on both, calls `Military.conscript` for both, shifts opinions by -0.30 and -0.60, logs "X declares war on Y (why)! Goal: g." and queues the alarm sound on both. No cost. The war lasts until a treaty is signed.
 
-The AI picks the goal with `Diplo.pick_goal`: `total` when its `strength` exceeds the target's by more than 1.5, otherwise `land` if it can expand towards the target, otherwise `tribute`. The goal sets the occupation needed to force a surrender (`Diplo.OCC_NEED`: tribute 15, land 40, total 60) and the spoils below. `Diplo.wars(towns)` lists the wars in progress with goal, occupation and duration; the Empire window's Domination text shows them.
+The AI picks the goal with `Diplo.pick_goal`: `total` when its `strength` exceeds the target's by more than 1.5, otherwise `land` if it can expand towards the target, otherwise `tribute`. The goal sets the occupation needed to force a surrender (`Diplo.OCC_NEED`: tribute 15, land 40, total 60) the spoils below, and what the surrender does: tribute takes spoils only, land also annexes a strip, and total makes the loser a vassal (see Vassals). `Diplo.wars(towns)` lists the wars in progress with goal, occupation and duration; the Empire window's Domination text shows them.
 
 `Military.conscript(c)` adds `clamp(pop / 15, 3, 12)` Riflemen at 70% hit points, so a town with no barracks still fields a militia. (This ignores the 150 army cap.)
 
@@ -164,7 +164,7 @@ While `wars() > 0` (`City.wars`, counting `treaty == "war"` entries):
 
 | Way | Condition | Result | Code |
 |---|---|---|---|
-| Surrender | an attacker's occupation counter on your town reaches the goal's need (15 / 40 / 60) | winner takes `min(30% of loser's coins, 300)` (land goal) or `min(50%, 600)` (tribute, total), treaty cleared, may annex a strip of land (not on a tribute goal), `rep` +0.1 winner / -0.1 loser | `Military._occupy`, `Diplo.surrender` |
+| Surrender | an attacker's occupation counter on your town reaches the goal's need (15 / 40 / 60) | land goal: winner takes `min(30% of loser's coins, 300)`, treaty cleared, may annex a strip of land. Tribute goal: winner takes `min(50%, 600)` of the coins, no land. Total goal: the same spoils as tribute, then the loser becomes a vassal of the winner (see Vassals) instead of ending with no treaty. `rep` +0.1 winner / -0.1 loser | `Military._occupy`, `Diplo.surrender`, `Diplo.vassalize` |
 | Purchased ceasefire | `Diplo.act(.., "peace")` after at least 3 war counters; 150 coins | treaty cleared, opinions +0.10 / +0.30 | `Diplo.act` |
 | Proposal accepted | multiplayer counterpart accepts a ceasefire offer | treaty cleared | `Diplo.resolve` |
 | Stalemate | `war_n >= 30` (600 s of war) and fewer than 6 units in total on both sides | treaty cleared, "armies spent, agree to a ceasefire" | end of `Military.fight` |
@@ -172,9 +172,21 @@ While `wars() > 0` (`City.wars`, counting `treaty == "war"` entries):
 
 The `leave` verb refuses to end a war; only `peace` does (150 coins, three war counters).
 
-Annexing: `Diplo.surrender` calls `w.can_expand(k)` and `l.cede(opposite side)`; if both succeed, `w.expand(k, true)` gives the winner a free strip of land (`City.expand(k, true)`) and the loser loses the matching strip.
+Annexing (land goal only): `Diplo.surrender` calls `w.can_expand(k)` and `l.cede(opposite side)`; if both succeed, `w.expand(k, true)` gives the winner a free strip of land (`City.expand(k, true)`) and the loser loses the matching strip.
 
 When a war ends, `Military.econ` clears each unit's target and erases its world position `p`, so units go home at once ("phase 1" behaviour in [WAR_DESIGN.md](../WAR_DESIGN.md)). The occupation counter of the loser against the winner is reset to 0 on surrender; after a peace by other means, it decays by 1 per second.
+
+### Vassals
+
+A total-goal war that ends by surrender no longer ends with no treaty. `Diplo.surrender` calls `Diplo.vassalize`, which makes the loser a vassal of the winner: its treaty becomes `vassal` and `City.liege` is set to the overlord's town name (saved with the town).
+
+- The vassal keeps its land, coins and buildings. No strip is annexed.
+- It pays the overlord `Diplo.VASSAL_SHARE` (10%) of its positive income every second (`Diplo._tribute`).
+- Trade and commuting use the alliance multiplier (x1.4 in `tmult`), and the opinion target is +0.3.
+- A vassal cannot declare war (the action returns "A vassal cannot declare war.") and cannot leave ("You cannot leave your overlord; only X can release you."). The overlord releases it with "Cancel treaty", the `leave` verb.
+- Signing any other treaty (embargo or war) ends vassalage, because `sign_treaty` clears `liege`. Pact and alliance are refused on a vassal as "already have a treaty".
+- AI towns never declare war as a vassal or on a vassal.
+- The map draws a vassal in the alliance colour. Vassal land counts as allied land in `Victory.second`, which is the 40% share for the hegemony route.
 
 ## The military model
 

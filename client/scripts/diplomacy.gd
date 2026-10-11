@@ -8,6 +8,7 @@ const T = Catalog.Id
 const DIRN := ["north", "east", "south", "west"]
 const COSTS := {"gift": 100.0, "pact": 200.0, "alliance": 400.0, "peace": 150.0}
 const TENSION_RATE := 0.003  # per second between linked towns without a treaty, scaled by ambition
+const VASSAL_SHARE := 0.1  # share of a vassal's positive income paid to its overlord each second
 const OCC_NEED := {"tribute": 15.0, "land": 40.0, "total": 60.0}  # occupation points that force a surrender, by war goal
 
 
@@ -94,7 +95,7 @@ static func tmult(a: City, b: City) -> float:
 	var m := clampf(0.6 + 0.5 * avg(a, b), 0.2, 1.3)
 	if t == "pact":
 		m *= 1.25
-	elif t == "alliance":
+	elif t == "alliance" or t == "vassal":
 		m *= 1.4
 	return m
 
@@ -105,6 +106,9 @@ static func _shift(a: City, b: City, r_a: float, r_b: float) -> void:
 
 
 static func sign_treaty(a: City, b: City, t: String) -> void:
+	if t != "vassal" and treaty(a, b) == "vassal":
+		a.liege = ""  # any other treaty ends vassalage
+		b.liege = ""
 	a.treaty[b.town_name] = t
 	b.treaty[a.town_name] = t
 	a.pet_ver += 1
@@ -185,11 +189,15 @@ static func act(a: City, b: City, what: String) -> String:
 		"war":
 			if t == "war":
 				return "You are already at war."
+			if a.liege != "":
+				return "A vassal cannot declare war."
 			declare(a, b, "land", "")
 			return "War declared on %s. Militia muster; barracks and bases train real units that march to the front and fight." % b.town_name
 		"leave":
 			if t == "":
 				return "No treaty to cancel."
+			if t == "vassal" and a.liege != "":
+				return "You cannot leave your overlord; only %s can release you." % b.town_name
 			if t == "war":
 				return "A war is ended with a peace treaty, not cancelled."
 			sign_treaty(a, b, "")
@@ -318,7 +326,7 @@ static func second(towns: Array, rng: RandomNumberGenerator) -> void:
 				var y: City = pair[1]
 				var t := treaty(x, y)
 				var target := x.temper
-				target += {"": 0.0, "pact": 0.4, "alliance": 0.7, "embargo": -0.8, "war": -0.9}[t]
+				target += {"": 0.0, "pact": 0.4, "alliance": 0.7, "vassal": 0.3, "embargo": -0.8, "war": -0.9}[t]
 				var flow: float = float(x.imports["power"]) + float(x.imports["water"]) + float(y.imports["power"]) + float(y.imports["water"])
 				target += minf(0.3, flow * 0.02)
 				if mil(y) > mil(x) + 0.5:
@@ -329,6 +337,8 @@ static func second(towns: Array, rng: RandomNumberGenerator) -> void:
 				x.rel[y.town_name] = move_toward(rel(x, y), clampf(target, -1.0, 1.0), 0.003)
 			if treaty(a, b) == "war":
 				Military.fight(a, b)
+			_tribute(a, b)
+			_tribute(b, a)
 			a.dipl_t -= 1.0
 			if a.dipl_t > 0.0:
 				continue
@@ -353,16 +363,34 @@ static func surrender(w: City, l: City) -> void:
 	var pay := minf(l.coins * (0.3 if goal == "land" else 0.5), 300.0 if goal == "land" else 600.0) if l.coins > 0.0 else 0.0
 	l.coins -= pay
 	w.coins += pay
-	sign_treaty(w, l, "")
+	if goal == "total":
+		vassalize(w, l)
+	else:
+		sign_treaty(w, l, "")
 	l.occ[w.town_name] = 0.0
 	var k := side(w, l)
 	var took := ""
-	if goal != "tribute" and k >= 0 and w.can_expand(k) and l.cede((k + 2) % 4):
+	if goal == "land" and k >= 0 and w.can_expand(k) and l.cede((k + 2) % 4):
 		w.expand(k, true)
 		took = " %s annexes a strip of its land." % w.town_name
 	w.rep = clampf(w.rep + 0.1, -0.3, 0.3)  # victory rallies voters
 	l.rep = clampf(l.rep - 0.1, -0.3, 0.3)
-	_say(w, l, "%s surrenders to %s and pays $%d.%s The war is over." % [l.town_name, w.town_name, int(pay), took])
+	_say(w, l, "%s surrenders to %s and pays $%d.%s %s" % [l.town_name, w.town_name, int(pay), took, ("It is now a vassal." if goal == "total" else "The war is over.")])
+
+
+## A vassal pays its overlord a fixed share of its positive income every second.
+static func _tribute(v: City, o: City) -> void:
+	if v.liege != o.town_name or treaty(v, o) != "vassal":
+		return
+	var pay := maxf(v.income, 0.0) * VASSAL_SHARE
+	v.coins -= pay
+	o.coins += pay
+
+
+## `w` takes `l` as a vassal: it keeps its land, coins and buildings, pays a share of its income and cannot declare war.
+static func vassalize(w: City, l: City) -> void:
+	sign_treaty(w, l, "vassal")
+	l.liege = w.town_name
 
 
 static func _event(a: City, b: City, rng: RandomNumberGenerator) -> void:
@@ -375,7 +403,7 @@ static func _event(a: City, b: City, rng: RandomNumberGenerator) -> void:
 	for pair in [[a, b], [b, a]]:
 		var x: City = pair[0]
 		var y: City = pair[1]
-		if not x.human and t != "pact" and t != "alliance" and float(x.tension.get(y.town_name, 0.0)) >= 1.0 and strength(x) > strength(y) and rng.randf() < 0.12 * ambition(x):
+		if not x.human and x.liege == "" and t != "pact" and t != "alliance" and t != "vassal" and float(x.tension.get(y.town_name, 0.0)) >= 1.0 and strength(x) > strength(y) and rng.randf() < 0.12 * ambition(x):
 			declare(x, y, pick_goal(x, y), "border tension")
 			return
 	var human: City = a if a.human else (b if b.human else null)
