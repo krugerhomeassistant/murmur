@@ -29,7 +29,7 @@ Three per-town settings control the planner. They are saved with the town (`SAVE
 
 | Setting | Values | Default (`City` field) | Meaning |
 |---|---|---|---|
-| `auto_mode` | 0, 1, 2 | 2 | 0 = off. 1 = "zones only" (see the caveat below). 2 = zones plus roads and extra annexing triggers |
+| `auto_mode` | 0, 1, 2 | 2 | 0 = off. 1 = "zones only": never lays roads. 2 = zones plus roads |
 | `auto_policy` | bool | true | The council flips policies and nudges the residential tax (`_plan_policy`) |
 | `auto_expand` | bool | true | The planner may buy land strips (`_expand_auto`) |
 
@@ -38,10 +38,10 @@ What `auto_mode` actually gates (all in `City._planner` and `City._plan_*`):
 | Behaviour | Mode 0 | Mode 1 | Mode 2 |
 |---|---|---|---|
 | Policy / tax changes (`auto_policy` only) | still runs | still runs | still runs |
-| Border roads (`_plan_gate`, planner-only towns), ore roads, power/water/sewer lines, avenue widening, service buildings, zoning | no | yes | yes |
-| New street stubs (`_extend_road`) and annexing from the zoning step (`_expand_auto`) | no | no | yes |
+| Border roads (`_plan_gate`, planner-only towns), ore roads, avenue widening, new street stubs (`_extend_road`) | no | no | yes |
+| Power/water/sewer lines, service buildings, zoning, annexing from the zoning step (`_expand_auto`, needs `auto_expand`) | no | yes | yes |
 
-Caveat: the HUD tooltip says that in "zones only" mode the planner never lays roads. In the code, mode 1 still lays border, ore and avenue roads (they check only `auto_mode == 0`); what mode 1 never does is `_extend_road` and `_expand_auto`. See [Open questions](#open-questions).
+Modes 0 and 1 never lay roads: the road steps check `auto_mode == 2`, and annexing no longer depends on the mode (it runs in mode 1 when "Auto-annex" is ticked).
 
 Who is a planner town: `City.human` is false. In a normal game the first town is the player's and all neighbours are planner towns (`Main._fresh`, neighbours get `human = false`, 400 coins). In spectate mode every town is a planner town. In multiplayer, towns nobody has claimed are planner towns (`client/scripts/networld.gd`). A planner town differs from a player town in more than the planner (see [Spectate and empire mode](#spectate-and-empire-mode)).
 
@@ -315,8 +315,6 @@ The large bonuses exist because scores are divided by cost, so military would ot
 
 ## Open questions
 
-- **"Zones only" tooltip.** The Policy tab tooltip says zones-only mode never lays roads, yet `_plan_gate`, `_plan_ore_road` and `_plan_traffic` run in mode 1. Is the tooltip out of date, or should those steps check `auto_mode == 2`?
-- **Mode 1 and annexing.** `_expand_auto` is nested under the mode-2 check, so "Auto-annex" does nothing in mode 1 even when ticked. Probably unintended.
 - **Policy rule order.** The rules table is iterated in insertion order and only the first change per run is applied, so earlier rules (watch, recycling) can delay later ones. Whether this ordering is intended was not documented.
 - **Tax nudge scope.** Only the residential rate is adjusted; commercial and industrial taxes stay at their initial values. Intent unknown.
 - **Lamp limit.** `1 + pop / 60` lamps for the whole town looks very low next to the lamp radius of 4; check against the design before tuning.

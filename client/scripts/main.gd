@@ -371,6 +371,8 @@ func _mp_test() -> void:
 func _net_reply(_c: String, r: Variant) -> void:
 	if r is String and r != "":
 		headline = r  # diplomacy answers, e.g. "Proposal sent to Ashby."
+	elif _c == "balance":
+		headline = "Moved $%d between your towns." % int(r) if r is float and r > 0.0 else "Nothing to balance."
 
 
 func _net_failed(reason: String) -> void:

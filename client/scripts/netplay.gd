@@ -226,7 +226,7 @@ func _cmd(idx: int, cname: String, args: Array) -> void:
 	if not players.has(sender) or not _allow(sender):
 		return
 	var r: Variant = _run(sender, idx, cname, args)
-	_reply.rpc_id(sender, cname, r if (r == null or r is bool or r is String or r is int) else true)
+	_reply.rpc_id(sender, cname, r if (r == null or r is bool or r is String or r is int or r is float) else true)
 
 
 @rpc("authority", "reliable")

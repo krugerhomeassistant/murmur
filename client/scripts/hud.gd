@@ -1092,7 +1092,8 @@ func _empire() -> void:
     body.add_child(r4)
     var bb := _btn(r4, "Balance treasuries (floor $200)", func() -> void:
         var n: Variant = m.cmd("balance", [200])
-        m.headline = "Moved $%d between your towns." % int(float(n)) if n != null else "Nothing to balance.")
+        if not (m.net != null and m.net.active and not m.net.is_host()):  # a client hears the answer in Main._net_reply
+            m.headline = "Moved $%d between your towns." % int(float(n)) if n != null else "Nothing to balance.")
     bb.tooltip_text = "Rich towns (over $600) give half of what they hold above $400; towns under $200 are topped up. No money is created."
     win_open["empire"] = false
     (wins["empire"] as PanelContainer).visible = false

@@ -74,7 +74,7 @@ Provided by: Library, University, Plaza, Cinema, Museum, Church, Stadium.
 
 ## Public transport
 
-Key `transit`. Uncovered homes lower mood (up to -6%). Citizens in covered homes walk 30% faster to work and leisure.
+Key `transit`. Uncovered homes lower mood (up to -6%). Citizens in homes with more than half coverage walk 30% faster to work and leisure.
 
 > "Getting around this city is a nightmare."
 

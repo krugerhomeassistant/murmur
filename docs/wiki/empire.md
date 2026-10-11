@@ -201,6 +201,6 @@ Score is population + land / 100 + units exported / 50. A timer resets when its 
 
 - **Sides depend on the viewed town.** Offline, `Main.cmd` does not check that the viewed town is yours, and `Empire.same_side` compares `human` flags. Viewing a neighbour (`human = false`) makes the planner towns "your towns" for totals, bulk changes and sending.
 - **Founding while spectating.** A founded town is created with `human = true` (`Main.found_town_at`), so after founding one `Main.spectating()` is false: Tab and auto-follow stop and the sides split. This follows from the code; I did not run it.
-- **Multiplayer feedback.** On a client `Main.cmd` returns null, so the Balance button always shows "Nothing to balance." even when the host moved money; on the host or offline a no-op shows "Moved $0 between your towns.".
+- **Multiplayer feedback.** On a client the Balance button waits for the host's reply (`Main._net_reply`) and shows the amount moved; on the host or offline a no-op shows "Moved $0 between your towns.".
 - **Simulation level of detail.** Reduced-rate simulation for many towns (E2) is not done. Towns share only by trade (goods, power, water, services), never by automatic money transfers: a shared-treasury auto top-up was built and removed on purpose. Manual Send and Balance remain.
 - **Refresh rate.** The window refreshes every sixth frame (`tick_n % 6` in `Hud._process`), which is about ten times a second at 60 frames per second and slower on a slow machine.

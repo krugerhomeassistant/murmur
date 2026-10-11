@@ -421,8 +421,7 @@ Every 5-11 s a random citizen shows a speech bubble from `City.thought(c)`. The 
 
 - A walking citizen follows the path calculated at departure. If a road on it is bulldozed after that, the code does not recompute or stop them; whether citizens can end up walking through removed road tiles is not checked here. Only the path at departure is verified in `City.selfcheck`.
 - Policing stat text now says -6%, matching its weight 0.06.
-- The Transit stat text says covered homes "walk 30% faster"; the code gives +30% to homes whose coverage exceeds 0.5.
-- The Sewage text claims sewage coverage affects how often people fall ill; `_sickness` has no sewage term. Sewage affects river health, fishing and mood only.
+- Transit text now says "more than half coverage", matching the 0.5 threshold. The Sewage text no longer claims it affects illness (`_sickness` has no sewage term; sewage affects river health, fishing and mood).
 - Wind turbine text says storms and cold snaps reduce its output; the code lowers power *coverage* through `cov_power` mods in those events, but plant output is only changed by `mod("power_out")`, which no data file sets.
 - Weather mood penalties (`WEATHER_PENALTY`) apply as long as the weather lasts, and the descriptions of events (for example Snowfall "walk slower") do not mention the 0.05 snow penalty.
 - Employment is assigned by nearest Manhattan distance, not by actual road path length, so a nearby building across a river or on a disconnected road network can be chosen and be unreachable (the citizen then retries every 5 s).
