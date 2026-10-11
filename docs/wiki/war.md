@@ -9,7 +9,7 @@ Conventions: "per second" means once per simulated second. Function names are wr
 - Towns of a region sit on a grid. Each has an opinion of every other town (`rel`, -1 to 1), a baseline `temper`, and a shared treaty state: none, pact, alliance, embargo or war.
 - Opinions drift towards a target each second. Random neighbour events (festivals, spats, smuggling, tribute demands, raids) fire every 45 to 90 seconds.
 - A war is fought by real units. Barracks, bases, radar posts and naval yards give the unit room; towns train units automatically and units march across the real map, respecting water, and shoot each other every second.
-- A war ends by surrender (an occupation counter reaching 40), by a ceasefire you buy, by stalemate, or by treaty.
+- A war ends by surrender (an occupation counter reaching the war goal's need: 15, 40 or 60), by a ceasefire you buy, by stalemate, or by treaty.
 - Planner-run (AI) towns raise their garrison and counter-train according to the threat they perceive.
 - Abstract "battles" are gone. `Diplo._battle` no longer exists; see Open questions.
 
@@ -52,8 +52,13 @@ target = temper
        + min(0.3, 0.02 * (imports of power+water of both towns))
        - 0.2  if mil(other) > mil(self) + 0.5     (fear)
        - 0.1  if other.pop > 2 * self.pop         (envy)
+       - 0.3 * min(1, border tension towards other)
 target = clamp(target, -1, 1)
 ```
+
+### Ambition and border tension
+
+`Diplo.ambition(c)` is `0.35 + 0.4 * mil/(mil+3) - 0.4 * temper`, clamped to 0..1. `Diplo.strength(c)` is `mil(c) + pop / 300`, so a town without barracks still counts for something. `City.tension[other]` is the border tension towards another town, updated every second by `Diplo._tension`: while the two towns are road-linked (`Diplo.linked`) with no treaty it grows by `0.003 * (0.5 + ambition)`, times 1.5 when the town is the stronger by more than 0.2 and times 0.6 otherwise; with any treaty or no link it falls by 0.002. Tension is saved. It lowers the opinion target by up to 0.3, and `City.threat()` counts it (half of tension times ambition) so ambitious planner towns build barracks as it rises. At 1.0 it makes an AI town eligible to declare war (see the events below).
 
 So opinion needs about 333 seconds (5.5 minutes) of play to cross 1.0 of distance. Gifts, wars and other actions give one-off shifts (`Diplo._shift(a, b, delta_a, delta_b)`, which changes both opinions, clamped to -1..1).
 
@@ -113,7 +118,7 @@ In a single-player game the same decisions come from AI towns (below). Offers an
 | `-0.15 <= r <= 0.1` | 50% | trade fair, +20 coins each, +0.04 |
 | `r < -0.15` and no embargo | always | the lower-opinion side is the aggressor; see below |
 
-For `r < -0.15`: if `r < -0.7`, the aggressor is a planner town, `mil(aggressor) > mil(victim) + 0.4` and a 40% roll succeeds, the aggressor declares war (`act(aggressor, victim, "war")`). Otherwise one of four things happens at random: a diplomatic spat (-0.06 each); smuggling (the victim triggers `crime_wave`); a `border_incident` on the victim; or, if `r < -0.55` and `mil(aggressor) >= mil(victim) - 0.3`, a tribute demand on a human victim (60%; amount `min(150, max(30% of coins, 40))`) or an immediate raid (`Diplo._raid`) with -0.08 each; otherwise the river is diverted (`water_main` on the victim).
+Before the table above applies, in either direction: a planner town whose tension towards the other has reached 1.0, with no pact or alliance and `strength` above the other's, declares war on a roll of `0.12 * ambition` per event ("border tension"). For `r < -0.15`: if `r < -0.7`, the aggressor is a planner town, `mil(aggressor) > mil(victim) + 0.4` and a 40% roll succeeds, the aggressor declares war ("relations collapsed"). Otherwise one of four things happens at random: a diplomatic spat (-0.06 each); smuggling (the victim triggers `crime_wave`); a `border_incident` on the victim; or, if `r < -0.55` and `mil(aggressor) >= mil(victim) - 0.3`, a tribute demand on a human victim (60%; amount `min(150, max(30% of coins, 40))`) or an immediate raid (`Diplo._raid`) with -0.08 each; otherwise the river is diverted (`water_main` on the victim).
 
 Raids in this path use `Diplo._raid`, described under Raids.
 
@@ -139,7 +144,9 @@ Planner towns do not build ports (`water` buildings) unless a naval yard is need
 
 ### Declaring
 
-`Diplo.act(a, b, "war")` signs a `war` treaty on both sides, sets `war_n[other] = 0` and `war_sc[other] = 0` on both, calls `Military.conscript` for both, shifts opinions by -0.30 and -0.60, logs "X declares war on Y!" and queues the alarm sound on both. No cost. The war lasts until a treaty is signed.
+`Diplo.declare(a, b, goal, why)` (the player's "war" action uses goal `land`) signs a `war` treaty on both sides, sets `war_n`, `war_sc`, `war_goal[other]` and tension to 0 / 0 / the goal / 0 on both, calls `Military.conscript` for both, shifts opinions by -0.30 and -0.60, logs "X declares war on Y (why)! Goal: g." and queues the alarm sound on both. No cost. The war lasts until a treaty is signed.
+
+The AI picks the goal with `Diplo.pick_goal`: `total` when its `strength` exceeds the target's by more than 1.5, otherwise `land` if it can expand towards the target, otherwise `tribute`. The goal sets the occupation needed to force a surrender (`Diplo.OCC_NEED`: tribute 15, land 40, total 60) and the spoils below. `Diplo.wars(towns)` lists the wars in progress with goal, occupation and duration; the Empire window's Domination text shows them.
 
 `Military.conscript(c)` adds `clamp(pop / 15, 3, 12)` Riflemen at 70% hit points, so a town with no barracks still fields a militia. (This ignores the 150 army cap.)
 
@@ -157,7 +164,7 @@ While `wars() > 0` (`City.wars`, counting `treaty == "war"` entries):
 
 | Way | Condition | Result | Code |
 |---|---|---|---|
-| Surrender | an attacker's occupation counter on your town reaches 40 | winner takes `min(30% of loser's coins, 300)`, treaty cleared, may annex a strip of land, `rep` +0.1 winner / -0.1 loser | `Military._occupy`, `Diplo.surrender` |
+| Surrender | an attacker's occupation counter on your town reaches the goal's need (15 / 40 / 60) | winner takes `min(30% of loser's coins, 300)` (land goal) or `min(50%, 600)` (tribute, total), treaty cleared, may annex a strip of land (not on a tribute goal), `rep` +0.1 winner / -0.1 loser | `Military._occupy`, `Diplo.surrender` |
 | Purchased ceasefire | `Diplo.act(.., "peace")` after at least 3 war counters; 150 coins | treaty cleared, opinions +0.10 / +0.30 | `Diplo.act` |
 | Proposal accepted | multiplayer counterpart accepts a ceasefire offer | treaty cleared | `Diplo.resolve` |
 | Stalemate | `war_n >= 30` (600 s of war) and fewer than 6 units in total on both sides | treaty cleared, "armies spent, agree to a ceasefire" | end of `Military.fight` |

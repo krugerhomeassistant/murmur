@@ -1374,6 +1374,8 @@ func _domination() -> String:
         out += v.describe() + "\n"
     for r: Dictionary in v.rows:
         out += "%s%s  towns %d  land %d%%  allied %d%%  score %d   conquest %d%%  hegemony %d%%\n" % ["> " if r["side"] == Victory.side(m.city) else "   ", r["name"], r["towns"], int(float(r["land"]) * 100.0), int(float(r["allied"]) * 100.0), int(r["score"]), int(float(r["con"]) * 100.0), int(float(r["heg"]) * 100.0)]
+    for w in Diplo.wars(m.towns):
+        out += "\nWAR %s vs %s: %s wants %s, occupation %d/%d, %d s" % [w["a"], w["b"], w["a"], w["goal"], w["occ"], w["need"], w["secs"]]
     return out.strip_edges()
 
 
@@ -1580,7 +1582,7 @@ func _side_text(c: City, p: City) -> String:
         return "%s lies far from you: no road link possible, diplomacy only." % p.town_name
     var s := "%s lies to the %s." % [p.town_name, Diplo.DIRN[k]]
     if Diplo.treaty(c, p) == "war":
-        return s + " AT WAR (%d s, enemy units destroyed %d).\nYour army: %s.\n%s army: %s.\nOccupation of your border: %d/40." % [int(c.war_n.get(p.town_name, 0)) * 20, int(c.war_sc.get(p.town_name, 0)), Military.summary(c), p.town_name, Military.summary(p), int(c.occ.get(p.town_name, 0.0))]
+        return s + " AT WAR (%d s, goal: %s, enemy units destroyed %d).\nYour army: %s.\n%s army: %s.\nOccupation of your border: %d/%d." % [int(c.war_n.get(p.town_name, 0)) * 20, String(c.war_goal.get(p.town_name, "land")), int(c.war_sc.get(p.town_name, 0)), Military.summary(c), p.town_name, Military.summary(p), int(c.occ.get(p.town_name, 0.0)), int(Diplo.occ_need(p, c))]
     if Diplo.linked(c, p):
         return s + " Road link open: trade and commuters flow."
     if int(c.gate[k]) == 0:

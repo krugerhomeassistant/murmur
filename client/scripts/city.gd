@@ -181,6 +181,8 @@ var gate := [0, 0, 0, 0]  # road tiles at the border facing N, E, S, W (a link n
 var war_n := {}  # town_name -> battles fought in the current war
 var war_sc := {}  # town_name -> battles I won in the current war
 var war_t := 25.0
+var tension := {}  # town_name -> border tension towards that town (grows while linked, a war starts at 1)
+var war_goal := {}  # town_name -> goal of the current war with it: "tribute", "land" or "total"
 # mayor
 var approval := 0.6
 var rep := 0.0  # reputation from promises, decays slowly
@@ -2220,6 +2222,8 @@ func threat() -> float:
 			return 1.0
 		if tr == "" and Diplo.rel(self, p) < -0.2:
 			t = maxf(t, clampf(-Diplo.rel(self, p) * 0.8, 0.0, 0.8) * (1.0 if Military.power(p) + 0.3 > Military.power(self) else 0.5))
+		if tr == "":
+			t = maxf(t, 0.5 * clampf(float(tension.get(p.town_name, 0.0)), 0.0, 1.0) * Diplo.ambition(self))  # an ambitious town arms as its border tension builds
 	return t
 
 
@@ -3559,7 +3563,7 @@ func _trade(_market: float) -> Array:
 const SAVE_KEYS := ["town_name", "grid", "lvl", "build", "wire", "pipe", "sewer", "lamp", "water", "ore", "ground", "coins", "mood", "tax_r", "tax_c", "tax_i", "clock", "day",
 	"policies", "auto_mode", "auto_policy", "peak", "announced", "next_id", "recent", "active", "approval", "rep", "favor",
 	"petitions", "promises", "pet_recent", "kept", "broken", "next_election", "elections_won", "rally_used", "last_vote",
-	"season", "wage_ix", "price_loc", "stock", "exported", "loans", "done_ms", "disasters_survived", "burned", "hist_coins", "hist_pop", "ruins", "offline", "lamp", "terr", "expansions", "auto_expand", "human", "owner", "temper", "rel", "treaty", "ev_scale", "gpos", "war_n", "war_sc", "occ", "train_on", "train_t", "train_w", "focus", "auto_focus", "ask_build", "vetoed"]
+	"season", "wage_ix", "price_loc", "stock", "exported", "loans", "done_ms", "disasters_survived", "burned", "hist_coins", "hist_pop", "ruins", "offline", "lamp", "terr", "expansions", "auto_expand", "human", "owner", "temper", "rel", "treaty", "ev_scale", "gpos", "war_n", "war_sc", "war_goal", "tension", "occ", "train_on", "train_t", "train_w", "focus", "auto_focus", "ask_build", "vetoed"]
 
 func to_dict() -> Dictionary:
 	var cs: Array = []
