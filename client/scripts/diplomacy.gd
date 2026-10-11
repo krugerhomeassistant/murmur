@@ -7,6 +7,8 @@ extends RefCounted
 const T = Catalog.Id
 const DIRN := ["north", "east", "south", "west"]
 const COSTS := {"gift": 100.0, "pact": 200.0, "alliance": 400.0, "peace": 150.0}
+const TENSION_RATE := 0.003  # per second between linked towns without a treaty, scaled by ambition
+const OCC_NEED := {"tribute": 15.0, "land": 40.0, "total": 60.0}  # occupation points that force a surrender, by war goal
 
 
 static func rel(a: City, b: City) -> float:
@@ -35,6 +37,29 @@ static func stance(r: float) -> String:
 
 static func mil(c: City) -> float:
 	return Military.power(c) + float(c.cov.get("defence", 0.0)) + 0.4 * (c.bt.get(T.BASE, []) as Array).size() + 0.15 * (c.bt.get(T.BARRACKS, []) as Array).size() + 0.1 * (c.bt.get(T.RADAR, []) as Array).size() + 0.35 * (c.bt.get(T.NAVYARD, []) as Array).size()
+
+
+## Fighting weight for deciding who may start a war: arms plus a militia share of the population, so small towns without barracks can still be bullies.
+static func strength(c: City) -> float:
+	return mil(c) + c.pop / 300.0
+
+
+## 0..1 appetite for conquest: strong military and a hostile temper raise it.
+static func ambition(c: City) -> float:
+	var m := mil(c)
+	return clampf(0.35 + 0.4 * m / (m + 3.0) - 0.4 * c.temper, 0.0, 1.0)
+
+
+static func occ_need(w: City, l: City) -> float:
+	return OCC_NEED.get(String(w.war_goal.get(l.town_name, "land")), 40.0)
+
+
+## What `x` wants from `y`: a decisive lead takes everything, a town with room to grow takes land, otherwise tribute.
+static func pick_goal(x: City, y: City) -> String:
+	if strength(x) > strength(y) + 1.5:
+		return "total"
+	var k := side(x, y)
+	return "land" if k >= 0 and x.can_expand(k) else "tribute"
 
 
 ## Which side of `a` town `b` lies on (0 N, 1 E, 2 S, 3 W), or -1 if not next to it.
@@ -160,17 +185,7 @@ static func act(a: City, b: City, what: String) -> String:
 		"war":
 			if t == "war":
 				return "You are already at war."
-			sign_treaty(a, b, "war")
-			a.war_n[b.town_name] = 0
-			b.war_n[a.town_name] = 0
-			a.war_sc[b.town_name] = 0
-			b.war_sc[a.town_name] = 0
-			Military.conscript(a)
-			Military.conscript(b)
-			_shift(a, b, -0.3, -0.6)
-			_say(a, b, "%s declares war on %s!" % [a.town_name, b.town_name])
-			a.sounds.append("alarm")
-			b.sounds.append("alarm")
+			declare(a, b, "land", "")
 			return "War declared on %s. Militia muster; barracks and bases train real units that march to the front and fight." % b.town_name
 		"leave":
 			if t == "":
@@ -181,6 +196,36 @@ static func act(a: City, b: City, what: String) -> String:
 			_shift(a, b, -0.05, -0.15)
 			return "Treaty with %s cancelled." % b.town_name
 	return ""
+
+
+## `a` declares war on `b` with a stated goal; `why` names the trigger in the headline.
+static func declare(a: City, b: City, goal: String, why: String) -> void:
+	sign_treaty(a, b, "war")
+	for p in [[a, b], [b, a]]:
+		var x: City = p[0]
+		var y: City = p[1]
+		x.war_n[y.town_name] = 0
+		x.war_sc[y.town_name] = 0
+		x.war_goal[y.town_name] = goal
+		x.tension[y.town_name] = 0.0
+	Military.conscript(a)
+	Military.conscript(b)
+	_shift(a, b, -0.3, -0.6)
+	_say(a, b, "%s declares war on %s%s! Goal: %s." % [a.town_name, b.town_name, (" (" + why + ")") if why != "" else "", goal])
+	a.sounds.append("alarm")
+	b.sounds.append("alarm")
+
+
+## Wars in progress, one row per war from the declaring side: {a, b, goal, occ, need, secs}.
+static func wars(towns: Array) -> Array:
+	var out := []
+	for i in towns.size():
+		for j in range(i + 1, towns.size()):
+			var x: City = towns[i]
+			var y: City = towns[j]
+			if treaty(x, y) == "war":
+				out.append({"a": x.town_name, "b": y.town_name, "goal": String(x.war_goal.get(y.town_name, "land")), "occ": maxi(int(y.occ.get(x.town_name, 0.0)), int(x.occ.get(y.town_name, 0.0))), "need": int(occ_need(x, y)), "secs": int(x.war_n.get(y.town_name, 0)) * 20})
+	return out
 
 
 ## True when `b` is run by a different player (multiplayer): treaties and tribute then need that player's answer instead of an AI's.
@@ -280,6 +325,7 @@ static func second(towns: Array, rng: RandomNumberGenerator) -> void:
 					target -= 0.2  # fear
 				if y.pop > x.pop * 2 and x.pop > 0:
 					target -= 0.1  # envy
+				target -= 0.3 * minf(_tension(x, y, t), 1.0)
 				x.rel[y.town_name] = move_toward(rel(x, y), clampf(target, -1.0, 1.0), 0.003)
 			if treaty(a, b) == "war":
 				Military.fight(a, b)
@@ -290,16 +336,28 @@ static func second(towns: Array, rng: RandomNumberGenerator) -> void:
 			_event(a, b, rng)
 
 
+## Border tension of `x` towards `y`, updated one second: grows between linked towns without a treaty (faster for ambitious, stronger towns), fades otherwise.
+static func _tension(x: City, y: City, t: String) -> float:
+	var v := float(x.tension.get(y.town_name, 0.0))
+	if t == "" and linked(x, y):
+		v += TENSION_RATE * (0.5 + ambition(x)) * (1.5 if strength(x) > strength(y) + 0.2 else 0.6)
+	else:
+		v = maxf(v - 0.002, 0.0)
+	x.tension[y.town_name] = v
+	return v
+
+
 ## The winner takes tribute and may annex a strip of the loser's land; the war ends.
 static func surrender(w: City, l: City) -> void:
-	var pay := minf(l.coins * 0.3, 300.0) if l.coins > 0.0 else 0.0
+	var goal := String(w.war_goal.get(l.town_name, "land"))
+	var pay := minf(l.coins * (0.3 if goal == "land" else 0.5), 300.0 if goal == "land" else 600.0) if l.coins > 0.0 else 0.0
 	l.coins -= pay
 	w.coins += pay
 	sign_treaty(w, l, "")
 	l.occ[w.town_name] = 0.0
 	var k := side(w, l)
 	var took := ""
-	if k >= 0 and w.can_expand(k) and l.cede((k + 2) % 4):
+	if goal != "tribute" and k >= 0 and w.can_expand(k) and l.cede((k + 2) % 4):
 		w.expand(k, true)
 		took = " %s annexes a strip of its land." % w.town_name
 	w.rep = clampf(w.rep + 0.1, -0.3, 0.3)  # victory rallies voters
@@ -314,6 +372,12 @@ static func _event(a: City, b: City, rng: RandomNumberGenerator) -> void:
 		return
 	if a.pop < 12 or b.pop < 12:
 		return
+	for pair in [[a, b], [b, a]]:
+		var x: City = pair[0]
+		var y: City = pair[1]
+		if not x.human and t != "pact" and t != "alliance" and float(x.tension.get(y.town_name, 0.0)) >= 1.0 and strength(x) > strength(y) and rng.randf() < 0.12 * ambition(x):
+			declare(x, y, pick_goal(x, y), "border tension")
+			return
 	var human: City = a if a.human else (b if b.human else null)
 	var other: City = b if human == a else a
 	if r > 0.1 and rng.randf() < 0.7:
@@ -349,7 +413,7 @@ static func _event(a: City, b: City, rng: RandomNumberGenerator) -> void:
 		var aggressor: City = a if rel(a, b) < rel(b, a) else b
 		var victim: City = b if aggressor == a else a
 		if r < -0.7 and not aggressor.human and mil(aggressor) > mil(victim) + 0.4 and rng.randf() < 0.4:
-			act(aggressor, victim, "war")
+			declare(aggressor, victim, pick_goal(aggressor, victim), "relations collapsed")
 			return
 		match rng.randi() % 4:
 			0:

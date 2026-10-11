@@ -664,7 +664,7 @@ static func _occupy(att: City, vic: City) -> void:
 			var loot := minf(maxf(vic.coins, 0.0) * 0.03, 30.0)
 			vic.coins -= loot
 			att.coins += loot
-		if float(vic.occ[att.town_name]) >= 40.0:
+		if float(vic.occ[att.town_name]) >= Diplo.occ_need(att, vic):
 			Diplo.surrender(att, vic)
 	else:
 		vic.occ[att.town_name] = maxf(float(vic.occ.get(att.town_name, 0.0)) - 1.0, 0.0)
