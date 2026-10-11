@@ -136,7 +136,7 @@ Goal: Murmur, a cozy interactive city-builder (Godot) with an optional Live Data
 
 ## Domination plan (user, 2026-10-09): READ docs/DOMINATION_DESIGN.md
 - [x] D1 Growth baseline: `tests/growth.gd` (not in CI). Baseline: to 100 pop never / 826 s / 1682 s over 3 runs; pop after 4800 s 64 / 106 / 110. Huge variance: tuning needs 5+ runs per side or a seeded sim.
-- [ ] D2 Victory: conquest (70% of land for 3 years or last group) and hegemony (top score 5 years, 40% of land under treaty); Empire progress bar; game-over screen with the route.
+- [x] D2 Victory (vassals join the allied land in D4, culture joins the score in D6): conquest (70% of land for 3 years or last group) and hegemony (top score 5 years, 40% of land under treaty); Empire progress bar; game-over screen with the route.
 - [ ] D3 War drivers: AI ambition, border tension, war goals (tribute / land / total); war banner in Empire.
 - [ ] D4 Vassalage and peace scoring.
 - [ ] D5 Growth tuning, one gate per PR, A/B 3x each.

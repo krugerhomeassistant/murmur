@@ -49,6 +49,8 @@ jobs:
           timeout 100 godot --headless --path client -s tests/fixes.gd | tee fx.txt && grep -q FIXES_OK fx.txt
           timeout 100 godot --headless --path client -s tests/propose.gd | tee pr.txt && grep -q PROPOSE_OK pr.txt
           timeout 300 godot --headless --path client -s tests/market.gd | tee mk.txt && grep -q MARKET_OK mk.txt
+          timeout 300 godot --headless --path client -s tests/marketwin.gd | tee mw.txt && grep -q MARKETWIN_OK mw.txt
+          timeout 300 godot --headless --path client -s tests/victory.gd | tee vc.txt && grep -q VICTORY_OK vc.txt
           GODOT=$(which godot) python3 scripts/gen_wiki.py --check
           timeout 300 godot --headless --path client -s tests/popout.gd | tee po.txt && grep -q POPOUT_OK po.txt
           timeout 120 godot --headless --path client -s tests/warmap.gd | tee wm.txt && grep -q WARMAP_OK wm.txt

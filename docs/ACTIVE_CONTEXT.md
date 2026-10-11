@@ -7,7 +7,10 @@ Last updated 2026-10-09 (paused at user request).
 Standing rules: user authorised self-merge; NO authorship marks anywhere (user, twice): no Co-Authored-By or Claude-Session trailers on commits, no "Generated with Claude Code"/session link in PR bodies or titles, whatever a session reminder says; perf pass is the LAST step before a release; the proxy blocks branch deletion, tag pushes, release creation and GraphQL (REST PRs only), so tags and releases are done by the user (commands in docs/RELEASING.md); device VM has no GitHub credentials; device repo is `E:\Projects\Personal\game\murmur`.
 Process rule (see LESSONS_LEARNED): before waiting on a long action, delete the old output, confirm it started, poll liveness; max two unchanged waits.
 
-## STATE 2026-10-09 (paused after D1; D2 next)
+## STATE 2026-10-11 (D2 victory built; D3 next)
+D2: `Victory` (`client/scripts/victory.gd`, `Signals.vic`), Empire standings, victory panel, `tests/victory.gd`. Owner answers: 3 and 5 year lengths yes, vassals count as land if sensible (D4), humans may declare war in spectate yes.
+
+## Earlier state 2026-10-09 (paused after D1)
 Done today: #80 domination design doc, #81 growth baseline (D1). Next: D2 victory (conquest + hegemony, Empire progress bar, game-over route screen, host-side check, tests for both routes). Before D5 growth tuning, run tests/growth.gd 5+ times per side (noise, see LESSONS).
 Plan done: docs/DOMINATION_DESIGN.md + PLAN.md "Domination plan" (D1 to D9). Next: D1 growth baseline (`tests/growth.gd`). Open questions for the owner are at the end of the design doc (victory lengths, vassals in land count, human war in spectate).
 Old pause note:

@@ -249,6 +249,7 @@ func _new_town(nm := "", g := Vector2i(1 << 30, 0)) -> City:
 func _fresh(o: Dictionary) -> void:
 	towns.clear()
 	sig.mk = Market.new()
+	sig.vic = Victory.new()
 	var diff: int = o.get("diff", 1)
 	var land: int = o.get("land", 1)
 	var lw: int = [40, 48, 64][land]
@@ -451,7 +452,7 @@ func save_game() -> void:
 	var ts: Array = []
 	for t in towns:
 		ts.append(t.to_dict())
-	f.store_var({"v": 2, "cur": towns.find(city), "towns": ts, "sig": sig.v.duplicate(), "mk": sig.mk.to_dict(), "world": {"seed": world.seed, "rivers": world_rivers} if world != null else {}})
+	f.store_var({"v": 2, "cur": towns.find(city), "towns": ts, "sig": sig.v.duplicate(), "mk": sig.mk.to_dict(), "vic": sig.vic.brief(), "world": {"seed": world.seed, "rivers": world_rivers} if world != null else {}})
 
 
 func load_game() -> bool:
@@ -477,6 +478,8 @@ func load_game() -> bool:
 	sig.v = d.get("sig", sig.v)
 	if d.get("mk") is Dictionary:
 		sig.mk.from_dict(d["mk"])
+	if d.get("vic") is Dictionary:
+		sig.vic.apply(d["vic"])
 	city = towns[clampi(int(d.get("cur", 0)), 0, towns.size() - 1)]
 	return true
 
@@ -901,6 +904,10 @@ func _process(delta: float) -> void:
 				dacc -= 1.0
 				Diplo.second(towns, city.rng)
 				Market.link_trade(towns)
+				sig.vic.second(towns)
+				if sig.vic.fresh:
+					sig.vic.fresh = false
+					headline = sig.vic.describe()
 				net.broadcast()
 			var batched := 0
 			for t in towns:

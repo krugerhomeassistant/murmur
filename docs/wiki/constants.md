@@ -31,6 +31,10 @@ The values the rules are built on, read from the code at generation time.
 | `max_players` | 8 |
 | `market_low` | 0.35 |
 | `market_high` | 3 |
+| `conquest_share` | 0.7 |
+| `conquest_years` | 3 |
+| `hegemony_years` | 5 |
+| `ally_share` | 0.4 |
 | `market_world` | 1.5 |
 | `market_sens` | 0.6 |
 | `market_follow` | 0.12 |

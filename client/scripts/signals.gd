@@ -7,6 +7,7 @@ const BASE := {"market": 0.0, "news": 0.0}
 
 var v := {"market": 0.0, "news": 0.0}  # -1..1, decay back to BASE
 var mk := Market.new()  # the goods exchange: a world condition shared by every town
+var vic := Victory.new()  # the race to conquest or hegemony
 var _weather := "clear"
 var _weather_left := 0.0
 

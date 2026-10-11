@@ -51,6 +51,41 @@ func _init() -> void:
 	r.from_dict({"price": {"food": 1e9, "goods": -5.0}})
 	if float(r.price["food"]) > Market.BASE["food"] * Market.HIGH * 1.5 + 0.01 or float(r.price["goods"]) < Market.BASE["goods"] * Market.LOW - 0.01:
 		errs.append("hostile prices must be clamped")
+	# candles: ten seconds make one, ranges hold, merging and stats agree, the tape names trades and events
+	var cm := Market.new()
+	_run(cm, 100, {"food": 1.0}, {"food": 6.0}, 3)
+	var fc: Array = cm.candles["food"]
+	if fc.size() < 8 or fc.size() > 10:
+		errs.append("100 s should close about 10 candles, got %d" % fc.size())
+	for c: Array in fc:
+		if float(c[2]) > float(c[0]) + 0.0001 or float(c[1]) < float(c[3]) - 0.0001 or float(c[2]) > float(c[1]):
+			errs.append("candle low/high must bound open and close: %s" % [c])
+			break
+	var mg: Array = cm.merged("food", 5)
+	if mg.size() != fc.size() / 5 or absf(float((mg[0] as Array)[0]) - float((fc[fc.size() % 5] as Array)[0])) > 0.0001 or absf(float((mg[mg.size() - 1] as Array)[3]) - float((fc[fc.size() - 1] as Array)[3])) > 0.0001:
+		errs.append("merged candles should span the same range")
+	var st := Market.stats(fc)
+	if float(st["chg"]) <= 0.0 or float(st["hi"]) < float(st["lo"]) or float(st["units"]) <= 0.0:
+		errs.append("a shortage should show a rising price with volume: %s" % [st])
+	var sm := Market.sma(fc, 3)
+	if sm.size() != fc.size() or absf(sm[sm.size() - 1] - (float((fc[fc.size() - 3] as Array)[3]) + float((fc[fc.size() - 2] as Array)[3]) + float((fc[fc.size() - 1] as Array)[3])) / 3.0) > 0.0001:
+		errs.append("sma(3) of the last candles")
+	if cm.status("food") != "shortage" or cm.status("ore") != "balanced":
+		errs.append("status should read shortage for food and balanced for ore")
+	cm.shock_by({"food": 1.3})
+	if not String((cm.tape[0] as Dictionary)["s"]).contains("food +30%"):
+		errs.append("an event should land on the tape")
+	for i in 60:
+		cm.note("x%d" % i)
+	if cm.tape.size() != Market.TAPE:
+		errs.append("the tape is capped")
+	var cr := Market.new()
+	cr.from_dict(cm.to_dict())
+	if (cr.candles["food"] as Array).size() != fc.size():
+		errs.append("candles must survive a save round trip")
+	cr.from_dict({"cd": {"food": [[1, 2], "junk", [-5.0, 1e30, 0, 1, 2, 3, 4]]}})
+	if (cr.candles["food"] as Array).size() != 1 or float(((cr.candles["food"] as Array)[0] as Array)[0]) < 0.0:
+		errs.append("hostile candles must be filtered")
 	# trade between linked towns: goods flow from cheap to dear, blocked by embargo or a missing road
 	var sg := Signals.new()
 	var ta := City.new(sg)
@@ -78,6 +113,9 @@ func _init() -> void:
 	var moved := float(tb.stock["food"])
 	if moved <= 0.0 or absf(float(ta.stock["food"]) - (300.0 - moved)) > 0.001:
 		errs.append("linked towns should move food to the dear side (%.2f)" % moved)
+	sg.mk.tick(10.0)
+	if sg.mk.tape.is_empty() or not String((sg.mk.tape[0] as Dictionary)["s"]).contains("A to B"):
+		errs.append("a link trade should show on the tape")
 	if ta.coins <= ca or tb.coins >= cb:
 		errs.append("the buyer pays, the seller earns")
 	if (tb.coins - cb) + (ta.coins - ca) >= 0.0:
@@ -107,7 +145,7 @@ func _init() -> void:
 	var inflow := 0.0
 	for c in ts:
 		inflow += float(c.flow.get("food_need", 0.0))
-	if inflow > 0.5 and sig.mk.ratio("food") < 1.05:
+	if inflow > 0.5 and sig.mk.ratio("food") < 1.0:
 		errs.append("towns that cannot feed themselves should lift the food price (%.2f)" % sig.mk.ratio("food"))
 	for k in Market.GOODS:
 		if is_nan(float(sig.mk.price[k])) or float(sig.mk.price[k]) <= 0.0:

@@ -51,6 +51,9 @@ var codex_list: ItemList
 var codex_text: RichTextLabel
 var codex_ids: Array = []
 var over_panel: PanelContainer
+var win_panel: PanelContainer
+var win_l: Label
+var win_seen := ""  # winner whose panel was dismissed
 var over_l: Label
 var hover_text := ""
 var tick_n := 0
@@ -141,6 +144,21 @@ func _ready() -> void:
     over_l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     over_l.add_theme_font_size_override("font_size", 20)
     over_panel.add_child(over_l)
+    win_panel = PanelContainer.new()
+    win_panel.position = Vector2(400, 150)
+    win_panel.custom_minimum_size = Vector2(480, 120)
+    win_panel.visible = false
+    add_child(win_panel)
+    var wv := VBoxContainer.new()
+    win_panel.add_child(wv)
+    win_l = Label.new()
+    win_l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    win_l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    win_l.add_theme_font_size_override("font_size", 18)
+    wv.add_child(win_l)
+    _btn(wv, "Keep playing", func() -> void:
+        win_seen = m.sig.vic.winner
+        win_panel.visible = false)
 
 
 func _theme() -> Theme:
@@ -895,6 +913,11 @@ func _process(_d: float) -> void:
     over_panel.visible = c.over != ""
     if c.over != "":
         over_l.text = "GAME OVER\n%s\nPeak population %d.   Press R to restart." % [c.over, int(c.peak)]
+    var vic: Victory = m.sig.vic
+    var mine := vic.winner != "" and vic.winner == Victory.side(c)
+    win_panel.visible = vic.winner != "" and vic.winner != win_seen and c.over == ""
+    if win_panel.visible:
+        win_l.text = ("VICTORY\n" if mine else "DEFEAT\n") + vic.describe()
     if tick_n % 6 != 0:
         return
     _empire_refresh(c)
@@ -1016,6 +1039,7 @@ func _army_refresh(c: City) -> void:
 # ---------- empire: all your towns at a glance ----------
 
 var emp_tot: Label
+var emp_dom: Label
 var emp_grid: GridContainer
 var emp_cells: Array = []  # per town: {"nm", "pop", "co", "inc", "mood", "fl", "go", "send"}
 var emp_sort := 0  # 0 order founded, 1 name, 2 pop, 3 coins, 4 net, 5 mood
@@ -1030,6 +1054,8 @@ func _empire() -> void:
     var body := _win("empire", "Empire (all your towns)", Vector2(160, 70), Vector2(600, 400))
     emp_tot = _lbl(body, 0)
     emp_tot.add_theme_font_size_override("font_size", 13)
+    emp_dom = _lbl(body, 0)
+    emp_dom.add_theme_font_size_override("font_size", 12)
     var sc := ScrollContainer.new()
     sc.size_flags_vertical = Control.SIZE_EXPAND_FILL
     sc.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
@@ -1072,52 +1098,179 @@ func _empire() -> void:
     (wins["empire"] as PanelContainer).visible = false
 
 
-var mk_grid: GridContainer
-var mk_cells := {}  # good -> {"price", "vs", "sup", "dem", "line", "you"}
+var mk_sel := "food"
+var mk_tf := 0  # index into MK_TF
+var mk_hover := -1.0  # mouse x over the chart, -1 when outside
+var mk_btns := {}  # good -> Button
+var mk_chart: Control
+var mk_stats: RichTextLabel
 var mk_note: Label
+var mk_towns: GridContainer
+var mk_tape: Label
 const MK_NAMES := {"crops": "Crops", "food": "Food", "goods": "Goods", "ore": "Ore", "metal": "Metal", "arms": "Arms"}
+const MK_TF := [["10 s", 1], ["1 min", 6], ["5 min", 30]]  # label, candles merged
+const MK_SHOW := 60  # candles on the chart
+const MK_UP := Color("6fbf73")
+const MK_DOWN := Color("d9645a")
 
 
 func _market_win() -> void:
-    var body := _win("market", "Market", Vector2(180, 90), Vector2(560, 260))
-    mk_note = _lbl(body, 540)
-    mk_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-    mk_grid = GridContainer.new()
-    mk_grid.columns = 7
-    mk_grid.add_theme_constant_override("h_separation", 10)
-    body.add_child(mk_grid)
-    for h in ["Good", "World", "Here", "Offered/s", "Wanted/s", "Last 15 min", "Your town"]:
-        _hdr(mk_grid, h)
+    var body := _win("market", "Market", Vector2(150, 70), Vector2(720, 470))
+    var top := HBoxContainer.new()
+    body.add_child(top)
     for k in Market.GOODS:
-        var cell := {"nm": _lbl(mk_grid, 56), "price": _lbl(mk_grid, 52), "vs": _lbl(mk_grid, 56), "sup": _lbl(mk_grid, 66), "dem": _lbl(mk_grid, 66)}
-        (cell["nm"] as Label).text = MK_NAMES[k]
-        var line := Control.new()
-        line.custom_minimum_size = Vector2(120, 24)
         var gk: String = k
-        line.draw.connect(func() -> void: _spark(line, gk))
-        mk_grid.add_child(line)
-        cell["line"] = line
-        cell["you"] = _lbl(mk_grid, 150)
-        mk_cells[k] = cell
-    _hdr(body, "World = the outside market, set by all towns together. Here = your town's price: low when you have plenty, high when you are short, always between selling abroad (80%) and buying abroad (120%). Linked towns (road to the shared border) trade goods when the price gap pays the freight.")
+        var b := _btn(top, MK_NAMES[k], func() -> void:
+            mk_sel = gk
+            _market_refresh(m.city))
+        b.toggle_mode = true
+        b.custom_minimum_size = Vector2(104, 0)
+        mk_btns[k] = b
+    var sp := Control.new()
+    sp.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    top.add_child(sp)
+    for i in MK_TF.size():
+        var ti: int = i
+        var tb := _btn(top, MK_TF[i][0], func() -> void:
+            mk_tf = ti
+            _market_refresh(m.city))
+        tb.toggle_mode = true
+        mk_btns["tf%d" % i] = tb
+    var mid := HBoxContainer.new()
+    body.add_child(mid)
+    mk_chart = Control.new()
+    mk_chart.custom_minimum_size = Vector2(500, 300)
+    mk_chart.mouse_filter = Control.MOUSE_FILTER_STOP
+    mk_chart.draw.connect(_mk_draw)
+    mk_chart.gui_input.connect(func(e: InputEvent) -> void:
+        if e is InputEventMouseMotion:
+            mk_hover = (e as InputEventMouseMotion).position.x
+            mk_chart.queue_redraw())
+    mk_chart.mouse_exited.connect(func() -> void:
+        mk_hover = -1.0
+        mk_chart.queue_redraw())
+    mid.add_child(mk_chart)
+    mk_stats = _rich(mid, 300)
+    mk_stats.custom_minimum_size = Vector2(210, 300)
+    var low := HBoxContainer.new()
+    low.add_theme_constant_override("separation", 14)
+    body.add_child(low)
+    var lv := VBoxContainer.new()
+    low.add_child(lv)
+    _hdr(lv, "Towns (price of the selected good)")
+    mk_towns = GridContainer.new()
+    mk_towns.columns = 4
+    mk_towns.add_theme_constant_override("h_separation", 10)
+    lv.add_child(mk_towns)
+    var rv := VBoxContainer.new()
+    low.add_child(rv)
+    _hdr(rv, "Trade tape")
+    mk_tape = Label.new()
+    mk_tape.custom_minimum_size = Vector2(330, 0)
+    mk_tape.add_theme_font_size_override("font_size", 11)
+    rv.add_child(mk_tape)
+    mk_note = _lbl(body, 700)
+    mk_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    mk_note.add_theme_font_size_override("font_size", 11)
+    var help := _lbl(body, 700)
+    help.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    help.add_theme_font_size_override("font_size", 11)
+    help.add_theme_color_override("font_color", Color("9aa88f"))
+    help.text = "World = the outside market, set by all towns together. Here = your town's price: low when you have plenty, high when you are short, always between selling abroad (80%) and buying abroad (120%). Candles show open, high, low and close for each period; thin lines are 5 and 20 period averages; bars are units cleared. Linked towns trade goods when the price gap pays the freight."
     win_open["market"] = false
     (wins["market"] as PanelContainer).visible = false
 
 
-func _spark(line: Control, k: String) -> void:
-    var h: Array = m.sig.mk.hist[k]
-    var r := Rect2(Vector2.ZERO, line.size)
-    line.draw_rect(r, Color(0, 0, 0, 0.18))
-    if h.size() < 2:
+func _mk_candles() -> Array:
+    return m.sig.mk.merged(mk_sel, int(MK_TF[mk_tf][1]))
+
+
+func _mk_draw() -> void:
+    var ch := mk_chart
+    var mk: Market = m.sig.mk
+    var all := _mk_candles()
+    var cs: Array = all.slice(-MK_SHOW)
+    var font := ThemeDB.fallback_font
+    var sz := ch.size
+    ch.draw_rect(Rect2(Vector2.ZERO, sz), Color(0, 0, 0, 0.22))
+    if cs.size() < 2:
+        ch.draw_string(font, Vector2(12, 24), "Collecting prices... (a candle closes every %d s of game time)" % (Market.CANDLE * int(MK_TF[mk_tf][1])), HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color("9aa88f"))
         return
-    var lo := float(Market.BASE[k]) * Market.LOW
-    var hi := float(Market.BASE[k]) * Market.HIGH
-    var by := r.size.y - (float(Market.BASE[k]) - lo) / (hi - lo) * r.size.y
-    line.draw_line(Vector2(0, by), Vector2(r.size.x, by), Color(1, 1, 1, 0.25))
-    var pts := PackedVector2Array()
-    for i in h.size():
-        pts.append(Vector2(r.size.x * i / float(Market.HIST - 1), r.size.y - clampf((float(h[i]) - lo) / (hi - lo), 0.0, 1.0) * r.size.y))
-    line.draw_polyline(pts, Color("e8c860"), 1.5)
+    var ax := 46.0  # left margin for the price axis
+    var ph := sz.y * 0.58
+    var vy := ph + 6.0
+    var vh := sz.y * 0.14
+    var sy := vy + vh + 14.0
+    var sh := sz.y - sy - 14.0
+    var base := float(Market.BASE[mk_sel])
+    var lo := base
+    var hi := base
+    for c: Array in cs:
+        lo = minf(lo, float(c[2]))
+        hi = maxf(hi, float(c[1]))
+    var pad := maxf((hi - lo) * 0.08, 0.02)
+    lo -= pad
+    hi += pad
+    var cw := (sz.x - ax - 4.0) / float(maxi(cs.size(), 24))  # a young chart fills from the right without huge candles
+    var x0 := sz.x - 4.0 - cw * cs.size()
+    var py := func(p: float) -> float: return ph - (p - lo) / (hi - lo) * (ph - 10.0) - 2.0
+    for i in 5:
+        var pv := lo + (hi - lo) * i / 4.0
+        var y: float = py.call(pv)
+        ch.draw_line(Vector2(ax, y), Vector2(sz.x, y), Color(1, 1, 1, 0.07))
+        ch.draw_string(font, Vector2(2, y + 4), "$%.2f" % pv, HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color("9aa88f"))
+    var by: float = py.call(base)
+    ch.draw_dashed_line(Vector2(ax, by), Vector2(sz.x, by), Color(1, 1, 1, 0.4), 1.0, 4.0)
+    var vmax := 0.001
+    var smax := 0.5
+    for c: Array in cs:
+        vmax = maxf(vmax, float(c[4]))
+        smax = maxf(smax, maxf(float(c[5]), float(c[6])))
+    var sp := PackedVector2Array()
+    var dp := PackedVector2Array()
+    for i in cs.size():
+        var c: Array = cs[i]
+        var x := x0 + cw * (i + 0.5)
+        var col := MK_UP if float(c[3]) >= float(c[0]) else MK_DOWN
+        ch.draw_line(Vector2(x, py.call(float(c[1]))), Vector2(x, py.call(float(c[2]))), col)
+        var yo: float = py.call(float(c[0]))
+        var yc: float = py.call(float(c[3]))
+        ch.draw_rect(Rect2(x - cw * 0.35, minf(yo, yc), cw * 0.7, maxf(absf(yo - yc), 1.0)), col)
+        var vbh := float(c[4]) / vmax * vh
+        ch.draw_rect(Rect2(x - cw * 0.35, vy + vh - vbh, cw * 0.7, vbh), Color(col, 0.55))
+        sp.append(Vector2(x, sy + sh - float(c[5]) / smax * sh))
+        dp.append(Vector2(x, sy + sh - float(c[6]) / smax * sh))
+    for pr in [[5, Color("7fb4ff")], [20, Color("ffb35c")]]:
+        var sm := Market.sma(all, int(pr[0]))
+        var tail := sm.slice(maxi(sm.size() - cs.size(), 0))
+        var pts := PackedVector2Array()
+        for i in tail.size():
+            pts.append(Vector2(x0 + cw * (i + 0.5), py.call(tail[i])))
+        if pts.size() >= 2:
+            ch.draw_polyline(pts, pr[1], 1.2)
+    ch.draw_string(font, Vector2(2, vy + 10), "units", HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color("9aa88f"))
+    ch.draw_string(font, Vector2(ax, sy - 3), "offered/s", HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color("7fd18b"))
+    ch.draw_string(font, Vector2(ax + 64, sy - 3), "wanted/s", HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color("e8a860"))
+    ch.draw_string(font, Vector2(2, sy + 10), "%.1f/s" % smax, HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color("9aa88f"))
+    ch.draw_line(Vector2(ax, sy + sh), Vector2(sz.x, sy + sh), Color(1, 1, 1, 0.12))
+    ch.draw_polyline(sp, Color("7fd18b"), 1.5)
+    ch.draw_polyline(dp, Color("e8a860"), 1.5)
+    var secs := cs.size() * Market.CANDLE * int(MK_TF[mk_tf][1])
+    ch.draw_string(font, Vector2(ax, sz.y - 2), "-%d:%02d" % [secs / 60, secs % 60], HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color("9aa88f"))
+    ch.draw_string(font, Vector2(sz.x - 30, sz.y - 2), "now", HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color("9aa88f"))
+    if mk_hover >= x0:
+        var i := clampi(int((mk_hover - x0) / cw), 0, cs.size() - 1)
+        var c: Array = cs[i]
+        var x := x0 + cw * (i + 0.5)
+        ch.draw_line(Vector2(x, 0), Vector2(x, sz.y), Color(1, 1, 1, 0.3))
+        var ago := (cs.size() - 1 - i) * Market.CANDLE * int(MK_TF[mk_tf][1])
+        var tip := "-%d:%02d  open %.2f  high %.2f  low %.2f  close %.2f  cleared %.0f  offered %.1f/s  wanted %.1f/s" % [ago / 60, ago % 60, c[0], c[1], c[2], c[3], c[4], c[5], c[6]]
+        ch.draw_rect(Rect2(ax, 2, sz.x - ax - 2, 16), Color(0, 0, 0, 0.7))
+        ch.draw_string(font, Vector2(ax + 4, 14), tip, HORIZONTAL_ALIGNMENT_LEFT, sz.x - ax - 10, 10, Color("f0f0e0"))
+    var cur := float(mk.price[mk_sel])
+    var cy: float = py.call(cur)
+    ch.draw_rect(Rect2(0, cy - 7, ax - 2, 14), Color("e8c860"))
+    ch.draw_string(font, Vector2(2, cy + 4), "$%.2f" % cur, HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color.BLACK)
 
 
 func _market_refresh(c: City) -> void:
@@ -1126,24 +1279,77 @@ func _market_refresh(c: City) -> void:
     var mk: Market = m.sig.mk
     var sell: Array[String] = []
     var glut: Array[String] = []
-    for k in Market.GOODS:
-        var cell: Dictionary = mk_cells[k]
-        var rt := mk.ratio(k)
-        (cell["price"] as Label).text = "$%.2f" % float(mk.price[k])
-        (cell["vs"] as Label).text = "$%.2f" % float(c.price_loc[k])
-        (cell["sup"] as Label).text = "%.1f" % float(mk.last_sup[k])
-        (cell["dem"] as Label).text = "%.1f" % float(mk.last_dem[k])
-        (cell["line"] as Control).queue_redraw()
-        var sold := float((c.flow.get("sold", {}) as Dictionary).get(k, 0.0))
-        var bought := float((c.flow.get("bought", {}) as Dictionary).get(k, 0.0))
-        var wanted := float((c.flow.get("want", {}) as Dictionary).get(k, 0.0))
-        var tr := float((c.flow.get("traded", {}) as Dictionary).get(k, 0.0))
-        (cell["you"] as Label).text = "stock %d, sell %.1f, buy %.1f%s" % [int(c.stock.get(k, 0.0)), sold, maxf(bought, wanted if k in ["food", "goods"] else bought), ("  linked %+.1f" % tr) if absf(tr) > 0.05 else ""]
-        if rt > 1.25 and float(c.flow.get(k, 0.0)) > 0.0:
-            sell.append(MK_NAMES[k])
+    for g in Market.GOODS:
+        var rt := mk.ratio(g)
+        var b: Button = mk_btns[g]
+        b.text = "%s $%.2f %+d%%" % [MK_NAMES[g], float(mk.price[g]), roundi((rt - 1.0) * 100.0)]
+        b.set_pressed_no_signal(g == mk_sel)
+        b.add_theme_color_override("font_color", MK_UP if rt > 1.05 else (MK_DOWN if rt < 0.95 else Color("e6e6d6")))
+        if rt > 1.25 and float(c.flow.get(g, 0.0)) > 0.0:
+            sell.append(MK_NAMES[g])
         if rt < 0.8:
-            glut.append(MK_NAMES[k])
+            glut.append(MK_NAMES[g])
+    for i in MK_TF.size():
+        (mk_btns["tf%d" % i] as Button).set_pressed_no_signal(i == mk_tf)
+    mk_chart.queue_redraw()
+    var k := mk_sel
+    var st := Market.stats(_mk_candles().slice(-MK_SHOW))
+    var spread := _mk_spread(k)
+    var sold := float((c.flow.get("sold", {}) as Dictionary).get(k, 0.0))
+    var bought := float((c.flow.get("bought", {}) as Dictionary).get(k, 0.0))
+    var wanted := float((c.flow.get("want", {}) as Dictionary).get(k, 0.0))
+    var tr := float((c.flow.get("traded", {}) as Dictionary).get(k, 0.0))
+    var stat := mk.status(k)
+    var scol: String = {"shortage": "e8a860", "glut": "7fb4ff", "balanced": "9aa88f"}[stat]
+    mk_stats.text = ""
+    mk_stats.append_text("[b]%s[/b]  $%.2f  ([color=#%s]%s[/color])\n" % [MK_NAMES[k], float(mk.price[k]), scol, stat])
+    mk_stats.append_text("base $%.2f   limits $%.2f to $%.2f\n" % [float(Market.BASE[k]), float(Market.BASE[k]) * Market.LOW, float(Market.BASE[k]) * Market.HIGH])
+    mk_stats.append_text("offered %.1f/s   wanted %.1f/s\n" % [float(mk.last_sup[k]), float(mk.last_dem[k])])
+    mk_stats.append_text("shown: high $%.2f  low $%.2f  avg $%.2f\n" % [st["hi"], st["lo"], st["avg"]])
+    mk_stats.append_text("change %+.1f%%   volatility %.1f%%\n" % [float(st["chg"]) * 100.0, float(st["vol"]) * 100.0])
+    mk_stats.append_text("units cleared %.0f\n" % float(st["units"]))
+    mk_stats.append_text("event shock x%.2f\n" % float(mk.shock.get(k, 1.0)))
+    mk_stats.append_text("\n[b]Your town[/b]\nprice $%.2f   stock %d\nsell %.1f/s   buy %.1f/s%s\n" % [float(c.price_loc[k]), int(c.stock.get(k, 0.0)), sold, maxf(bought, wanted if k in ["food", "goods"] else bought), ("   linked %+.1f/s" % tr) if absf(tr) > 0.05 else ""])
+    if spread.size() == 4:
+        mk_stats.append_text("\n[b]Spread[/b] $%.2f (%s) to $%.2f (%s)" % [spread[0], spread[2], spread[1], spread[3]])
+    _mk_towns(k)
+    var lines: Array[String] = []
+    for e: Dictionary in mk.tape.slice(0, 7):
+        var t := int(e["t"])
+        lines.append("%02d:%02d  %s" % [t / 60, t % 60, e["s"]])
+    mk_tape.text = "\n".join(lines) if not lines.is_empty() else "No trades between towns yet."
     mk_note.text = ("Worth selling: %s.  " % ", ".join(sell) if not sell.is_empty() else "") + ("Glut (cheap, held back): %s.  " % ", ".join(glut) if not glut.is_empty() else "") + ("Prices are near their base values." if sell.is_empty() and glut.is_empty() else "")
+
+
+## [lowest price, highest price, its town, its town] over the towns, or [] with fewer than two.
+func _mk_spread(k: String) -> Array:
+    if m.towns.size() < 2:
+        return []
+    var lo: City = m.towns[0]
+    var hi: City = m.towns[0]
+    for t: City in m.towns:
+        if float(t.price_loc[k]) < float(lo.price_loc[k]):
+            lo = t
+        if float(t.price_loc[k]) > float(hi.price_loc[k]):
+            hi = t
+    return [float(lo.price_loc[k]), float(hi.price_loc[k]), lo.town_name, hi.town_name]
+
+
+func _mk_towns(k: String) -> void:
+    for ch in mk_towns.get_children():
+        ch.queue_free()
+    for h in ["Town", "Price", "vs world", "Stock"]:
+        _hdr(mk_towns, h)
+    var ts: Array = m.towns.duplicate()
+    ts.sort_custom(func(a: City, b: City) -> bool: return float(a.price_loc[k]) > float(b.price_loc[k]))
+    var w := float(m.sig.mk.price[k])
+    for t: City in ts.slice(0, 6):
+        _lbl(mk_towns, 90).text = t.town_name + (" *" if t == m.city else "")
+        _lbl(mk_towns, 50).text = "$%.2f" % float(t.price_loc[k])
+        _lbl(mk_towns, 56).text = "%+d%%" % roundi((float(t.price_loc[k]) / maxf(w, 0.001) - 1.0) * 100.0)
+        _lbl(mk_towns, 50).text = "%d" % int(t.stock.get(k, 0.0))
+    if ts.size() > 6:
+        _hdr(mk_towns, "+%d more" % (ts.size() - 6))
 
 
 func _chk(p: Node, text: String, key: String) -> CheckButton:
@@ -1159,6 +1365,17 @@ func _tax_all(k: String, d: float) -> void:
     m.cmd("apply_all", ["tax", k, clampf(snappedf(float(m.city.get("tax_" + k)) + d, 0.01), 0.0, 0.5)])
 
 
+## The standings as text: land share, allied share, score and progress to each victory.
+func _domination() -> String:
+    var v: Victory = m.sig.vic
+    var out := "DOMINATION: conquest = %d%% of the land for %d years; hegemony = top score and %d%% allied for %d years\n" % [int(Victory.CONQUEST_SHARE * 100.0), int(Victory.CONQUEST_YEARS), int(Victory.ALLY_SHARE * 100.0), int(Victory.HEGEMONY_YEARS)]
+    if v.winner != "":
+        out += v.describe() + "\n"
+    for r: Dictionary in v.rows:
+        out += "%s%s  towns %d  land %d%%  allied %d%%  score %d   conquest %d%%  hegemony %d%%\n" % ["> " if r["side"] == Victory.side(m.city) else "   ", r["name"], r["towns"], int(float(r["land"]) * 100.0), int(float(r["allied"]) * 100.0), int(r["score"]), int(float(r["con"]) * 100.0), int(float(r["heg"]) * 100.0)]
+    return out.strip_edges()
+
+
 func _empire_sort(col: int) -> void:
     emp_sort = col
     emp_cells.clear()  # rebuild in the new order
@@ -1169,6 +1386,7 @@ func _empire_refresh(c: City) -> void:
         return
     var mine := Empire.mine(m.towns, c)
     var tt := Empire.totals(mine)
+    emp_dom.text = _domination()
     emp_tot.text = "%d of your towns   pop %d   treasury $%d   net %+.1f/s" % [tt["towns"], tt["pop"], int(tt["coins"]), tt["income"]]
     var rows: Array = []
     for t in m.towns:

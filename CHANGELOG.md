@@ -6,6 +6,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 ## [Unreleased]
 
 ### Added
+- Victory (D2): a side wins by conquest (70% of all claimed land for 3 years, or the last side alive) or hegemony (top score for 5 years while its land plus its allies' land is at least 40%). The host checks once per sim second and syncs standings in every snapshot and save; the Empire window shows land, allied land, score and progress per side; a Victory or Defeat panel names the route and offers "Keep playing" (the game continues as a sandbox). `tests/victory.gd`.
+- Market window rebuilt as a trading screen: candlestick chart per good (10 s, 1 min and 5 min candles) with 5 and 20 period moving averages, volume and offered/wanted panes, hover readout, status (shortage, glut, balanced), high, low, average, change and volatility, price spread between towns, per-town local prices and a trade tape of town-to-town trades and price events. Candles are saved and rebuilt by multiplayer clients. `tests/marketwin.gd`.
 - `tests/growth.gd`: growth baseline printout (time to 100 and 300 people), for tuning the planner and households.
 - Domination plan: `docs/DOMINATION_DESIGN.md` sets the end goal (conquest or hegemony), faster growth, more frequent war, the depth order and a `city.gd` split. Design only; no gameplay change yet.
 - Rivers v2: main rivers are domain-warped (meanders, loops), vary between 3 and 5 tiles wide, and thin tributaries run through wet country. Same seed gives the same land; old saves keep the seed so their rivers change shape.
@@ -26,6 +28,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 - The land between and around the towns is drawn from the endless world (rivers, lakes, coast, forest, hills, rock, ore), generated a few milliseconds per frame near the camera, and the camera may roam 10 plots past the outermost town (it was clamped to the towns).
 
 ### Fixed
+- `tests/market.gd` no longer fails when a food-importing region's price sits just above base (it failed once in CI at 1.02 against a 1.05 threshold); it now checks the price is not below base.
 - Small unhappy planner towns could stall at about 40 people (one police station for the whole town, crime keeping mood under the immigration threshold); they may now build more of a service they badly lack. Seen as `tests/ai.gd` building only 3-6 military buildings in about a quarter of runs; now about 1 in 30.
 - Power and water between towns now cost the buyer exactly what the seller earns (0.3 per unit); before, the buyer paid 0.4 and the seller got 0.2 for each partner's imports, which lost money and could over-credit with three or more towns.
 - Multiplayer: a dropped player's town is reclaimed with a secret per-install rejoin token instead of the display name, and a fast reconnect takes over its old seat; the host no longer queues snapshots for a stalled client (it skips rounds, then disconnects it after a minute). `tests/token.gd`, `netsync`, `mp`.
