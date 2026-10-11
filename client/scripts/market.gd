@@ -16,6 +16,9 @@ const IMPORT := 1.2  ## shortages not covered by a neighbour are bought abroad a
 const FOLLOW := 0.12  # how fast the price chases its target, per second
 const HIST := 90  # price samples kept (one per HIST_EVERY seconds)
 const HIST_EVERY := 10.0
+const CANDLE := 10  # samples (sim seconds) per candle
+const CANDLES := 360  # candles kept (one hour of sim time)
+const TAPE := 40  # trade tape entries kept
 
 var price := BASE.duplicate()
 var sup := {}  # units offered this window (by the towns)
@@ -28,8 +31,12 @@ var reporters := 0  # towns that reported this window
 var last_reporters := 0
 var t := 0.0
 var th := 0.0
-var _rec := 0
 var shock := {}  # good -> price multiplier from events, fading back to 1
+var candles := {}  # good -> Array of [open, high, low, close, volume, offered/s, wanted/s], oldest first
+var tape: Array = []  # newest first: {"t": sim seconds, "s": text}
+var clock := 0.0  # sim seconds this market has run
+var _cur := {}  # good -> candle being built (slot 7 counts samples), empty between candles
+var _flow := {}  # "from|to|good" -> [units, coins] moved between towns since the last candle
 
 
 func _init() -> void:
@@ -40,6 +47,8 @@ func _init() -> void:
 		last_dem[k] = 0.0
 		pool[k] = 0.0
 		hist[k] = [BASE[k]]
+		candles[k] = []
+		_cur[k] = []
 
 
 ## A town reports one second of trade. Call once per town per sim second.
@@ -55,6 +64,26 @@ func shock_by(mults: Dictionary) -> void:
 	for k in mults:
 		if k in GOODS:
 			shock[k] = clampf(float(shock.get(k, 1.0)) * float(mults[k]), 0.5, 2.5)
+	var parts: Array[String] = []
+	for k in mults:
+		if k in GOODS and absf(float(mults[k]) - 1.0) >= 0.01:
+			parts.append("%s %+d%%" % [k, roundi((float(mults[k]) - 1.0) * 100.0)])
+	if not parts.is_empty():
+		note("Event: " + ", ".join(parts))
+
+
+## One line on the trade tape (newest first).
+func note(text: String) -> void:
+	tape.push_front({"t": clock, "s": text})
+	if tape.size() > TAPE:
+		tape.pop_back()
+
+
+## A town-to-town sale; the tape shows the total per route when a candle closes.
+func flow_note(from: String, to: String, k: String, q: float, coins: float) -> void:
+	var key := "%s|%s|%s" % [from, to, k]
+	var f: Array = _flow.get(key, [0.0, 0.0])
+	_flow[key] = [float(f[0]) + q, float(f[1]) + coins]
 
 
 ## Production inputs (crops for a mill, ore for a foundry, metal for a factory) can only be bought from what is on offer.
@@ -74,6 +103,7 @@ func tick(dt: float, mult := 1.0) -> void:
 	th += dt
 	if t < 1.0:
 		return
+	clock += t
 	var w := WORLD * maxf(float(reporters), 1.0)
 	for k in GOODS:
 		var s: float = float(sup[k]) / t
@@ -85,6 +115,7 @@ func tick(dt: float, mult := 1.0) -> void:
 		var target: float = float(BASE[k]) * mult * sh * clampf(pow((d + w) / (s + w + ELASTIC * maxf(d - s, 0.0)), SENS), LOW, HIGH)
 		price[k] = float(price[k]) + (target - float(price[k])) * minf(FOLLOW * t, 1.0)
 		pool[k] = s + w
+		_sample(k, float(price[k]), s, d, minf(s, d) * t)
 		sup[k] = 0.0
 		dem[k] = 0.0
 	last_reporters = reporters
@@ -92,15 +123,18 @@ func tick(dt: float, mult := 1.0) -> void:
 	t = 0.0
 	if th >= HIST_EVERY:
 		th = 0.0
-		for k in GOODS:
-			(hist[k] as Array).append(price[k])
-			if (hist[k] as Array).size() > HIST:
-				(hist[k] as Array).pop_front()
+		var keys: Array = _flow.keys()
+		keys.sort()
+		for key: String in keys:
+			var p := key.split("|")
+			var f: Array = _flow[key]
+			note("%s to %s: %.1f %s at $%.2f" % [p[0], p[1], float(f[0]), p[2], float(f[1]) / maxf(float(f[0]), 0.001)])
+		_flow.clear()
 
 
 ## Full state for saves.
 func to_dict() -> Dictionary:
-	return {"price": price.duplicate(), "hist": hist.duplicate(true), "ls": last_sup.duplicate(), "ld": last_dem.duplicate()}
+	return {"price": price.duplicate(), "hist": hist.duplicate(true), "ls": last_sup.duplicate(), "ld": last_dem.duplicate(), "cd": candles.duplicate(true), "clock": clock}
 
 
 func from_dict(d: Dictionary) -> void:
@@ -112,6 +146,15 @@ func from_dict(d: Dictionary) -> void:
 		var h: Variant = (d.get("hist", {}) as Dictionary).get(k, [])
 		if h is Array and not (h as Array).is_empty():
 			hist[k] = (h as Array).slice(-HIST).map(func(x: Variant) -> float: return float(x))
+		var cd: Variant = (d.get("cd", {}) as Dictionary).get(k, [])
+		if cd is Array:
+			var out: Array = []
+			for c: Variant in (cd as Array).slice(-CANDLES):
+				if c is Array and (c as Array).size() == 7:
+					out.append((c as Array).map(func(x: Variant) -> float: return maxf(0.0, float(x))))
+			if not out.is_empty():
+				candles[k] = out
+	clock = maxf(0.0, float(d.get("clock", clock)))
 
 
 ## What snapshots carry to clients (no history: the client records its own).
@@ -119,18 +162,118 @@ func brief() -> Dictionary:
 	return {"price": price.duplicate(), "ls": last_sup.duplicate(), "ld": last_dem.duplicate()}
 
 
-## Client side: take the host's prices and keep a local history (one sample per HIST_EVERY real seconds).
+## Client side: take the host's prices and record them into the local candles (one sample per snapshot, about one a second).
 func apply_brief(d: Dictionary) -> void:
 	var keep := hist
+	var kc := candles
 	from_dict(d)
 	hist = keep
-	var now := Time.get_ticks_msec()
-	if now - _rec >= int(HIST_EVERY * 1000.0):
-		_rec = now
-		for k in GOODS:
-			(hist[k] as Array).append(price[k])
-			if (hist[k] as Array).size() > HIST:
-				(hist[k] as Array).pop_front()
+	candles = kc
+	clock += 1.0
+	for k in GOODS:
+		_sample(k, float(price[k]), float(last_sup[k]), float(last_dem[k]), minf(float(last_sup[k]), float(last_dem[k])))
+
+
+## Fold one second into the candle being built; a finished candle is stored and the 15-minute line follows its close.
+func _sample(k: String, p: float, s: float, d: float, vol: float) -> void:
+	var c: Array = _cur[k]
+	if c.is_empty():
+		c = [p, p, p, p, 0.0, 0.0, 0.0, 0]
+	c[1] = maxf(float(c[1]), p)
+	c[2] = minf(float(c[2]), p)
+	c[3] = p
+	c[4] = float(c[4]) + vol
+	c[5] = float(c[5]) + s
+	c[6] = float(c[6]) + d
+	c[7] = int(c[7]) + 1
+	_cur[k] = c
+	if int(c[7]) < CANDLE:
+		return
+	var n := float(c[7])
+	var arr: Array = candles[k]
+	arr.append([c[0], c[1], c[2], c[3], c[4], float(c[5]) / n, float(c[6]) / n])
+	if arr.size() > CANDLES:
+		arr.pop_front()
+	_cur[k] = []
+	(hist[k] as Array).append(p)
+	if (hist[k] as Array).size() > HIST:
+		(hist[k] as Array).pop_front()
+
+
+## Candles merged `n` at a time, ending at the newest (to zoom a chart out). Volume adds up; offered and wanted average.
+func merged(k: String, n: int) -> Array:
+	var src: Array = candles[k]
+	if n <= 1:
+		return src.duplicate()
+	var out: Array = []
+	var i := src.size() % n
+	while i + n <= src.size():
+		var hi := -INF
+		var lo := INF
+		var vol := 0.0
+		var s := 0.0
+		var d := 0.0
+		for j in range(i, i + n):
+			var c: Array = src[j]
+			hi = maxf(hi, float(c[1]))
+			lo = minf(lo, float(c[2]))
+			vol += float(c[4])
+			s += float(c[5])
+			d += float(c[6])
+		out.append([(src[i] as Array)[0], hi, lo, (src[i + n - 1] as Array)[3], vol, s / n, d / n])
+		i += n
+	return out
+
+
+## Moving average of candle closes, one value per candle (early values average what exists).
+static func sma(cs: Array, period: int) -> PackedFloat32Array:
+	var out := PackedFloat32Array()
+	var sum := 0.0
+	for i in cs.size():
+		sum += float((cs[i] as Array)[3])
+		if i >= period:
+			sum -= float((cs[i - period] as Array)[3])
+		out.append(sum / minf(float(i + 1), float(period)))
+	return out
+
+
+## High, low, average close, change (first open to last close), volatility (std dev of close-to-close change) and units cleared.
+static func stats(cs: Array) -> Dictionary:
+	if cs.is_empty():
+		return {"hi": 0.0, "lo": 0.0, "avg": 0.0, "chg": 0.0, "vol": 0.0, "units": 0.0}
+	var hi := -INF
+	var lo := INF
+	var sum := 0.0
+	var units := 0.0
+	for c: Array in cs:
+		hi = maxf(hi, float(c[1]))
+		lo = minf(lo, float(c[2]))
+		sum += float(c[3])
+		units += float(c[4])
+	var rets: Array[float] = []
+	for i in range(1, cs.size()):
+		var a := float((cs[i - 1] as Array)[3])
+		rets.append((float((cs[i] as Array)[3]) - a) / maxf(a, 0.001))
+	var mean := 0.0
+	for r in rets:
+		mean += r
+	mean /= maxf(float(rets.size()), 1.0)
+	var v := 0.0
+	for r in rets:
+		v += (r - mean) * (r - mean)
+	var o := float((cs[0] as Array)[0])
+	return {"hi": hi, "lo": lo, "avg": sum / cs.size(), "chg": (float((cs[cs.size() - 1] as Array)[3]) - o) / maxf(o, 0.001), "vol": sqrt(v / maxf(float(rets.size()), 1.0)), "units": units}
+
+
+## "shortage", "glut" or "balanced" from the last window's offers and wants.
+func status(k: String) -> String:
+	var s := float(last_sup[k])
+	var d := float(last_dem[k])
+	if d > s * 1.25 + 0.2:
+		return "shortage"
+	if s > d * 1.25 + 0.2:
+		return "glut"
+	return "balanced"
 
 
 # ---------- trade between linked towns ----------
@@ -177,5 +320,6 @@ static func link_trade(towns: Array) -> void:
 				b.stock[k] = float(b.stock[k]) + q
 				s.coins += q * tp * City.RATE
 				b.coins -= q * (tp + freight) * City.RATE
+				s.sig.mk.flow_note(s.town_name, b.town_name, k, q, q * tp)
 				s.traded[k] = float(s.traded.get(k, 0.0)) - q
 				b.traded[k] = float(b.traded.get(k, 0.0)) + q

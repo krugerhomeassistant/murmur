@@ -1,6 +1,6 @@
 # Market
 
-Six goods are traded: crops, food, goods, ore, metal and arms. Each good has its own price with its own base (crops 0.6, food 1.5, goods 2.0, ore 0.8, metal 3.0) and moves on its own supply and demand; the six never share a price. There are two levels: the **world price** of each good (the outside market, set by all towns together) and each town's **local price** (scarcity inside the town, between selling abroad at 80% and buying abroad at 120% of the world price). Linked towns also trade goods with each other when the price gap pays for freight. Implementation: `client/scripts/market.gd` (class `Market`), owned by `Signals` (`sig.mk`), used by `City._trade`. Test: `client/tests/market.gd`.
+Six goods are traded: crops, food, goods, ore, metal and arms. Each good has its own price with its own base (crops 0.6, food 1.5, goods 2.0, ore 0.8, metal 3.0) and moves on its own supply and demand; the six never share a price. There are two levels: the **world price** of each good (the outside market, set by all towns together) and each town's **local price** (scarcity inside the town, between selling abroad at 80% and buying abroad at 120% of the world price). Linked towns also trade goods with each other when the price gap pays for freight. Implementation: `client/scripts/market.gd` (class `Market`), owned by `Signals` (`sig.mk`), used by `City._trade`. Tests: `client/tests/market.gd`, `client/tests/marketwin.gd` (the window).
 
 ## Price formation
 Every sim second `Market.tick` closes a window. For each good:
@@ -14,7 +14,9 @@ price += (target - price) * min(0.12 * window, 1)
 
 `signal` is `1 + 0.3 * market` from `Signals` (the world market signal, -1..1). Base prices: crops 0.6, food 1.5, goods 2.0, ore 0.8, metal 3.0, arms 4.0. The outside world keeps prices bounded and stops one idle town from moving a price alone. A good nobody trades stays at base.
 
-The price is sampled into a history every 10 s (90 samples, 15 minutes) for the Market window. Clients of a multiplayer game receive prices and last-window supply and demand inside every town snapshot (`City.to_dict` key `mk`) and keep their own history.
+Every sim second the price, offered and wanted units and units cleared (`min(offered, wanted)`) are folded into a **candle** per good: ten seconds make one candle `[open, high, low, close, volume, offered/s, wanted/s]` and the last 360 (one hour) are kept in `Market.candles`. `Market.merged` combines candles for the 1 and 5 minute charts, `Market.sma` gives moving averages and `Market.stats` gives high, low, average, change and volatility (standard deviation of close-to-close change). `Market.status` calls a good a shortage (wanted over offered by 25%), a glut (the reverse) or balanced. The older 15-minute line (`hist`, 90 closes) is kept for saves. Clients of a multiplayer game receive prices and last-window supply and demand inside every town snapshot (`City.to_dict` key `mk`) and build their own candles from them, one sample per snapshot.
+
+The **trade tape** (`Market.tape`, newest first, 40 lines) records events that move prices (`Event: food +30%`) and, every candle, the total goods moved between each pair of linked towns (`A to B: 12.4 food at $1.62`).
 
 ## Local prices
 `City._trade` sets `price_loc[good]` every second:
@@ -48,10 +50,10 @@ So a town sitting on ore sells it cheaply to a linked town with a foundry, and a
 Because input purchases are limited to what is on offer, a mill in a town without farms only works as far as other towns (or the world) supply crops, and its demand pushes the crop price up, which makes farming elsewhere pay. The same holds for foundries (ore) and factories (metal).
 
 ## Market window
-Windows > Market (`Hud._market_win`). Columns: price, change against base, units offered and wanted per second in the last window, a 15-minute price line (white line is the base price), and your town's stock, sales and purchases. The note line names goods worth selling (price over base by 25% and you produce them) and goods in glut (under 80% of base).
+Windows > Market (`Hud._market_win`). The top row picks a good (each button shows the world price and its change against base) and a timeframe (10 s, 1 min, 5 min per candle). The chart shows up to 60 candles (green when the close is at or above the open) with the dashed base price, 5 and 20 period moving averages, a volume pane (units cleared) and a supply and demand pane (offered and wanted per second); hover for the exact values of a candle. The side panel shows the status (shortage, glut, balanced), base and limits, high, low, average, change and volatility of the visible candles, units cleared, the event shock multiplier, your town's price, stock, sales and purchases, and the spread between the cheapest and dearest town. Below are the six dearest towns' local prices with their difference from the world price and the trade tape. The note line names goods worth selling (price over base by 25% and you produce them) and goods in glut (under 80% of base).
 
 ## Save and multiplayer
-`Main.save_game` stores `sig.mk.to_dict()`; a new game starts with a fresh `Market`. `Market.from_dict` clamps prices, so a hostile snapshot cannot inject absurd values.
+`Main.save_game` stores `sig.mk.to_dict()` (prices, history and candles; the tape is not saved); a new game starts with a fresh `Market`. `Market.from_dict` clamps prices, so a hostile snapshot cannot inject absurd values.
 
 ## Arms supply chain
 Armouries (military building, cost 420) turn up to 0.25 metal/s into 2x arms; the metal comes from the town's own stock or the metal market, and ore from its own mines or the ore market, so a town without a mine buys. Training a unit now costs `cost*0.6` coins (labour) plus `ceil(cost/25)` arms: the town uses its own arms first, then buys the rest abroad at `price*1.2` and reports the demand to the market. Arms with no armoury or metal are simply bought, so war makes arms and metal prices rise. The planner builds an armoury when arms stock is low or the town is threatened (`City._plan_service`). Test: `client/tests/arms.gd`.
@@ -63,7 +65,8 @@ Armouries (military building, cost 420) turn up to 0.25 metal/s into 2x arms; th
 | Town trade, local prices | `City._trade`, `City.trade_offer`, `City.trade_want` (`city.gd`) |
 | Trade between towns | `Market.link_trade` (`market.gd`) |
 | Snapshot and save | `Market.brief`, `Market.apply_brief`, `Market.to_dict`, `City.to_dict`, `Main.save_game` |
-| Window | `Hud._market_win`, `Hud._market_refresh`, `Hud._spark` |
+| Candles, stats, tape | `Market._sample`, `Market.merged`, `Market.sma`, `Market.stats`, `Market.note`, `Market.flow_note` |
+| Window | `Hud._market_win`, `Hud._mk_draw`, `Hud._market_refresh` |
 
 ## Open questions
 - Link trade covers adjacent plots only; multi-hop routes, ports and shipping capacity are planned (E4 in [PLAN](../PLAN.md)).
