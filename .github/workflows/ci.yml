@@ -1,8 +1,14 @@
 name: CI
 on:
-  push:
-    branches: [main]
-  pull_request:
+ push:
+ branches: [main]
+ pull_request:
+ workflow_dispatch:
+
+concurrency:
+ group: murmur-ci-${{ github.ref }}
+ cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 env:
   GODOT_VERSION: "4.7.2"
 defaults:
