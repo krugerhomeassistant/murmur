@@ -1,33 +1,26 @@
 class_name Victory
 extends RefCounted
 ## The end goal (docs/DOMINATION_DESIGN.md, docs/wiki/victory.md). Towns belong to a *side* (all towns of one human or
-## multiplayer owner, or a single planner town). A side wins by
-##   conquest   : holding CONQUEST_SHARE of all claimed land for CONQUEST_YEARS, or being the only side left,
-##   hegemony   : the top score for HEGEMONY_YEARS while its land plus its allies' land is at least ALLY_SHARE of the whole.
+## multiplayer owner, or a single planner town). A side wins the moment the map is in its state (no timers):
+##   conquest   : it holds CONQUEST_SHARE of all claimed land, or is the only side left,
+##   hegemony   : its score is at least LEAD_RATIO times the next side's while its land plus its allies' land is at least ALLY_SHARE.
 ## The check runs once per sim second on the host (`second`), the result rides in every snapshot (`brief`).
 ## A win does not stop the game (sandbox): the standings keep updating.
 ## Pure rules, no scene: tests use it directly. Vassals count as allied land; culture (D6) will join the score.
 
 const CONQUEST_SHARE := 0.7
-const CONQUEST_YEARS := 3.0
-const HEGEMONY_YEARS := 5.0
 const ALLY_SHARE := 0.4
+const LEAD_RATIO := 1.5  # hegemony needs a clear lead, so a fresh alliance cannot win on the first second
 const LAND_SCORE := 100.0  # claimed tiles per score point
 const TRADE_SCORE := 50.0  # units exported per score point
 
-var con := {}  # side -> seconds it has held the conquest share
-var heg := {}  # side -> seconds it has led and held the allied share
 var winner := ""  # side key, "" while undecided
 var winner_name := ""
 var route := ""  # "conquest", "last" or "hegemony"
-var clock := 0.0
+var clock := 0.0  # sim seconds
 var seen := 1  # most sides alive at once; no win is possible before there are two
 var rows: Array = []  # standings, best score first: {side, name, towns, land, allied, score, con, heg}
 var fresh := false  # set when a win has just been decided; the game reads and clears it
-
-
-static func year_secs() -> float:
-	return float(Civics.YEAR_DAYS) * City.DAY_SECS
 
 
 ## The side a town plays for: a multiplayer owner, "human" for offline player towns, otherwise the town on its own.
@@ -76,28 +69,23 @@ func second(towns: Array[City]) -> void:
 		s["land"] = float(s["land"]) / maxf(total, 1.0)
 	var list: Array = sides.values()
 	list.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return float(a["score"]) > float(b["score"]))
-	var need_c := CONQUEST_YEARS * year_secs()
-	var need_h := HEGEMONY_YEARS * year_secs()
 	rows = []
 	for i in list.size():
 		var s: Dictionary = list[i]
 		var k: String = s["side"]
-		var lead: bool = i == 0 and (list.size() < 2 or float(s["score"]) > float((list[1] as Dictionary)["score"]))
-		con[k] = float(con.get(k, 0.0)) + 1.0 if seen >= 2 and float(s["land"]) >= CONQUEST_SHARE else 0.0
-		heg[k] = float(heg.get(k, 0.0)) + 1.0 if seen >= 2 and lead and float(s["allied"]) >= ALLY_SHARE else 0.0
-		rows.append({"side": k, "name": s["name"], "towns": s["towns"], "land": s["land"], "allied": s["allied"], "score": s["score"], "con": minf(float(con[k]) / need_c, 1.0), "heg": minf(float(heg[k]) / need_h, 1.0)})
-		if winner != "":
+		var next := float((list[i + 1] as Dictionary)["score"]) if i + 1 < list.size() else 0.0
+		var lead: bool = i == 0 and float(s["score"]) >= LEAD_RATIO * next
+		var con := minf(float(s["land"]) / CONQUEST_SHARE, 1.0)  # progress bars only: the rule itself is a state
+		var heg := minf(float(s["allied"]) / ALLY_SHARE, 1.0) if lead else 0.0
+		rows.append({"side": k, "name": s["name"], "towns": s["towns"], "land": s["land"], "allied": s["allied"], "score": s["score"], "con": con, "heg": heg})
+		if winner != "" or seen < 2:
 			continue
-		if seen >= 2 and list.size() == 1:
+		if list.size() == 1:
 			_win(k, s["name"], "last")
-		elif float(con[k]) >= need_c:
+		elif float(s["land"]) >= CONQUEST_SHARE:
 			_win(k, s["name"], "conquest")
-		elif float(heg[k]) >= need_h:
+		elif heg >= 1.0:
 			_win(k, s["name"], "hegemony")
-	for k in con.keys():  # sides that disappeared stop their timers
-		if not sides.has(k):
-			con.erase(k)
-			heg.erase(k)
 
 
 func _win(k: String, nm: String, how: String) -> void:
@@ -111,9 +99,9 @@ func _win(k: String, nm: String, how: String) -> void:
 func describe() -> String:
 	match route:
 		"conquest":
-			return "%s wins by conquest: %d%% of the land held for %d years." % [winner_name, int(CONQUEST_SHARE * 100.0), int(CONQUEST_YEARS)]
+			return "%s wins by conquest: %d%% of the land is theirs." % [winner_name, int(CONQUEST_SHARE * 100.0)]
 		"hegemony":
-			return "%s wins by hegemony: the top score for %d years with %d%% of the land allied." % [winner_name, int(HEGEMONY_YEARS), int(ALLY_SHARE * 100.0)]
+			return "%s wins by hegemony: the clear top score with %d%% of the land allied." % [winner_name, int(ALLY_SHARE * 100.0)]
 		"last":
 			return "%s wins: no other side is left." % winner_name
 	return ""
@@ -121,7 +109,7 @@ func describe() -> String:
 
 ## Snapshot and save state (the same dictionary; `apply` sanitises it because snapshots come from a possibly hostile host).
 func brief() -> Dictionary:
-	return {"w": winner, "wn": winner_name, "r": route, "clock": clock, "seen": seen, "con": con.duplicate(), "heg": heg.duplicate(), "rows": rows.duplicate(true)}
+	return {"w": winner, "wn": winner_name, "r": route, "clock": clock, "seen": seen, "rows": rows.duplicate(true)}
 
 
 func apply(d: Dictionary) -> void:
@@ -130,8 +118,6 @@ func apply(d: Dictionary) -> void:
 	route = str(d.get("r", "")) if str(d.get("r", "")) in ["conquest", "hegemony", "last"] else ""
 	clock = clampf(float(d.get("clock", 0.0)), 0.0, 1.0e9)
 	seen = clampi(int(d.get("seen", 1)), 1, 1000)
-	con = _times(d.get("con", {}))
-	heg = _times(d.get("heg", {}))
 	rows = []
 	var rs: Variant = d.get("rows", [])
 	if rs is Array:
@@ -143,10 +129,3 @@ func apply(d: Dictionary) -> void:
 					"con": clampf(float(rd.get("con", 0.0)), 0.0, 1.0), "heg": clampf(float(rd.get("heg", 0.0)), 0.0, 1.0)})
 
 
-static func _times(v: Variant) -> Dictionary:
-	var out := {}
-	if v is Dictionary:
-		for k in v:
-			if k is String and out.size() < 64:
-				out[(k as String).left(40)] = clampf(float(v[k]), 0.0, 1.0e9)
-	return out
