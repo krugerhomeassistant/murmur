@@ -14,18 +14,17 @@ The owner's goal: every city should aim at world domination, won by peace (econo
 
 ## 2. Victory
 
-Every game has a *domination* goal with two routes. A player or AI group wins when it meets either:
+No timers. Nothing in the game is defined by a clock: a win is a state the map reaches and holds, and the game plays out naturally until one exists. Two routes, both checked on the host every day:
 
-1. **Conquest:** controls at least 70% of the claimed land of all groups for 3 in-game years, or is the last group with a town.
-2. **Hegemony (peace):** holds the top score for 5 in-game years with at least 40% of the land under treaty (alliance or vassal) and no war declared by its vassals. Score = population + trade volume + culture (see 5) + land. Vassals count as land for the overlord.
+1. **Conquest:** one group is the only group with towns left (last group standing).
+2. **Hegemony:** one group holds at least 70% of the claimed land. Vassals count as that group's land. Rivals that remain are allowed to exist only as allies or vassals of the leader, so the state is reached by treaty or by war, not by waiting.
 
 Rules:
-- The win is shown in the Empire window as a progress bar per group, so every player sees the race.
-- Game over is a screen with the winning route, not a silent flag. Continuing after a win is allowed (sandbox).
-- Victory is only checked on the host in multiplayer and synced as an event.
-- Constants live in `constants.md` (generated) so they can be tuned without code changes.
-
-Open: whether a human can lose by being conquered (yes, when their last town falls; spectators keep watching).
+- The Empire window shows each group's land share and its distance to each route, so every player sees the race.
+- A win shows a game-over screen naming the route. Continuing afterwards is allowed (sandbox).
+- Victory is checked on the host in multiplayer and synced as an event.
+- Thresholds (the 70% and the vassal rule) live in `constants.md` (generated) so they can be tuned without code changes.
+- Singleplayer spectator mode is unrestricted: any command, setting or forced war, treaty or land transfer is allowed there, for testing and play.
 
 ## 3. Growth, faster
 
@@ -91,9 +90,9 @@ Rules: no file over about 1,200 lines; each module has a header comment with its
 ## 8. Execution order
 
 1. Add `tests/growth.gd` and a measured baseline (time to 500 pop, 3 runs). No behaviour change yet.
-2. Victory conditions and the Empire progress bar (section 2), with tests for both routes.
+2. Victory conditions (state-based, no timers) and the Empire progress bar (section 2), with tests for both routes.
 3. War ambition, border tension, war goals (section 4, items 1 to 3). Measure war starts over 30 minutes.
-4. Vassalage and peace route scoring (section 4, item 4; section 2 hegemony).
+4. Vassalage (section 4, item 4), which feeds the hegemony land count.
 5. Growth tuning (section 3), one gate per PR, each with the A/B rule.
 6. Culture score (section 5).
 7. Split `city.gd` (section 6): start with `city_housing.gd`, then `city_services.gd`, then the rest. Can run in parallel with 3 to 6 only if each PR is a pure move.
@@ -106,7 +105,7 @@ Each step is its own PR, updates PLAN.md and ACTIVE_CONTEXT.md, and ends with th
 
 - Making war frequent can make towns unplayable. Guard: a war cannot start while the target has a treaty of alliance or vassal, and a town below 50% mood cannot declare wars.
 - Growth tuning can raise sim cost. Guard: perf pass each step, not only at release.
-- Victory can end a game too early. Guard: the 3-year and 5-year timers, and sandbox continue.
+- Victory can end a game too early. Guard: the 70% threshold is a state, not a timer, and sandbox continue.
 - The owner has not yet played the new systems on a real screen. Each phase ends with a short hand-play note in the PR.
 
 ## 10. Open questions for the owner
