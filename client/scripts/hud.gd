@@ -1366,10 +1366,10 @@ func _tax_all(k: String, d: float) -> void:
     m.cmd("apply_all", ["tax", k, clampf(snappedf(float(m.city.get("tax_" + k)) + d, 0.01), 0.0, 0.5)])
 
 
-## The standings as text: land share, allied share, score and progress to each victory.
+## The standings as text: land share, allied share, score and how close each side is to each victory.
 func _domination() -> String:
     var v: Victory = m.sig.vic
-    var out := "DOMINATION: conquest = %d%% of the land for %d years; hegemony = top score and %d%% allied for %d years\n" % [int(Victory.CONQUEST_SHARE * 100.0), int(Victory.CONQUEST_YEARS), int(Victory.ALLY_SHARE * 100.0), int(Victory.HEGEMONY_YEARS)]
+    var out := "DOMINATION: conquest = %d%% of the land (or the last side); hegemony = a clear top score and %d%% allied. No timers.\n" % [int(Victory.CONQUEST_SHARE * 100.0), int(Victory.ALLY_SHARE * 100.0)]
     if v.winner != "":
         out += v.describe() + "\n"
     for r: Dictionary in v.rows:

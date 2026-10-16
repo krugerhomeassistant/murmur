@@ -181,8 +181,8 @@ Towns belong to a **side** (`Victory.side`): all towns of one multiplayer owner 
 
 | Route | Condition |
 |---|---|
-| Conquest | The side holds at least 70% of all claimed land (live towns) for 3 years, or is the only side left once two or more have existed. |
-| Hegemony | The side has the strictly top score for 5 years while its land plus the land of towns it has an alliance with is at least 40% of the whole. |
+| Conquest | The side holds at least 70% of all claimed land (live towns), or is the only side left once two or more have existed. The moment the state holds, the game is won. |
+| Hegemony | The side's score is at least 1.5 times the next side's, and its land plus the land of towns it has an alliance with is at least 40% of the whole. No timer: the state wins. |
 
 Score is population + land / 100 + units exported / 50. A timer resets when its condition fails. After a win the Victory or Defeat panel names the route; "Keep playing" dismisses it and the game continues as a sandbox with the winner kept. The Empire window lists each side's land, allied land, score and progress. Constants are in [constants](constants.md); `tests/victory.gd` covers both routes, timer reset, last side standing, a lone town and hostile snapshot input.
 
