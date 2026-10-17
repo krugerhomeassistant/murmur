@@ -2119,8 +2119,10 @@ func _planner() -> void:
 	if coins < saving_for:
 		return
 	if mood < (0.38 if pop >= 40 else 0.25):  # tiny towns must be allowed to bootstrap
-		_plan_service(true)  # raise mood first, otherwise a low-mood town never zones again
-		return
+		if _plan_service(true):  # raise mood first, otherwise a low-mood town never zones again
+			return
+		if res_dem <= 0.3:  # nothing left to build for mood: a town that needs homes must still grow, not sit on its treasury
+			return
 	var open := 0
 	for i in cells:
 		if is_zone(grid[i]) and lvl[i] == 0:

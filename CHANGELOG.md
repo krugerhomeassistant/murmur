@@ -41,6 +41,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 - Planner towns could never link a border: the border road was laid as a straight line and gave up for good at the first building in the way (`tests/spectate.gd` failed about 1 run in 4). It now finds a route around buildings, preferring dry land.
 
 ### Changed
+- Growth (D5, gate 1): a town below the planner's mood gate that has no service left to build now keeps zoning when it needs homes, instead of sitting on its treasury. Six fresh towns: 0 of 6 reached 300 people in 4800 s before, 7 of 12 after.
 - Rivers of the endless world rise at the foot of the hills instead of crossing mountains, and are smoother; your starting town is always placed with some water nearby.
 - New games are cut from the shared procedural world: rivers, lakes, coast, sand, forest, hills, rock and ore now continue across neighbouring towns, and a start-site search keeps every starting town on dry land. The Rivers setup option is now Natural / None / Custom. The world seed is saved; older saves keep their terrain.
 - Docs: README roadmap and docs index brought up to date; `scripts/check_repo.py` now fails when a `docs/*.md` file is missing from the docs index.
