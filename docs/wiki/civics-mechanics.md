@@ -130,7 +130,7 @@ Because `rep` goes straight into the target, +0.07 from a rally raises the targe
 
 ### Raising a petition
 
-`pet_t` starts at 40 and counts down by 1 each second in `Mayor.civics`. At zero it is reset to a random 70 to 130 seconds and `City._raise_petition` runs. The petition is dropped immediately (nothing happens until the next timer) if any of these hold:
+`pet_t` starts at 40 and counts down by 1 each second in `Mayor.civics`. At zero it is reset to a random 70 to 130 seconds and `Mayor.raise_petition` runs. The petition is dropped immediately (nothing happens until the next timer) if any of these hold:
 
 - the town is not human, or `pop < 12`, or three or more decisions are already open (`petitions.size() >= 3`; offers, demands and recovery offers count in this list).
 
@@ -139,7 +139,7 @@ Otherwise it builds a list of candidates from `Civics.PETITIONS` and removes any
 1. Its `id` is already open (in `petitions` or `promises`), or it was raised in the last 6 days (`pet_recent`), or `pop` is below its `minpop` (default 15 if the entry has none).
 2. The tribe's current `tribe_share` is below 0.05.
 3. The petition has a `crime` field and `crime` is below it (only `lamps`, 0.2), or a `poll` field and `pollution` is below it (only `clean_air`, 0.15). These petitions only appear when the problem exists.
-4. Its need is already met (`_met`). For a `build` need the rule is different: the building must be unlocked (`unlocked`) and the town must have fewer than `1 + pop / 100` of that building.
+4. Its need is already met (`Mayor.met`). For a `build` need the rule is different: the building must be unlocked (`unlocked`) and the town must have fewer than `1 + pop / 100` of that building.
 5. For the festival petition (`need.event`), it is skipped when `mood > 0.55`.
 
 One candidate is chosen uniformly at random. It gets `kind = "petition"` and `expires = day + 2`, a headline, a log line and the "petition" sound.
@@ -174,7 +174,7 @@ A petition that sits unanswered past `expires` (`day > expires`) is auto-decline
 
 Each second `Mayor.civics` checks every promise:
 
-- if `_met` is true the promise is removed, `kept += 1`, favour +0.20, rep +0.06, a "good" sound and a headline;
+- if `Mayor.met` is true the promise is removed, `kept += 1`, favour +0.20, rep +0.06, a "good" sound and a headline;
 - else if `day > deadline` it is removed, `broken += 1`, favour -0.30, rep -0.10 and a "bad" sound.
 
 The deadline is inclusive of the day it names: accepting a 3-day petition on day 10 sets the deadline to 13, and it breaks on day 14. A non-build need that is already satisfied when you accept (it may have become true since it was raised) is credited as kept on the next second. For build needs the `have` baseline prevents this: you must construct a new building.
@@ -194,11 +194,11 @@ The deadline is inclusive of the day it names: accepting a 3-day petition on day
 
 | Condition | Message | Where |
 |---|---|---|
-| lost election (vote under 50%) | "Voted out..." | `_new_day` |
+| lost election (vote under 50%) | "Voted out..." | `Mayor.new_day` |
 | `coins < DEBT_LIMIT` (-150) | "Bankrupt. The city could not pay its bills." | `tick` |
 | `peak >= 10` and `pop < 1` | "Everyone left. The city is empty." | `tick` |
 
-Planner-only towns cannot lose: for a non-human town `tick` instead lifts `coins` to at least 30, and `_new_day` returns before the election. When `over` is set, pressing R calls `Main.new_game()`, and the game does not autosave a finished city.
+Planner-only towns cannot lose: for a non-human town `tick` instead lifts `coins` to at least 30, and `Mayor.new_day` returns before the election. When `over` is set, pressing R calls `Main.new_game()`, and the game does not autosave a finished city.
 
 ### Campaign rally
 
@@ -428,7 +428,7 @@ Not saved, recomputed or reset on load: the countdowns `pet_t`, `ev_t`, `next_fi
 | Static data: seasons, petitions, milestones, ranks, loans, rally cost | `client/scripts/civics.gd` (`Civics.SEASONS`, `PETITIONS`, `MILESTONES`, `RANKS`, `LOANS`, `RALLY_COST`, `YEAR_DAYS`) |
 | Event catalogue and `pick` | `client/scripts/events.gd` (`WorldEvents.EVENTS`, `pick`, `describe`) |
 | Approval, promises, petition timer | `Mayor.civics` |
-| Petition creation, answers | `City._raise_petition`, `City.answer`, `City._met`, `City._open_ids` |
+| Petition creation, answers | `Mayor.raise_petition`, `City.answer`, `Mayor.met`, `City._open_ids` |
 | Elections, rally | `Mayor.new_day`, `City.rally`, `City.tick` (game-over checks) |
 | Advisors | `City.advisors` |
 | Milestones | `Mayor.milestones` |
