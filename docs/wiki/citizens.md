@@ -53,7 +53,7 @@ A citizen keeps the same tribe for life. Each second `City._tribes()` computes e
 opinion = clamp(0.5 * average citizen mood of the tribe + 0.5 * (satisfaction + favor[tribe]), 0, 1)
 ```
 
-where `favor[tribe]` is the standing earned or lost by answering petitions (`City._civics`, clamped to -0.4..0.4, decaying 0.0008 per second toward 0) and `satisfaction` is:
+where `favor[tribe]` is the standing earned or lost by answering petitions (`Mayor.civics`, clamped to -0.4..0.4, decaying 0.0008 per second toward 0) and `satisfaction` is:
 
 | Tribe | Satisfaction |
 |---|---|
@@ -75,7 +75,7 @@ where `favor[tribe]` is the standing earned or lost by answering petitions (`Cit
 | artists | `tour_mult` x1.2 | `tour_mult` x0.8 |
 | rebels | none | `crime_add` +0.1 |
 
-An "angry" tribe is also written to the event log when it becomes angry. Tribe opinions also feed the mayor's approval rating (`City._civics`) and petitions (`City._raise_petition`); see [Civics](civics.md).
+An "angry" tribe is also written to the event log when it becomes angry. Tribe opinions also feed the mayor's approval rating (`Mayor.civics`) and petitions (`City._raise_petition`); see [Civics](civics.md).
 
 ## Homes and jobs
 
@@ -386,7 +386,7 @@ For citizens the direct effects are the mood terms, immigration in spring, and w
 - Fires and tornadoes destroy buildings; the owners lose homes and are evicted at the next `_second`.
 - A war removes mood: `-0.03` per active war and `-0.004` per battle fought (up to 15 battles) via `_collect_mods`.
 - Insurance: +30 coins per ruined building (`City._ruin`).
-- The mayor's petitions and elections (`City._raise_petition`, `City._civics`, `City._new_day`) are driven by tribe opinion and mood; details on [Civics](civics.md).
+- The mayor's petitions and elections (`City._raise_petition`, `Mayor.civics`, `Mayor.new_day`) are driven by tribe opinion and mood; details on [Civics](civics.md).
 
 ## Thoughts and murmurs
 

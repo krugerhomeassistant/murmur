@@ -273,7 +273,7 @@ The large bonuses exist because scores are divided by cost, so military would ot
 **Spectate** (setup option, also the dedicated multiplayer server and the benchmark): `Main._fresh` sets, for every town, `human = false`, 400 coins, `auto_mode = 2`, `auto_policy = true`, `auto_expand = true`. There is no mayor. What `human = false` changes besides the planner steps already listed:
 
 - Border roads (`_plan_gate`) and threat-driven military are active.
-- `Civics` stages are skipped: no petitions, elections or civics milestones (`City._second`, `_raise_petition`, `_civics`).
+- `Civics` stages are skipped: no petitions, elections or civics milestones (`City._second`, `Mayor.raise_petition`, `Mayor.civics`).
 - The treasury is floored at 30 each tick (`City.tick`: "neighbours are kept alive by the state") and the town can never go bankrupt or be abandoned; a human town ends the game below the debt limit (-150) or when everyone leaves.
 - `Military.econ` re-weights unit training automatically.
 - Diplomacy: only a non-human town acts as an AI aggressor (`Diplo`, requires opinion below -0.7 and a military lead).
