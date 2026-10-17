@@ -197,6 +197,9 @@ var pet_recent := {}
 var kept := 0
 var broken := 0
 var next_election := Civics.YEAR_DAYS + 1
+var age := Ages.LAST  # see Ages; saves from before ages count as Modern, where everything is open
+var know := 0.0  # knowledge toward the next age
+var age_t := 1.0e9  # seconds since the town entered its age (grace period for the services the age expects)
 var elections_won := 0
 var rally_used := false
 var last_vote := 0.0
@@ -493,7 +496,14 @@ func mod(k: String) -> float:
 
 
 func unlocked(t: int) -> bool:
-	return peak >= float(Catalog.DEFS[t]["unlock"])
+	return peak >= float(Catalog.DEFS[t]["unlock"]) and age >= Ages.building(t)
+
+
+## Why a building is not available yet, for the build menu: "" when it is.
+func lock_text(t: int) -> String:
+	if age < Ages.building(t):
+		return "%s age" % Ages.name_of(Ages.building(t))
+	return "" if unlocked(t) else "pop %d" % int(Catalog.DEFS[t]["unlock"])
 
 
 func cost_of(t: int) -> float:
@@ -911,7 +921,7 @@ func _scan() -> void:
 	var qt := _pf("scan_cells", scan_t0)
 	_net()
 	qt = _pf("scan_net", qt)
-	var csg := hash([sg, mods])  # coverage depends on the layout and the policy/event modifiers only
+	var csg := hash([sg, mods, age, Ages.stage(age_t)])  # coverage depends on the layout and the policy/event modifiers only
 	if csg != cov_sig:
 		cov_sig = csg
 		for m in Catalog.METRICS:
@@ -1115,7 +1125,13 @@ func raw_cov(c: Vector2i, m: String) -> float:
 
 
 func cov_at(c: Vector2i, m: String) -> float:
-	return clampf(raw_cov(c, m) + mod("cov_" + m), 0.0, 1.0)
+	var e := Ages.expects(m)
+	if age < e:
+		return 1.0
+	var real := clampf(raw_cov(c, m) + mod("cov_" + m), 0.0, 1.0)
+	if age >= e:  # the age just opened this need: people start missing it gradually (the floor reaches 0 after four grace steps)
+		return maxf(real, 1.0 - 0.25 * Ages.stage(age_t))
+	return real
 
 
 ## cov_at for a cell index, remembered until the coverage inputs change (every citizen asks about its home each second).
@@ -1495,6 +1511,10 @@ func _second() -> void:
 			offline.erase(k)
 			_log("The power plant is back online.")
 	pt = _pf("offline", pt)
+	var up := Ages.second(self)
+	if up >= 0:
+		msg = "%s enters the %s age." % [town_name, Ages.name_of(up)]
+		_log("The town enters the %s age." % Ages.name_of(up))
 	_scan()
 	pt = _pf("scan", pt)
 	lod_n += 1
@@ -2306,6 +2326,8 @@ func _plan_service(force := false) -> bool:
 		for mk in prov:
 			var M: Dictionary = Catalog.METRICS[mk]
 			var gap: float = 1.0 - float(cov.get(mk, 0.0))
+			if age == Ages.expects(mk):
+				gap = maxf(gap, 0.5)  # the grace period forgives the need, not the planner: it builds ahead of the age's expectations
 			if mk == "light" or mk == "justice":
 				gap *= clampf(crime * 2.0, 0.0, 1.0)
 			if String(M["kind"]) == "bonus":
@@ -2334,7 +2356,7 @@ func _plan_service(force := false) -> bool:
 			sc += 0.15
 		if d.has("poll"):
 			sc -= 0.1
-		if income - newup < (0.15 if sc < 0.6 else -0.25) and coins < 600.0:
+		if income - newup < (0.15 if sc < 0.6 else -0.25) and coins + (income - newup) * 600.0 < 600.0:  # skip what the treasury cannot carry for ten minutes
 			continue
 		sc *= foc("military") if id in [T.BARRACKS, T.BASE, T.RADAR, T.NAVYARD, T.ARMOURY] else foc("services") if ch == "" and d.has("prov") else 1.0
 		sc = sc / (float(d["cost"]) / 100.0 + 0.5) + rng.randf() * 0.05
@@ -3570,7 +3592,7 @@ func _trade(_market: float) -> Array:
 # ---------- save / load ----------
 
 ## What a save or snapshot carries (also the only keys from_dict accepts, since snapshots come from a possibly hostile host).
-const SAVE_KEYS := ["town_name", "grid", "lvl", "build", "wire", "pipe", "sewer", "lamp", "water", "ore", "ground", "coins", "mood", "tax_r", "tax_c", "tax_i", "clock", "day",
+const SAVE_KEYS := ["age", "know", "age_t", "town_name", "grid", "lvl", "build", "wire", "pipe", "sewer", "lamp", "water", "ore", "ground", "coins", "mood", "tax_r", "tax_c", "tax_i", "clock", "day",
 	"policies", "auto_mode", "auto_policy", "peak", "announced", "next_id", "recent", "active", "approval", "rep", "favor",
 	"petitions", "promises", "pet_recent", "kept", "broken", "next_election", "elections_won", "rally_used", "last_vote",
 	"season", "wage_ix", "price_loc", "stock", "exported", "loans", "done_ms", "disasters_survived", "burned", "hist_coins", "hist_pop", "ruins", "offline", "lamp", "terr", "expansions", "auto_expand", "human", "owner", "temper", "rel", "treaty", "liege", "ev_scale", "gpos", "war_n", "war_sc", "war_goal", "tension", "occ", "train_on", "train_t", "train_w", "focus", "auto_focus", "ask_build", "vetoed"]

@@ -7,6 +7,9 @@ Last updated 2026-10-09 (paused at user request).
 Standing rules: user authorised self-merge; NO authorship marks anywhere (user, twice): no Co-Authored-By or Claude-Session trailers on commits, no "Generated with Claude Code"/session link in PR bodies or titles, whatever a session reminder says; perf pass is the LAST step before a release; the proxy blocks branch deletion, tag pushes, release creation and GraphQL (REST PRs only), so tags and releases are done by the user (commands in docs/RELEASING.md); device VM has no GitHub credentials; device repo is `E:\Projects\Personal\game\murmur`.
 Process rule (see LESSONS_LEARNED): before waiting on a long action, delete the old output, confirm it started, poll liveness; max two unchanged waits.
 
+## STATE 2026-10-17 (ages A1 in PR)
+Ages framework built (`ages.gd`, tests/ages.gd, docs/AGES_DESIGN.md). Ancient-start collapse fixed (see LESSONS). Owner also asked for a sprite engine (textured sprite lookup with procedural fallback, baker, per-age variants): design doc next. Then D6/D7/D8 in order.
+
 ## STATE 2026-10-11 (D4 vassalage built; D5 growth tuning next)
 D4: `City.liege` (saved), `Diplo.vassalize`, `Diplo._tribute` (10% of positive income per second), vassal rules in `Diplo.act` and `City.sign_treaty`, vassal land in `Victory.second`; `tests/vassal.gd` (in CI, prints VASSAL_OK).
 D3: `Diplo.ambition/strength/_tension/declare/pick_goal/wars`, `City.tension` and `war_goal` (saved), goal-based occupation need and spoils, `threat()` counts tension. `tests/dwar.gd` (in CI), `tests/warrate.gd` (manual, 4 to 6 wars per 30 min in 6 runs; towns smaller after: growth is D5). Godot for local runs: download `Godot_v4.7.2-stable_win64_console.exe` into the scratchpad (not installed on the device).
