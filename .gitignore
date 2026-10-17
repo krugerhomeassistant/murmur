@@ -7,3 +7,4 @@ dist/
 client/benchmark_result.json
 client/build_info.json
 build/
+client/art/bake/
