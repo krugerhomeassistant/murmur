@@ -76,3 +76,6 @@ A **Lumber camp** (cost 90, unlock 40 people) fells the forest within 5 tiles, u
 - Local prices are not part of the multiplayer snapshot's price band check beyond `price_loc` itself, and the Market window on a client shows host values only after the first snapshot.
 - Basic-need imports are unlimited and unaffected by the input-purchase pool; only demand is recorded.
 - Only five goods exist; wood, fuel and tools are planned.
+
+## Rail yard
+A town with a Rail yard (`Catalog.Id.RAILYARD`, Industrial age, cost 320, upkeep 1.2) can use rail on trade links. In `Market.link_trade`, when both the seller and the buyer have one, freight is multiplied by `RAIL_FREIGHT` (0.4) and the link's capacity (`LINK_CAP`) doubles. Planner towns of 80 people or more with a neighbour build one. Test: `client/tests/rail.gd`.

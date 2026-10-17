@@ -1883,6 +1883,11 @@ func _can_upgrade(i: int) -> bool:
 
 
 ## What this town could send to linked towns now (stock above a minute and a half of its own use) and what it would take.
+## True when this town has a rail yard.
+func has_rail() -> bool:
+	return not (bt.get(T.RAILYARD, []) as Array).is_empty()
+
+
 func trade_offer(k: String) -> float:
 	return maxf(0.0, float(stock.get(k, 0.0)) - maxf(float(need_rate.get(k, 0.0)) * 90.0, cap * 0.1))
 
@@ -2336,6 +2341,10 @@ func _plan_service(force := false) -> bool:
 			if (bt.get(T.LUMBER, []) as Array).is_empty() or pop < 60 or foc("industry") < 0.4 or float(stock.get("planks", 0.0)) >= 30.0:
 				continue
 			lim = 1 + pop / 300
+		if ch == "rail":
+			if partners.is_empty() or pop < 80 or foc("industry") < 0.4:
+				continue
+			lim = 1
 		if ch == "tools":
 			if (bt.get(T.LUMBER, []) as Array).is_empty() or (bt.get(T.FOUNDRY, []) as Array).is_empty() or foc("industry") < 0.4 or float(stock.get("tools", 0.0)) >= 20.0:
 				continue
@@ -2355,7 +2364,7 @@ func _plan_service(force := false) -> bool:
 			sc += 0.5 + thr
 		if ch == "foundry" and (float(stock.get("ore", 0.0)) > 4.0 or have == 0):
 			sc += 0.9
-		if ch == "wood" or ch == "tools" or ch == "planks":
+		if ch == "wood" or ch == "tools" or ch == "planks" or ch == "rail":
 			sc += 0.6
 		if ch == "store":
 			for sk in stock:

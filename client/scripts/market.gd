@@ -279,6 +279,7 @@ func status(k: String) -> String:
 # ---------- trade between linked towns ----------
 
 const FREIGHT := 0.06  ## per unit and per plot of distance, as a share of the base price
+const RAIL_FREIGHT := 0.4  ## freight share left when both towns have a rail yard
 const LINK_CAP := 2.0  ## units per second one pair of linked towns can move, before the treaty multiplier
 const MIN_GAIN := 0.05  ## a trade must beat freight by this share of the base price
 
@@ -308,11 +309,12 @@ static func link_trade(towns: Array) -> void:
 				if link <= 0.0 or s == b:
 					continue
 				var dist := maxi(absi(s.gpos.x - b.gpos.x), absi(s.gpos.y - b.gpos.y))
-				var freight: float = float(BASE[k]) * FREIGHT * dist
+				var rail: bool = s.has_rail() and b.has_rail()  # both ends have a rail yard
+				var freight: float = float(BASE[k]) * FREIGHT * dist * (RAIL_FREIGHT if rail else 1.0)
 				var gap: float = float(b.price_loc[k]) - float(s.price_loc[k]) - freight
 				if gap < float(BASE[k]) * MIN_GAIN:
 					continue
-				var q: float = minf(minf(s.trade_offer(k), b.trade_want(k)), LINK_CAP * link)
+				var q: float = minf(minf(s.trade_offer(k), b.trade_want(k)), LINK_CAP * link * (2.0 if rail else 1.0))
 				if q <= 0.0:
 					continue
 				var tp: float = float(s.price_loc[k]) + gap * 0.5  # the gain from trade is split

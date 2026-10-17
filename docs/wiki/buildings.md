@@ -2,7 +2,7 @@
 
 # Buildings and tiles
 
-69 placeable things in 12 categories. `unlock` is the population (peak) at which the Build menu offers it. Costs are coins; `upkeep` is coins per second before the town-size and policy multipliers (see [Economy](economy.md)).
+70 placeable things in 12 categories. `unlock` is the population (peak) at which the Build menu offers it. Costs are coins; `upkeep` is coins per second before the town-size and policy multipliers (see [Economy](economy.md)).
 
 How to read an entry: **Radius** is the service reach in tiles (Manhattan diamond); **Provides** lists the city-stat coverage it adds (see [City stats](stats.md)); **Output** is the network supply it adds (power, water, sewage units); **Jobs** is staff; **Pollution** is `[radius, strength]`; **Tourism** is visitor income strength; **Visited** means citizens walk there as a leisure destination; **Grant** is a free income (coins per second, scaled by `RATE`).
 
@@ -1195,6 +1195,7 @@ Turns metal into arms (up to 0.25 metal a second becomes 0.5 arms). Every soldie
 | [Lumber camp](#lumber-camp) | 90 | 0.4 | 40 | svc |
 | [Toolworks](#toolworks) | 200 | 0.8 | 150 | svc |
 | [Sawmill](#sawmill) | 140 | 0.6 | 80 | svc |
+| [Rail yard](#rail-yard) | 320 | 1.2 | 200 | svc |
 | [Warehouse](#warehouse) | 120 | 0.4 | 30 | svc |
 | [Trade depot](#trade-depot) | 300 | 1 | 60 | svc |
 
@@ -1314,6 +1315,23 @@ Saws wood into planks: 0.5 wood a second becomes 0.25 planks. Building sites wit
 | Map colour / letter | `#a07a4a` / `Sa` |
 
 *Tip:* Needs wood: a lumber camp, or a supplier across the border.
+
+### Rail yard
+
+Loads goods onto trains. When both towns of a trade link have a rail yard, freight costs 60% less and the link carries twice as much.
+
+| | |
+|---|---|
+| Id | `RAILYARD` |
+| Cost / upkeep | 320 / 1.2 per s |
+| Unlocks at | 200 population |
+| Kind | svc |
+| Jobs | 8 |
+| Pollution | radius 2, strength 0.2 |
+| Production chain | rail |
+| Map colour / letter | `#5a5f6b` / `Ry` |
+
+*Tip:* Both ends need one. Worth it between towns that trade a lot.
 
 ### Warehouse
 

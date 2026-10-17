@@ -36,7 +36,7 @@ E5 adds rail, ports and power tiers on top of the goods market (`Market`, `City.
 ## Phases
 
 1. **E5a Upkeep and wear model** (shared with E4 slice 3): per-building and per-road upkeep, wear that grows without maintenance, repair cost. Acceptance: 6 of 6 parallel long runs stay solvent.
-2. **E5b Rail**: track pieces, station with catchment, trains moving goods between linked towns, block rule, payment decay. Acceptance: a test where a train route beats a road route over distance, and one where a broken or unserviced train stops delivering.
+2. **E5b Rail** (first slice done: the Rail yard, a building that cuts freight by 60% and doubles link capacity when both towns have one; `Market.link_trade`, `tests/rail.gd`). Still to do:: track pieces, station with catchment, trains moving goods between linked towns, block rule, payment decay. Acceptance: a test where a train route beats a road route over distance, and one where a broken or unserviced train stops delivering.
 3. **E5c Ports**: harbour and ship routes with their own speed, capacity and range, using the same payment decay.
 4. **E5d Power tiers**: power and water tiers feeding the Ages needs (see [AGES_DESIGN.md](AGES_DESIGN.md)).
 
