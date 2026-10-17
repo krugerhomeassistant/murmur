@@ -116,6 +116,7 @@ const UPGRADE_WEALTH := 20.0  # average savings per resident needed per current 
 const WAGE_TIER := {"office": 1.8, "mine": 1.2, "ind": 1.1, "com": 1.0, "farm": 0.8, "orchard": 0.9, "ranch": 0.9, "green": 0.9, "fishfarm": 0.9}
 const NETS := ["power", "water", "sewage"]
 var sewer := PackedByteArray()
+var wear := 0.0  # 0 = well kept, 1 = falling apart; builds while maintenance goes unpaid (not saved: a loaded town starts kept)
 var river_health := 1.0  # 1 = clean; falls when sewage goes untreated, kills fish
 var net_sup := {"power": 0.0, "water": 0.0, "sewage": 0.0}
 var net_dem := {"power": 0.0, "water": 0.0, "sewage": 0.0}
@@ -214,8 +215,9 @@ var cpi := 1.0  # cost-of-living index: market price of the food and goods baske
 var hh := {"avg": 0.0, "median": 0.0, "broke": 0.0, "rich": 0.0, "real": 1.0}  # household statistics, recomputed every second
 var hh_tax := 0.0  # savings tax collected from the well-off this second
 var hardship := 0.0  # share of households that cannot make ends meet
-var home_w := {}  # runtime: home cell -> [wealth sum, residents]
-var stock := {"crops": 0.0, "food": 0.0, "goods": 0.0, "ore": 0.0, "metal": 0.0, "arms": 0.0, "wood": 0.0, "tools": 0.0}
+var home_w := {}  # runtime: home cell -> [wealth sum, residents, broke residents]
+var stock := {"crops": 0.0, "food": 0.0, "goods": 0.0, "ore": 0.0, "metal": 0.0, "arms": 0.0, "wood": 0.0, "tools": 0.0, "planks": 0.0}
+var plank_mult := 1.0  # construction speed from planks in stock, set every second by _trade
 var wood_sig := 0
 var site_sig := -1
 var site_ok := false  # a free, road-side plot with forest around it exists (cached by scan_sig)
@@ -1655,6 +1657,7 @@ func _second() -> void:
 	if pop >= 20:
 		target -= 0.15 * float(hh["broke"])  # households that cannot pay their bills
 	target -= 0.15 * pollution + 0.25 * maxf(crime - 0.1, 0.0) + 0.1 * clampf((avg_commute - 12.0) / 30.0, 0.0, 1.0) + 0.04 * clampf((avg_shop - 8.0) / 20.0, 0.0, 1.0)
+	target -= 0.1 * wear
 	target += mod("mood")
 	mood = move_toward(mood, clampf(target, 0.0, 1.0), 0.05)
 	protest = mood < 0.2 or (pop >= 30 and hardship > 0.5)  # riots over the cost of living
@@ -1741,7 +1744,7 @@ func _money(market: float) -> void:
 	_households()
 	_svc_trade()
 	var econ := 1.0 + 0.5 * market
-	var prodm := (1.0 - 0.2 * _need("health")) * (1.0 - 0.25 * _need("power")) * (1.0 - 0.15 * _need("water")) * mod("prod_mult")
+	var prodm := (1.0 - 0.2 * _need("health")) * (1.0 - 0.25 * _need("power")) * (1.0 - 0.15 * _need("water")) * (1.0 - 0.2 * wear) * mod("prod_mult")
 	var wise := 1.0 + 0.3 * float(cov["edu"])
 	var fin := (1.0 + 0.12 * float(cov["finance"])) * mod("tax_mult")
 	var f := (0.5 if protest else 1.0) * RATE
@@ -1757,7 +1760,8 @@ func _money(market: float) -> void:
 	var r_tour := tour_sum * 3.0 * econ * mood * mod("tour_mult") * f
 	var mult := 1.0 + pop / 60.0  # size has a cost
 	var um := mod("upkeep_mult")
-	var e_roads := (roads * 0.08 + avenues * 0.12) * mult * um * RATE
+	var e_roads := (roads * 0.05 + avenues * 0.08) * mult * um * RATE
+	var e_maint := (roads * 0.03 + avenues * 0.04) * mult * um * RATE  # crews keep roads up; the split keeps the total close to before
 	var e_zone := up_zone * mult * um * RATE
 	var e_svc := up_svc * mult * um * RATE
 	var e_pol := 0.0
@@ -1782,7 +1786,7 @@ func _money(market: float) -> void:
 	budget_lines = [
 		["Residential tax", r_tax], ["Commercial tax", r_com], ["Industrial tax", r_ind], ["Office tax", r_off],
 		["Tourism", r_tour], ["Events", mod("income_add") * RATE], ["Military funding", grant_sum * RATE * mod("grant_mult")], ["Regional trade", trade_net], ["Savings tax", hh_tax * RATE],
-		["Roads", -e_roads], ["Buildings", -e_zone], ["Services", -e_svc], ["Policies", -e_pol],
+		["Roads", -e_roads], ["Maintenance", -e_maint], ["Buildings", -e_zone], ["Services", -e_svc], ["Policies", -e_pol],
 		["City staff", -e_staff], ["Crime losses", -e_crime],
 		["Exports", tr[0]], ["Imports (food, goods)", -tr[1]], ["Loan repayments", -e_loan],
 	]
@@ -1831,7 +1835,7 @@ func _grow() -> void:
 			continue
 		if lvl[i] == 0:
 			if build[i] > 0.0:
-				build[i] += maxf(mod("build_mult"), 1.0) / BUILD_SECS * efficiency()
+				build[i] += maxf(mod("build_mult"), 1.0) / BUILD_SECS * efficiency() * plank_mult
 				if build[i] >= 1.0:
 					build[i] = 0.0
 					lvl[i] = 1
@@ -1926,9 +1930,10 @@ func _households() -> void:
 			rich += 1
 		tot += c.wealth
 		ws.append(c.wealth)
-		var hw: Array = home_w.get(c.home, [0.0, 0])
+		var hw: Array = home_w.get(c.home, [0.0, 0, 0])
 		hw[0] = float(hw[0]) + c.wealth
 		hw[1] = int(hw[1]) + 1
+		hw[2] = int(hw[2]) + (1 if c.wealth < BROKE else 0)
 		home_w[c.home] = hw
 	var n := citizens.size()
 	hardship = float(broke) / maxf(n, 1.0)
@@ -2305,6 +2310,10 @@ func _plan_service(force := false) -> bool:
 			if pop < 40 or not _lumber_site() or foc("industry") < 0.4 or float(stock.get("wood", 0.0)) >= 30.0:
 				continue
 			lim = 1 + pop / 250
+		if ch == "planks":
+			if (bt.get(T.LUMBER, []) as Array).is_empty() or pop < 60 or foc("industry") < 0.4 or float(stock.get("planks", 0.0)) >= 30.0:
+				continue
+			lim = 1 + pop / 300
 		if ch == "tools":
 			if (bt.get(T.LUMBER, []) as Array).is_empty() or (bt.get(T.FOUNDRY, []) as Array).is_empty() or foc("industry") < 0.4 or float(stock.get("tools", 0.0)) >= 20.0:
 				continue
@@ -2324,7 +2333,7 @@ func _plan_service(force := false) -> bool:
 			sc += 0.5 + thr
 		if ch == "foundry" and (float(stock.get("ore", 0.0)) > 4.0 or have == 0):
 			sc += 0.9
-		if ch == "wood" or ch == "tools":
+		if ch == "wood" or ch == "tools" or ch == "planks":
 			sc += 0.6
 		if ch == "store":
 			for sk in stock:
@@ -3055,6 +3064,7 @@ func tick(dt: float) -> void:
 		active = keep
 		_collect_mods()
 	coins += (income) * dt
+	wear = clampf(wear + (0.002 if coins <= 0.0 else -0.004) * dt, 0.0, 1.0)  # unpaid crews let it slide in about 8 minutes; paid, it recovers in about 4
 	peak = maxf(peak, float(pop))
 	if not human:
 		coins = maxf(coins, 30.0)  # neighbours are kept alive by the state
@@ -3216,7 +3226,7 @@ func _trade(_market: float) -> Array:
 	var mills := (bt.get(T.MILL, []) as Array).size()
 	var deps := (bt.get(T.DEPOT, []) as Array).size() + 2 * (bt.get(T.PORT, []) as Array).size()
 	cap = 60.0 + 250.0 * (bt.get(T.WAREHOUSE, []) as Array).size()
-	for k in ["ore", "metal", "arms", "wood", "tools"]:  # saves from before mining, arms, wood and tools
+	for k in ["ore", "metal", "arms", "wood", "tools", "planks"]:  # saves from before mining, arms, wood and tools
 		if not stock.has(k):
 			stock[k] = 0.0
 	var want := {}  # units this town wants from the market this second
@@ -3230,11 +3240,18 @@ func _trade(_market: float) -> Array:
 	var works := (bt.get(T.TOOLWORKS, []) as Array).size()
 	var tool_need := (farm_jobs + orch_jobs + mine_jobs + fac_jobs) * emp * 0.004
 	var wood_in := _wood_rate(emp)
-	var w_wood := maxf(0.0, works * 0.3 - float(stock["wood"]) - wood_in)
+	var saws := (bt.get(T.SAWMILL, []) as Array).size()
+	var sites := 0
+	for i in zones:
+		if lvl[i] == 0 and build[i] > 0.0:
+			sites += 1
+	var plank_need := sites * 0.02
+	var w_planks := maxf(0.0, plank_need - float(stock["planks"]))
+	var w_wood := maxf(0.0, works * 0.3 + saws * 0.5 - float(stock["wood"]) - wood_in)
 	var w_tools := maxf(0.0, tool_need - float(stock["tools"]))
 	var w_crops := maxf(0.0, mills * 3.0 - (float(stock["crops"]) + crops))
 	var w_ore := maxf(0.0, foundries * 2.0 - (float(stock["ore"]) + mined))
-	for pair in [["crops", w_crops], ["ore", w_ore], ["wood", w_wood], ["tools", w_tools]]:
+	for pair in [["crops", w_crops], ["ore", w_ore], ["wood", w_wood], ["tools", w_tools], ["planks", w_planks]]:
 		var k: String = pair[0]
 		var w: float = pair[1]
 		want[k] = w
@@ -3271,6 +3288,12 @@ func _trade(_market: float) -> Array:
 	stock["wood"] = maxf(float(stock["wood"]) + wood_in - made, 0.0)
 	stock["metal"] = float(stock["metal"]) - made * 0.5
 	stock["tools"] = float(stock["tools"]) + made
+	var sawn := minf(saws * 0.5 * emp, float(stock["wood"]))  # sawmills take the wood the toolworks left
+	stock["wood"] = float(stock["wood"]) - sawn
+	stock["planks"] = float(stock["planks"]) + sawn * 0.5
+	var plank_used := minf(float(stock["planks"]), plank_need)
+	stock["planks"] = float(stock["planks"]) - plank_used
+	plank_mult = 1.0 + 0.25 * (plank_used / plank_need if plank_need > 0.0 else 0.0)
 	var milled := minf(float(stock["crops"]) + crops, mills * 3.0)
 	var goods := (fac_jobs * emp * 0.06 + mused * 3.0) * mod("goods_mult") * tool_mult
 	var fish := (bt.get(T.FISHDOCK, []) as Array).size() * 6.0 * emp * 0.15 * river_health
@@ -3302,8 +3325,8 @@ func _trade(_market: float) -> Array:
 			offered[k] = sell
 		stock[k] = minf(float(stock[k]), cap)
 	mk.report(offered, want)
-	need_rate = {"crops": mills * 3.0, "food": fneed, "goods": gneed, "ore": foundries * 2.0, "metal": m_fac + m_arm + m_tool, "arms": arms_use, "wood": works * 0.3, "tools": tool_need}
-	prod_rate = {"crops": crops, "food": milled + fish + ranch_jobs * emp * 0.1 + fish_jobs * emp * 0.12 * river_health, "goods": goods, "ore": mined, "metal": smelt * 0.5, "arms": marms * 2.0, "wood": wood_in, "tools": made}
+	need_rate = {"crops": mills * 3.0, "food": fneed, "goods": gneed, "ore": foundries * 2.0, "metal": m_fac + m_arm + m_tool, "arms": arms_use, "wood": works * 0.3 + saws * 0.5, "tools": tool_need, "planks": plank_need}
+	prod_rate = {"crops": crops, "food": milled + fish + ranch_jobs * emp * 0.1 + fish_jobs * emp * 0.12 * river_health, "goods": goods, "ore": mined, "metal": smelt * 0.5, "arms": marms * 2.0, "wood": wood_in, "tools": made, "planks": sawn * 0.5}
 	for k in Market.GOODS:  # local scarcity: days of cover (stock plus a minute of production) against use, between export and import parity
 		var nr: float = maxf(float(need_rate[k]), 0.0)
 		var lf := 0.8
