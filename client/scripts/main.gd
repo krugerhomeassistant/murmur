@@ -270,6 +270,8 @@ func _fresh(o: Dictionary) -> void:
 		towns[k].acc = 0.3 * k
 		towns[k].set_start(lw, lh)
 		towns[k].ev_scale = [1.5, 1.0, 0.7][diff]
+	for t in towns:
+		Ages.set_age(t, o.get("age", Ages.LAST))
 	city.coins = [600.0, 300.0, 150.0][diff]
 	city.auto_mode = o.get("auto", 2)
 	city.auto_policy = o.get("policy", true)

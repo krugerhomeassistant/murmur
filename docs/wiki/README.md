@@ -21,6 +21,7 @@ The complete reference for how Murmur works: what every building, unit, policy a
 | [Market](market.md) | Goods prices, supply and demand, input purchases |
 | [Citizens](citizens.md) | Citizens, tribes, mood, crime, health, immigration, walking and traffic |
 | [Networks and building](networks.md) | Roads, power, water, sewage, coverage, building lifecycle, fires, territory |
+| [Ages](ages.md) | Ages, knowledge, what each age unlocks and expects |
 | [Planner AI](planner.md) | How automatic towns decide what to build |
 | [Mayor, elections and events](civics-mechanics.md) | Approval, petitions, elections, loans, event scheduling |
 | [Diplomacy and war](war.md) | Neighbours, treaties, armies, combat, raids, occupation |

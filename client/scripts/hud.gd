@@ -936,7 +936,7 @@ func _process(_d: float) -> void:
             var open: bool = c.unlocked(id)
             var b: Button = tool_btns[id]
             b.disabled = not open
-            b.text = String(b.get_meta("base")) + ("" if open else "  (pop %d)" % Catalog.DEFS[id]["unlock"])
+            b.text = String(b.get_meta("base")) + ("" if open else "  (%s)" % c.lock_text(id))
     insp.text = _insp_text()
     needs_l.text = "\n".join(c.needs().slice(0, 7))
     goal_l.text = "%s  |  %s" % [Civics.rank(c.peak), c.goal_text()]

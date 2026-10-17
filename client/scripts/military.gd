@@ -204,7 +204,7 @@ static func econ(c: City) -> void:
 		var cnt := counts(c)
 		var w := weights(c)
 		for k in KIND:
-			if int(w[k]) > 0 and int(cnt[k]) < int(cap[k]) and c.coins >= float(KIND[k]["cost"]) * 3.0:
+			if int(w[k]) > 0 and c.age >= Ages.unit(k) and int(cnt[k]) < int(cap[k]) and c.coins >= float(KIND[k]["cost"]) * 3.0:
 				c.train_t[k] = float(c.train_t.get(k, 0.0)) + 0.5 * int(w[k])  # priority 1 = half speed, 3 = 1.5x
 				if float(c.train_t[k]) >= float(KIND[k]["train"]):
 					if _pay(c, k):
