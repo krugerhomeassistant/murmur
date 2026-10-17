@@ -112,4 +112,4 @@ Each step is its own PR, updates PLAN.md and ACTIVE_CONTEXT.md, and ends with th
 
 Decided by the owner on 2026-10-16: no timers anywhere (the game plays out naturally); vassals count as land; singleplayer spectator mode can do anything.
 
-- Still open: should a conquered human in multiplayer keep watching the match, or is the game simply over for them?
+- Decided 2026-10-17: a player who loses every town chooses to keep spectating or quit (`Main.keep_watching`, `Main.quit_game`).
