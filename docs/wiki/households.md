@@ -31,6 +31,9 @@ The policy [Cost-of-living payments](policies.md) gives every broke household 0.
 ## Landlords and the savings tax
 Each second every household pays rent (`RENT` times its home's tier). The rents are pooled and paid out equally to the households whose savings are in the top quarter (at least 4 residents are needed), so rent moves wealth upward and is conserved (`hh.rent` collected, `hh.rent_got` paid). The well-off already spend and invest away 0.4% per second of savings above 150; the town now taxes a share `clamp(5 * residential tax rate, 0, 1)` of that outflow into the treasury (budget line "Savings tax", `City.hh_tax`), so a 10% rate takes half and a 0% rate none. Test: `client/tests/landlords.gd`.
 
+## Per-home view
+Hovering a home shows its residents' average savings and how many of them are broke (`City.home_w`: wealth sum, residents, broke residents per home cell, rebuilt every second). Citizens still act as one household each; grouping residents of a home into families is not done yet. Test: `client/tests/households.gd`.
+
 ## Where to see it
 City panel (Economy tab): "Households: average savings, median, broke and comfortable shares, prices, wages, real wage". Event feed: price events.
 

@@ -215,7 +215,7 @@ var cpi := 1.0  # cost-of-living index: market price of the food and goods baske
 var hh := {"avg": 0.0, "median": 0.0, "broke": 0.0, "rich": 0.0, "real": 1.0}  # household statistics, recomputed every second
 var hh_tax := 0.0  # savings tax collected from the well-off this second
 var hardship := 0.0  # share of households that cannot make ends meet
-var home_w := {}  # runtime: home cell -> [wealth sum, residents]
+var home_w := {}  # runtime: home cell -> [wealth sum, residents, broke residents]
 var stock := {"crops": 0.0, "food": 0.0, "goods": 0.0, "ore": 0.0, "metal": 0.0, "arms": 0.0, "wood": 0.0, "tools": 0.0, "planks": 0.0}
 var plank_mult := 1.0  # construction speed from planks in stock, set every second by _trade
 var wood_sig := 0
@@ -1930,9 +1930,10 @@ func _households() -> void:
 			rich += 1
 		tot += c.wealth
 		ws.append(c.wealth)
-		var hw: Array = home_w.get(c.home, [0.0, 0])
+		var hw: Array = home_w.get(c.home, [0.0, 0, 0])
 		hw[0] = float(hw[0]) + c.wealth
 		hw[1] = int(hw[1]) + 1
+		hw[2] = int(hw[2]) + (1 if c.wealth < BROKE else 0)
 		home_w[c.home] = hw
 	var n := citizens.size()
 	hardship = float(broke) / maxf(n, 1.0)

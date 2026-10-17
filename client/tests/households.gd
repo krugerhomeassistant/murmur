@@ -89,6 +89,18 @@ func _init() -> void:
 		w_paid += ct.wealth
 	if plain.citizens.size() > 3 and w_paid <= w_plain:
 		errs.append("cost-of-living payments should leave households with more savings (%.1f vs %.1f)" % [w_paid, w_plain])
+	# per-home view: residents and broke counts add up to the town's
+	var hres := 0
+	var hbroke := 0
+	for k in t2.home_w:
+		hres += int(t2.home_w[k][1])
+		hbroke += int(t2.home_w[k][2])
+	var cbroke := 0
+	for ct in t2.citizens:
+		if ct.wealth < City.BROKE:
+			cbroke += 1
+	if hres != t2.citizens.size() or absi(hbroke - cbroke) > 0:
+		errs.append("per-home household totals (%d/%d residents, %d/%d broke)" % [hres, t2.citizens.size(), hbroke, cbroke])
 	# save round trip
 	var d := t2.to_dict()
 	var r := _town(Signals.new())
