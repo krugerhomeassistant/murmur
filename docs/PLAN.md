@@ -139,7 +139,7 @@ Goal: Murmur, a cozy interactive city-builder (Godot) with an optional Live Data
 - [x] D2 Victory, no timers (vassals join the allied land in D4, culture joins the score in D6): conquest (70% of land or last side) and hegemony (score at least 1.5x the next, 40% of land allied); Empire progress; game-over screen with the route. Timers removed 2026-10-16 at the owner's request.
 - [x] D3 War drivers: AI ambition, border tension, war goals (tribute / land / total); wars listed in the Empire window. `tests/dwar.gd`; `tests/warrate.gd` (8 towns, 30 min: 4 to 6 wars in 6 runs).
 - [x] D4 Vassalage and peace scoring: a total-goal surrender makes the loser a vassal (10% of its income to the overlord, allied trade, vassal land counts for hegemony); `tests/vassal.gd`.
-- [x] Sprite engine S1 (docs/SPRITES_DESIGN.md): lookup with procedural fallback, baker, test. Next S2 units/terrain, S3 generation pipeline.
+- [x] Sprite engine S1 (docs/SPRITES_DESIGN.md): lookup with procedural fallback, baker, test.
 - [x] Ages A1 framework (docs/AGES_DESIGN.md): next A2 early-age content and Ancient default start, A3 research and scenario setup; sprite engine design next.
 - [ ] D5 Growth tuning, one gate per PR, A/B with 6 parallel runs each. Gate 1 done (mood gate fall-through): before 0/6 reached 300 people, after 7/12 (rest 80 to 206). Diagnosis: stuck towns had max housing demand, jobs 2x housing, 38k idle coins, mood 0.33 to 0.41. Gate 2 done (upgrade mood 0.45 to 0.35): to100 610 to 978 s, mean pop at cap 265 vs 238. Next candidates: open-plot cap `3 + pop/80`, one planner action per 8 s, why 2 of 12 still stall.
 - [ ] D6 Culture score (about five buildings, two civics).
@@ -147,6 +147,10 @@ Goal: Murmur, a cozy interactive city-builder (Godot) with an optional Live Data
 - [ ] D8 Depth layers (E4 goods and households, E5 infrastructure, E6 military, E3 group multiplayer) in table order.
 - [ ] D9 Perf pass, benchmark table, release.
 Found on 2026-10-09: the game has no victory condition at all, and war needs temper below -0.7 plus a 40% roll per event, which is why it feels rare.
+
+## LAST in the whole plan (owner, 2026-10-17): art
+Everything else comes first. Visual detail (characters, units, buildings, sprites S2/S3 in docs/SPRITES_DESIGN.md) is not crucial, and sprites ship only if the benchmark shows no performance loss; otherwise improve the procedural drawings instead.
+- [ ] Art pass: S2 units/terrain sprites, S3 generation pipeline, character and unit detail. Gate: standard benchmark equal or better.
 
 ## Empire / endless world (user, 2026-10-08): NEXT MAJOR FEATURE, design in docs/EMPIRE_DESIGN.md
 - [ ] E1 Endless procedural world: [x] `world.gd` generator + chunk cache + `tests/world.gd` (determinism, no chunk seams, terrain mix); [x] towns cut from the world (`City.apply_world`, start-site search, ground drawing, seed saved, `tests/worldtown.gd`, `tests/worldstart.gd`); [x] found a town on any free plot with a distance cost (`Main.found_town_at`, `tests/found.gd`), `WorldLayer` draws the wilderness, camera roams 10 plots past the towns; [ ] fog of war, claim adjacent land, multiplayer founding (needs a Cmd), nicer rivers (they form closed loops), free off-grid placement (maybe never: the plot grid keeps trade and gates simple); plots anchored by world position (replace `gpos`), fog of war, found-a-town on the map with distance cost (replaces flat $300), claim adjacent land, save v2 + migration, `tests/world.gd`.
