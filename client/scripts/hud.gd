@@ -1117,7 +1117,7 @@ var mk_stats: RichTextLabel
 var mk_note: Label
 var mk_towns: GridContainer
 var mk_tape: Label
-const MK_NAMES := {"crops": "Crops", "food": "Food", "goods": "Goods", "ore": "Ore", "metal": "Metal", "arms": "Arms"}
+const MK_NAMES := {"crops": "Crops", "food": "Food", "goods": "Goods", "ore": "Ore", "metal": "Metal", "arms": "Arms", "wood": "Wood", "tools": "Tools"}
 const MK_TF := [["10 s", 1], ["1 min", 6], ["5 min", 30]]  # label, candles merged
 const MK_SHOW := 60  # candles on the chart
 const MK_UP := Color("6fbf73")
@@ -1508,7 +1508,7 @@ func _mayor_tick(c: City) -> void:
         gt += "%s %s%s\n" % ["[color=#9fd3a0][x][/color]" if done else "[ ]", ms["n"], "" if done else ("  [color=#9aa88f]%s / %s  reward $%d[/color]" % [_num(cur), _num(float(ms["v"])), ms["reward"]])]
     goals_l.text = gt
     var f: Dictionary = c.flow
-    var et := "Stock (cap %d): crops %d  food %d  goods %d  ore %d  metal %d  arms %d\n" % [int(c.cap), int(c.stock["crops"]), int(c.stock["food"]), int(c.stock["goods"]), int(c.stock.get("ore", 0.0)), int(c.stock.get("metal", 0.0)), int(c.stock.get("arms", 0.0))]
+    var et := "Stock (cap %d): crops %d  food %d  goods %d  ore %d  metal %d  arms %d  wood %d  tools %d\n" % [int(c.cap), int(c.stock["crops"]), int(c.stock["food"]), int(c.stock["goods"]), int(c.stock.get("ore", 0.0)), int(c.stock.get("metal", 0.0)), int(c.stock.get("arms", 0.0)), int(c.stock.get("wood", 0.0)), int(c.stock.get("tools", 0.0))]
     et += "Per second: crops +%.1f  food milled +%.1f  goods +%.1f  ore +%.1f  metal +%.1f\n" % [f.get("crops", 0.0), f.get("food", 0.0), f.get("goods", 0.0), f.get("ore", 0.0), f.get("metal", 0.0)]
     et += "Needs: food %.1f (%d%% local)  goods %.1f (%d%% local)\n" % [f.get("food_need", 0.0), int(float(f.get("food_local", 1.0)) * 100.0), f.get("goods_need", 0.0), int(float(f.get("goods_local", 1.0)) * 100.0)]
     et += "Imports -$%.2f/s   Exports +$%.2f/s   Market price x%.2f\n" % [f.get("imp", 0.0), f.get("ex", 0.0), f.get("price", 1.0)]

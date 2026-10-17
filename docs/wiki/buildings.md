@@ -2,7 +2,7 @@
 
 # Buildings and tiles
 
-66 placeable things in 12 categories. `unlock` is the population (peak) at which the Build menu offers it. Costs are coins; `upkeep` is coins per second before the town-size and policy multipliers (see [Economy](economy.md)).
+68 placeable things in 12 categories. `unlock` is the population (peak) at which the Build menu offers it. Costs are coins; `upkeep` is coins per second before the town-size and policy multipliers (see [Economy](economy.md)).
 
 How to read an entry: **Radius** is the service reach in tiles (Manhattan diamond); **Provides** lists the city-stat coverage it adds (see [City stats](stats.md)); **Output** is the network supply it adds (power, water, sewage units); **Jobs** is staff; **Pollution** is `[radius, strength]`; **Tourism** is visitor income strength; **Visited** means citizens walk there as a leisure destination; **Grant** is a free income (coins per second, scaled by `RATE`).
 
@@ -1192,6 +1192,8 @@ Turns metal into arms (up to 0.25 metal a second becomes 0.5 arms). Every soldie
 | [Fishing dock](#fishing-dock) | 200 | 0.6 | 40 | svc |
 | [Food mill](#food-mill) | 160 | 0.6 | 20 | svc |
 | [Foundry](#foundry) | 220 | 1 | 120 | svc |
+| [Lumber camp](#lumber-camp) | 90 | 0.4 | 40 | svc |
+| [Toolworks](#toolworks) | 200 | 0.8 | 150 | svc |
 | [Warehouse](#warehouse) | 120 | 0.4 | 30 | svc |
 | [Trade depot](#trade-depot) | 300 | 1 | 60 | svc |
 
@@ -1261,6 +1263,39 @@ Smelts ore into metal, up to 2 ore a second. Metal sells for far more than ore, 
 | Map colour / letter | `#8a5a4a` / `Fo` |
 
 *Tip:* Needs a mine. One foundry per 3-4 mine plots.
+
+### Lumber camp
+
+Fells the forest within 5 tiles: up to 0.24 wood a second, more the more trees stand around it. Wood is the first raw material of the tool chain and sells on the market.
+
+| | |
+|---|---|
+| Id | `LUMBER` |
+| Cost / upkeep | 90 / 0.4 per s |
+| Unlocks at | 40 population |
+| Kind | svc |
+| Jobs | 5 |
+| Production chain | wood |
+| Map colour / letter | `#6a8a4a` / `Lu` |
+
+*Tip:* Site it at the edge of a forest (green on the map). Toolworks turn the wood into tools.
+
+### Toolworks
+
+Makes tools from wood and metal (0.3 wood and 0.15 metal a second become 0.3 tools). Farms, mines and factories with tools in stock produce up to 15% more.
+
+| | |
+|---|---|
+| Id | `TOOLWORKS` |
+| Cost / upkeep | 200 / 0.8 per s |
+| Unlocks at | 150 population |
+| Kind | svc |
+| Jobs | 8 |
+| Pollution | radius 2, strength 0.2 |
+| Production chain | tools |
+| Map colour / letter | `#7a6a5a` / `To` |
+
+*Tip:* Needs wood (a lumber camp) and metal (a foundry), or suppliers across the border.
 
 ### Warehouse
 

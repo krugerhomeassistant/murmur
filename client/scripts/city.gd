@@ -215,7 +215,9 @@ var hh := {"avg": 0.0, "median": 0.0, "broke": 0.0, "rich": 0.0, "real": 1.0}  #
 var hh_tax := 0.0  # savings tax collected from the well-off this second
 var hardship := 0.0  # share of households that cannot make ends meet
 var home_w := {}  # runtime: home cell -> [wealth sum, residents]
-var stock := {"crops": 0.0, "food": 0.0, "goods": 0.0, "ore": 0.0, "metal": 0.0, "arms": 0.0}
+var stock := {"crops": 0.0, "food": 0.0, "goods": 0.0, "ore": 0.0, "metal": 0.0, "arms": 0.0, "wood": 0.0, "tools": 0.0}
+var wood_sig := 0
+var wood_yield := 0.0  # forest tiles around the lumber camps (each camp counts up to 12)
 var arms_use := 0.0  # arms the army is consuming per second (training), for the market
 var flow := {}
 var cap := 60.0
@@ -2297,6 +2299,14 @@ func _plan_service(force := false) -> bool:
 			if mine_jobs == 0 or foc("mining") < 0.4:
 				continue
 			lim = 1 + mine_jobs / 12
+		if ch == "wood":
+			if pop < 40 or foc("industry") < 0.4 or float(stock.get("wood", 0.0)) >= 30.0:
+				continue
+			lim = 1 + pop / 250
+		if ch == "tools":
+			if (bt.get(T.LUMBER, []) as Array).is_empty() or (bt.get(T.FOUNDRY, []) as Array).is_empty() or foc("industry") < 0.4 or float(stock.get("tools", 0.0)) >= 20.0:
+				continue
+			lim = 1 + pop / 300
 		if id in [T.BARRACKS, T.BASE, T.RADAR]:
 			lim = maxi(lim, 1 + int(thr * 2.0 * (1.0 + pop / 250.0)))  # a threatened planner town raises its garrison, within reason (upkeep and fight cost)
 		if id == T.NAVYARD and nav:
@@ -2312,6 +2322,8 @@ func _plan_service(force := false) -> bool:
 			sc += 0.5 + thr
 		if ch == "foundry" and (float(stock.get("ore", 0.0)) > 4.0 or have == 0):
 			sc += 0.9
+		if ch == "wood" or ch == "tools":
+			sc += 0.6
 		if ch == "store":
 			for sk in stock:
 				if float(stock[sk]) >= cap * 0.9:
@@ -2377,7 +2389,7 @@ func _plan_service(force := false) -> bool:
 		if best == T.LIGHT:
 			if is_road(grid[i]) and lamp[i] == 0 and not _lamp_near(i, 3):
 				cand.append(i)
-		elif grid[i] == T.EMPTY and water[i] == 0 and _road_next_to(i) >= 0 and (best != T.NAVYARD or wet_next(i % W, i / W)):
+		elif grid[i] == T.EMPTY and water[i] == 0 and _road_next_to(i) >= 0 and (best != T.NAVYARD or wet_next(i % W, i / W)) and (best != T.LUMBER or _forest_near(i) >= 4):
 			cand.append(i)
 	if cand.is_empty():
 		return false
@@ -3161,6 +3173,29 @@ func _sickness() -> void:
 
 # ---------- economy: crops -> food, goods, storage, trade ----------
 
+## Wood per second from the lumber camps: the forest within 5 tiles of each (cached until the town changes).
+func _wood_rate(emp: float) -> float:
+	if wood_sig != scan_sig:
+		wood_sig = scan_sig
+		wood_yield = 0.0
+		for i in bt.get(T.LUMBER, []):
+			wood_yield += minf(float(_forest_near(i)), 12.0)
+	return wood_yield * 0.02 * emp
+
+
+func _forest_near(i: int) -> int:
+	var n := 0
+	if ground.size() != W * H:
+		return 0
+	var cx := i % W
+	var cy := i / W
+	for y in range(maxi(cy - 5, 0), mini(cy + 6, H)):
+		for x in range(maxi(cx - 5, 0), mini(cx + 6, W)):
+			if ground[y * W + x] == World.K.FOREST and grid[y * W + x] == T.EMPTY:
+				n += 1
+	return n
+
+
 ## Returns [export income, import cost] per second.
 func _trade(_market: float) -> Array:
 	var mk: Market = sig.mk
@@ -3168,7 +3203,7 @@ func _trade(_market: float) -> Array:
 	var mills := (bt.get(T.MILL, []) as Array).size()
 	var deps := (bt.get(T.DEPOT, []) as Array).size() + 2 * (bt.get(T.PORT, []) as Array).size()
 	cap = 60.0 + 250.0 * (bt.get(T.WAREHOUSE, []) as Array).size()
-	for k in ["ore", "metal", "arms"]:  # saves from before mining and arms
+	for k in ["ore", "metal", "arms", "wood", "tools"]:  # saves from before mining, arms, wood and tools
 		if not stock.has(k):
 			stock[k] = 0.0
 	var want := {}  # units this town wants from the market this second
@@ -3179,9 +3214,14 @@ func _trade(_market: float) -> Array:
 	var foundries := (bt.get(T.FOUNDRY, []) as Array).size()
 	# Inputs: a mill with idle capacity buys crops, a foundry ore, factories metal, when the treasury can afford it and the market has any.
 	var rich := coins > 120.0
+	var works := (bt.get(T.TOOLWORKS, []) as Array).size()
+	var tool_need := (farm_jobs + orch_jobs + mine_jobs + fac_jobs) * emp * 0.004
+	var wood_in := _wood_rate(emp)
+	var w_wood := maxf(0.0, works * 0.3 - float(stock["wood"]) - wood_in)
+	var w_tools := maxf(0.0, tool_need - float(stock["tools"]))
 	var w_crops := maxf(0.0, mills * 3.0 - (float(stock["crops"]) + crops))
 	var w_ore := maxf(0.0, foundries * 2.0 - (float(stock["ore"]) + mined))
-	for pair in [["crops", w_crops], ["ore", w_ore]]:
+	for pair in [["crops", w_crops], ["ore", w_ore], ["wood", w_wood], ["tools", w_tools]]:
 		var k: String = pair[0]
 		var w: float = pair[1]
 		want[k] = w
@@ -3190,13 +3230,19 @@ func _trade(_market: float) -> Array:
 			stock[k] = float(stock[k]) + got
 			bought[k] = got
 			spent += got * float(mk.price[k]) * RATE
+	var tool_used := minf(float(stock["tools"]), tool_need)  # worn out in use; a stocked workforce is up to 15% more productive
+	stock["tools"] = float(stock["tools"]) - tool_used
+	var tool_mult := 1.0 + 0.15 * (tool_used / tool_need if tool_need > 0.0 else 0.0)
+	crops *= tool_mult
+	mined *= tool_mult
 	var smelt := minf(float(stock["ore"]) + mined, foundries * 2.0)
 	stock["ore"] = float(stock["ore"]) + mined - smelt
 	stock["metal"] = float(stock["metal"]) + smelt * 0.5
 	var armouries := (bt.get(T.ARMOURY, []) as Array).size()
 	var m_fac := fac_jobs * emp * 0.02
 	var m_arm := armouries * 0.25 * emp * minf(foc("military"), 1.0)  # low military focus: buy arms instead of making them
-	var w_metal := maxf(0.0, m_fac + m_arm - float(stock["metal"]))
+	var m_tool := works * 0.15 * emp
+	var w_metal := maxf(0.0, m_fac + m_arm + m_tool - float(stock["metal"]))
 	want["metal"] = w_metal
 	if w_metal > 0.0 and rich:
 		var gm := mk.take("metal", minf(w_metal, coins * 0.05 / (float(mk.price["metal"]) * RATE)))
@@ -3208,8 +3254,12 @@ func _trade(_market: float) -> Array:
 	var marms := minf(float(stock["metal"]), m_arm)  # armouries smelt what is left into arms
 	stock["metal"] = float(stock["metal"]) - marms
 	stock["arms"] = float(stock["arms"]) + marms * 2.0
+	var made := minf(minf(works * 0.3 * emp, float(stock["wood"]) + wood_in), float(stock["metal"]) * 2.0)  # toolworks: wood and metal into tools
+	stock["wood"] = maxf(float(stock["wood"]) + wood_in - made, 0.0)
+	stock["metal"] = float(stock["metal"]) - made * 0.5
+	stock["tools"] = float(stock["tools"]) + made
 	var milled := minf(float(stock["crops"]) + crops, mills * 3.0)
-	var goods := (fac_jobs * emp * 0.06 + mused * 3.0) * mod("goods_mult")
+	var goods := (fac_jobs * emp * 0.06 + mused * 3.0) * mod("goods_mult") * tool_mult
 	var fish := (bt.get(T.FISHDOCK, []) as Array).size() * 6.0 * emp * 0.15 * river_health
 	stock["crops"] = float(stock["crops"]) + crops - milled
 	stock["food"] = float(stock["food"]) + milled + fish + ranch_jobs * emp * 0.1 + fish_jobs * emp * 0.12 * river_health
@@ -3239,8 +3289,8 @@ func _trade(_market: float) -> Array:
 			offered[k] = sell
 		stock[k] = minf(float(stock[k]), cap)
 	mk.report(offered, want)
-	need_rate = {"crops": mills * 3.0, "food": fneed, "goods": gneed, "ore": foundries * 2.0, "metal": m_fac + m_arm, "arms": arms_use}
-	prod_rate = {"crops": crops, "food": milled + fish + ranch_jobs * emp * 0.1 + fish_jobs * emp * 0.12 * river_health, "goods": goods, "ore": mined, "metal": smelt * 0.5, "arms": marms * 2.0}
+	need_rate = {"crops": mills * 3.0, "food": fneed, "goods": gneed, "ore": foundries * 2.0, "metal": m_fac + m_arm + m_tool, "arms": arms_use, "wood": works * 0.3, "tools": tool_need}
+	prod_rate = {"crops": crops, "food": milled + fish + ranch_jobs * emp * 0.1 + fish_jobs * emp * 0.12 * river_health, "goods": goods, "ore": mined, "metal": smelt * 0.5, "arms": marms * 2.0, "wood": wood_in, "tools": made}
 	for k in Market.GOODS:  # local scarcity: days of cover (stock plus a minute of production) against use, between export and import parity
 		var nr: float = maxf(float(need_rate[k]), 0.0)
 		var lf := 0.8
