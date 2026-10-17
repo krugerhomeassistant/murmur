@@ -1813,7 +1813,7 @@ func _grow() -> void:
 					msg = "A new %s opened." % String(Catalog.DEFS[t]["n"]).to_lower().replace(" zone", "")
 			else:
 				empties.append(i)
-		elif lvl[i] < int(Catalog.DEFS[t]["max"]) and mood > 0.45 and dem_for(t) > 0.15 and coins > GROW_COST * scale * 4.0 + saving_for and rng.randf() < 0.08 and _can_upgrade(i):
+		elif lvl[i] < int(Catalog.DEFS[t]["max"]) and mood > 0.35 and dem_for(t) > 0.15 and coins > GROW_COST * scale * 4.0 + saving_for and rng.randf() < 0.08 and _can_upgrade(i):
 			lvl[i] += 1
 			coins -= GROW_COST * scale * 1.6
 			msg = "A building was upgraded."

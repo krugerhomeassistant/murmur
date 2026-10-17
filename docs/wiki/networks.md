@@ -243,7 +243,7 @@ Land value (`City._land`, every 10th second) also reads the coverage fields of l
    - `hold = 0` for a home when `res_dem > 0.3`, otherwise `0.7 * saving_for`.
    The cost is paid immediately and `build` is set to 0.01.
 4. **Construction**: each second `build += max(mod("build_mult"), 1) / BUILD_SECS` with `BUILD_SECS` = 8, so 8 seconds, or 5 seconds with the Fast-track policy (build_mult 1.6). At 1.0 the plot becomes level 1 ("A new ... opened").
-5. **Levelling up**: a built plot below its catalog `max` level (3 for most housing and industry, 2 for farm types) rolls each second: it levels up with probability 0.08 if `mood > 0.45`, the sector demand `dem_for(t) > 0.15`, and `coins > GROW_COST * scale * 4 + saving_for`. The upgrade costs `GROW_COST * scale * 1.6`.
+5. **Levelling up**: a built plot below its catalog `max` level (3 for most housing and industry, 2 for farm types) rolls each second: it levels up with probability 0.08 if `mood > 0.35`, the sector demand `dem_for(t) > 0.15`, and `coins > GROW_COST * scale * 4 + saving_for`. The upgrade costs `GROW_COST * scale * 1.6`.
 6. **Effects**: housing is `home * level`, jobs `jobs * level`, upkeep and income scale with level.
 
 Demand values (`res_dem`, `com_dem`, `ind_dem`, `off_dem`) are computed in `_second` from population, jobs, housing, mood, market and tax rates; farm-type zones use `dem_for` as a fraction of industrial demand.
