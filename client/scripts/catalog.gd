@@ -9,7 +9,7 @@ enum Id {
     PARK, PLAYGROUND, PLAZA, CINEMA, MUSEUM, STADIUM, THEME,
     BUS, TRAIN, WIND, SOLAR, COAL, WATER, LANDFILL, RECYCLE,
     MARKET, BANK, MALL, HOTEL, TOWNHALL, WIRE, PIPE, LIGHT, COURT, PRISON, COTTAGE, TOWNHOUSE, TENEMENT, CONDO, CHURCH, BAR, UNION_HALL, CHAMBER, BASE, BARRACKS, RADAR, MILL, WAREHOUSE, DEPOT, SEWAGE, SEWER, PORT, NAVYARD, FISHDOCK,
-    ORCHARD, RANCH, MINE, FOUNDRY, GREENHOUSE, FISHFARM, ARMOURY, LUMBER, TOOLWORKS, SAWMILL,
+    ORCHARD, RANCH, MINE, FOUNDRY, GREENHOUSE, FISHFARM, ARMOURY, LUMBER, TOOLWORKS, SAWMILL, RAILYARD,
 }
 
 const CATS := [
@@ -366,6 +366,10 @@ const DEFS := {
         "r": 0, "prov": {}, "jobs": 6, "poll": [2, 0.1], "chain": "planks", "shape": "chimney",
         "desc": "Saws wood into planks: 0.5 wood a second becomes 0.25 planks. Building sites with planks in stock finish up to 25% faster.",
         "tip": "Needs wood: a lumber camp, or a supplier across the border."},
+    Id.RAILYARD: {"n": "Rail yard", "cat": "trade", "kind": "svc", "cost": 320, "up": 1.2, "unlock": 200, "col": Color("5a5f6b"), "g": "Ry",
+        "r": 0, "prov": {}, "jobs": 8, "poll": [2, 0.2], "chain": "rail", "shape": "chimney",
+        "desc": "Loads goods onto trains. When both towns of a trade link have a rail yard, freight costs 60% less and the link carries twice as much.",
+        "tip": "Both ends need one. Worth it between towns that trade a lot."},
     Id.ARMOURY: {"n": "Armoury", "cat": "mil", "kind": "svc", "cost": 420, "up": 1.5, "unlock": 160, "col": Color("6b6a52"), "g": "Ar",
         "r": 0, "prov": {}, "jobs": 10, "poll": [3, 0.3], "chain": "arms", "shape": "fort",
         "desc": "Turns metal into arms (up to 0.25 metal a second becomes 0.5 arms). Every soldier, tank and plane costs arms to train: make them from your own metal, or buy them abroad at a premium that rises in wartime.",
