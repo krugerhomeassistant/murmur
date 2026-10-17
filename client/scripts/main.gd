@@ -862,6 +862,39 @@ func spectating() -> bool:
 	return towns.all(func(t: City) -> bool: return not t.human)
 
 
+var watching := false  # the player lost every town and chose to keep spectating
+
+
+## True when the player owned towns (offline: human towns; multiplayer: towns they own) and has lost all of them.
+func defeated() -> bool:
+	if not started or watching:
+		return false
+	var mine := towns.filter(func(t: City) -> bool: return t.human or (net != null and net.active and t.owner == net.my_id()))
+	return not mine.is_empty() and mine.all(func(t: City) -> bool: return t.over != "")
+
+
+## After a defeat: stay and watch the world play on. Offline the dead towns stop being "human", so the game is a plain spectate
+## (Tab, auto-follow) and the camera moves to a town that is still alive.
+func keep_watching() -> void:
+	watching = true
+	follow = true
+	if net == null or not net.active:
+		for t in towns:
+			if t.over != "":
+				t.human = false
+	for i in towns.size():
+		if towns[i].over == "":
+			switch_town(i)
+			break
+
+
+## After a defeat: leave the game. The dead game's save is removed so it cannot be reloaded.
+func quit_game() -> void:
+	if defeated():
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(SAVE))
+	get_tree().quit()
+
+
 func _process(delta: float) -> void:
 	delta = minf(delta, 0.25)
 	if started and follow and towns.size() > 1 and spectating() and _lod() < 3:  # not while looking at the whole world

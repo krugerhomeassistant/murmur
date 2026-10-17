@@ -51,6 +51,7 @@ var codex_list: ItemList
 var codex_text: RichTextLabel
 var codex_ids: Array = []
 var over_panel: PanelContainer
+var over_btns: HBoxContainer  # Keep spectating / Quit, shown once every town of the player is lost
 var win_panel: PanelContainer
 var win_l: Label
 var win_seen := ""  # winner whose panel was dismissed
@@ -143,7 +144,14 @@ func _ready() -> void:
     over_l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
     over_l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     over_l.add_theme_font_size_override("font_size", 20)
-    over_panel.add_child(over_l)
+    var ov := VBoxContainer.new()
+    over_panel.add_child(ov)
+    ov.add_child(over_l)
+    over_btns = HBoxContainer.new()
+    over_btns.alignment = BoxContainer.ALIGNMENT_CENTER
+    ov.add_child(over_btns)
+    _btn(over_btns, "Keep spectating", func() -> void: m.keep_watching())
+    _btn(over_btns, "Quit", func() -> void: m.quit_game())
     win_panel = PanelContainer.new()
     win_panel.position = Vector2(400, 150)
     win_panel.custom_minimum_size = Vector2(480, 120)
@@ -910,9 +918,10 @@ func _process(_d: float) -> void:
     dp.visible = txt != "" and bool(win_open.get("detail", true))
     if detail.text != txt:
         detail.text = txt
-    over_panel.visible = c.over != ""
+    over_panel.visible = c.over != "" and not m.watching
+    over_btns.visible = m.defeated()
     if c.over != "":
-        over_l.text = "GAME OVER\n%s\nPeak population %d.   Press R to restart." % [c.over, int(c.peak)]
+        over_l.text = "GAME OVER\n%s\nPeak population %d.   Keep spectating, quit, or press R for a new game." % [c.over, int(c.peak)]
     var vic: Victory = m.sig.vic
     var mine := vic.winner != "" and vic.winner == Victory.side(c)
     win_panel.visible = vic.winner != "" and vic.winner != win_seen and c.over == ""
