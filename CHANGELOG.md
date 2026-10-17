@@ -6,6 +6,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 ## [Unreleased]
 
 ### Added
+- Rail yard (E5b, first slice): a trade building from the Industrial age. When both towns of a trade link have one, freight costs 60% less and the link carries twice as much. Planner towns of 80 people with a neighbour build one. `tests/rail.gd` (in CI). The fuel good is dropped from E4 and folded into E5.
 - Families (E4 household v2 part 2b): residents of one home share their savings (20% of the gap to the home average closes each second), so jobless members are carried by earning housemates. `tests/households.gd` extended.
 - Infrastructure design: `docs/INFRASTRUCTURE_DESIGN.md` for E5 (rail, ports, power tiers), including which OpenTTD mechanics are adopted or skipped (ideas only, no code or assets). Design only.
 - Household view (E4 household v2 part 2): hovering a home shows its residents' average savings and how many are broke. `tests/households.gd` checks the per-home totals.
