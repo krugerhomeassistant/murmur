@@ -14,5 +14,6 @@
 | [MULTIPLAYER.md](MULTIPLAYER.md) | Multiplayer design and phases |
 | [EMPIRE_DESIGN.md](EMPIRE_DESIGN.md) | Endless world, empire mode, group multiplayer, economy and infrastructure roadmap |
 | [WAR_DESIGN.md](WAR_DESIGN.md) | War rework phases and status |
+| [SPRITES_DESIGN.md](SPRITES_DESIGN.md) | Sprite engine: PNG overrides per age and level, baker, phases |
 | [AGES_DESIGN.md](AGES_DESIGN.md) | Ages: advancing, expectations, grace period, phases |
 | [DOMINATION_DESIGN.md](DOMINATION_DESIGN.md) | End goal (conquest or hegemony), faster growth, more frequent war, depth order, readability split |

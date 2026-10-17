@@ -1405,7 +1405,7 @@ func draw_chunk(c_item: CanvasItem, t_: City, x0: int, y0: int, x1: int, y1: int
 					if city.lvl[i] == 0:
 						_zone(r, t, i)
 					else:
-						_building(r, d, city.lvl[i], city.connected[i] == 1, night)
+						_building(r, d, city.lvl[i], city.connected[i] == 1, night, t)
 				_:
 					_service(r, d, city.connected[i] == 1, night, t)
 	if lod == 0:
@@ -1455,7 +1455,9 @@ func _overlay(x0: int, y0: int, x1: int, y1: int) -> void:
 				ci.draw_rect(r, Color(0.2, 0.8, 0.4, c * 0.45) if c > 0.0 else Color(0.8, 0.2, 0.2, 0.18))
 
 
-func _building(r: Rect2, d: Dictionary, lv: int, ok: bool, night: bool) -> void:
+func _building(r: Rect2, d: Dictionary, lv: int, ok: bool, night: bool, id := -1) -> void:
+	if id >= 0 and Sprites.draw(ci, r, id, lv, city.age, ok):
+		return
 	if Art.building(ci, r, String(d.get("shape", "")), d["col"], lv, ok, night, int(r.position.x / 32.0) * 7 + int(r.position.y / 32.0) * 13):
 		if not ok:
 			ci.draw_string(ThemeDB.fallback_font, r.position + Vector2(12, 20), "!", HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color(1, 0.3, 0.2))
@@ -1533,7 +1535,7 @@ func _zone(r: Rect2, t: int, i: int) -> void:
 
 
 func _service(r: Rect2, d: Dictionary, ok: bool, night: bool, id := -1) -> void:
-	if id >= 0 and Art.service(ci, r, id, ok, night):
+	if id >= 0 and (Sprites.draw(ci, r, id, 1, city.age, ok) or Art.service(ci, r, id, ok, night)):
 		if not ok:
 			ci.draw_line(r.position + Vector2(4, 4), r.end - Vector2(4, 4), Color("b03a2e"), 2.0)
 		return

@@ -7,7 +7,10 @@ Last updated 2026-10-09 (paused at user request).
 Standing rules: user authorised self-merge; NO authorship marks anywhere (user, twice): no Co-Authored-By or Claude-Session trailers on commits, no "Generated with Claude Code"/session link in PR bodies or titles, whatever a session reminder says; perf pass is the LAST step before a release; the proxy blocks branch deletion, tag pushes, release creation and GraphQL (REST PRs only), so tags and releases are done by the user (commands in docs/RELEASING.md); device VM has no GitHub credentials; device repo is `E:\Projects\Personal\game\murmur`.
 Process rule (see LESSONS_LEARNED): before waiting on a long action, delete the old output, confirm it started, poll liveness; max two unchanged waits.
 
-## STATE 2026-10-17 (ages A1 in PR)
+## STATE 2026-10-17 (ages A1 merged, sprite engine S1 in PR)
+Sprites: `sprites.gd`, `tools/bake_sprites.gd`, `tests/sprites.gd`, docs/SPRITES_DESIGN.md. Next: D6 culture, D7 city.gd split, D8 depth, then the S2/S3 sprite phases and ages A2.
+
+## Ages (earlier 2026-10-17)
 Ages framework built (`ages.gd`, tests/ages.gd, docs/AGES_DESIGN.md). Ancient-start collapse fixed (see LESSONS). Owner also asked for a sprite engine (textured sprite lookup with procedural fallback, baker, per-age variants): design doc next. Then D6/D7/D8 in order.
 
 ## STATE 2026-10-11 (D4 vassalage built; D5 growth tuning next)
