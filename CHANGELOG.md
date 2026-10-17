@@ -6,6 +6,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 ## [Unreleased]
 
 ### Added
+- Culture score (D6): hegemony score now includes culture, population x (0.6 culture coverage + 0.4 education coverage) x 0.4 (20% more with free schools), the peaceful route's currency. The Empire standings show each side's culture part. `tests/victory.gd`.
 - Sprite engine (S1): a PNG in `client/art/sprites/<age>/b<id>_<level>.png` replaces the procedural drawing of that building, with fallback through older ages and then the code art. `tools/bake_sprites.gd` renders all 87 current drawings to PNG templates. `tests/sprites.gd`, `docs/SPRITES_DESIGN.md`.
 - Ages (A1): towns advance Ancient, Medieval, Industrial, Modern by knowledge (population, education, culture), peak population, treasury and mood. The age gates buildings and units, and opens needs (fire, police, education; then power, water, sewage, waste, transit, health) that fade in over a 400 s per step grace period that holds while mood is low. The planner builds ahead of new needs and no longer takes on upkeep the treasury cannot carry for ten minutes. Setup option "Starting age" (default Modern: classic behaviour, saves load as Modern) and command `set_age`. An Ancient start survived 6 of 6 runs of 4200 s. `tests/ages.gd`, `docs/AGES_DESIGN.md`, wiki page.
 - Defeat choice: a player who loses every town sees the game-over panel with "Keep spectating" (the world plays on, Tab and auto-follow work) or "Quit". `tests/defeat.gd`.
