@@ -1643,7 +1643,7 @@ func _second() -> void:
 	pt = _pf("mood", pt)
 	_sickness()
 	pt = _pf("sickness", pt)
-	_traffic()
+	Traffic.tick(self)
 	pt = _pf("traffic", pt)
 	target -= 0.08 * congestion + 0.25 * float(sick_n) / maxf(pop, 1)
 	if pop >= 40 and float(flow.get("food_local", 1.0)) < 0.3:
@@ -1691,7 +1691,7 @@ func _second() -> void:
 	if human:
 		_civics()
 		_milestones()
-	_sync_buses()
+	Traffic.sync_buses(self)
 
 	hist_t += 1
 	if hist_t >= 2:
@@ -2139,7 +2139,7 @@ func _planner() -> void:
 		return
 	if _plan_net():
 		return
-	if auto_mode == 2 and congestion > 0.25 and unlocked(T.AVENUE) and rng.randf() < 0.3 and _plan_traffic():
+	if auto_mode == 2 and congestion > 0.25 and unlocked(T.AVENUE) and rng.randf() < 0.3 and Traffic.widen(self):
 		return
 	if rng.randf() < 0.6 and _plan_service():
 		return
@@ -2833,7 +2833,7 @@ func _move(dt: float) -> void:
 		if path.is_empty():
 			b["wait"] = float(b["wait"]) - dt
 			if float(b["wait"]) <= 0.0:
-				_bus_route(b)
+				Traffic.bus_route(self, b)
 			continue
 		var step := WALK * 2.2 * dt * sm
 		var pi: int = b["pi"]
@@ -3395,100 +3395,6 @@ func _sickness() -> void:
 		citizens.erase(c)
 		msg = "%s did not survive the illness." % c.nm
 		_log(msg)
-
-
-## Cars leave a trail on each road cell they cross; jams form where it piles up.
-func _traffic() -> void:
-	drivers = 0
-	for i in cells:
-		traffic[i] *= 0.7
-	for c in citizens:
-		if c.car and c.path.size() > 0:
-			var q := Vector2i(c.pos.floor())
-			if inside(q.x, q.y):
-				traffic[q.y * W + q.x] += 1.0
-				drivers += 1
-	var cs := 0.0
-	var n := 0
-	for i in cells:
-		if traffic[i] > 0.3:
-			n += 1
-			cs += clampf((traffic[i] - (8.0 if grid[i] == T.AVENUE else 3.0)) / 4.0, 0.0, 1.0)
-	congestion = cs / maxf(n, 1)
-
-
-## Upgrades the busiest plain road (and up to 3 neighbours in line) to an avenue.
-func _plan_traffic() -> bool:
-	var best := -1
-	var bv := 3.0
-	for i in cells:
-		if grid[i] == T.ROAD and traffic[i] > bv:
-			bv = traffic[i]
-			best = i
-	if best < 0:
-		return false
-	var c := cell(best)
-	var axis := Vector2i(1, 0) if is_road(at(c.x + 1, c.y)) or is_road(at(c.x - 1, c.y)) else Vector2i(0, 1)
-	var n := 0
-	for k in range(-2, 3):
-		var q := c + axis * k
-		if inside(q.x, q.y) and grid[q.y * W + q.x] == T.ROAD and coins >= 7.0:
-			grid[q.y * W + q.x] = T.AVENUE
-			coins -= 7.0
-			n += 1
-	roads_dirty = true
-	msg = "Planners widened a jammed street into an avenue."
-	_scan()
-	return n > 0
-
-
-func _sync_buses() -> void:
-	var stops: Array = bt.get(T.BUS, [])
-	var keep: Array = []
-	for b in buses:
-		if stops.has(b["stop"]):
-			keep.append(b)
-	buses = keep
-	for s in stops:
-		var has := false
-		for b in buses:
-			if b["stop"] == s:
-				has = true
-		var r := _road_next_to(s)
-		if not has and r >= 0:
-			buses.append({"stop": s, "pos": center(r), "path": PackedVector2Array(), "pi": 0, "wait": 1.0, "out": false, "dir": Vector2.RIGHT})
-
-
-func _bus_route(b: Dictionary) -> void:
-	var goal: int = b["stop"]
-	if not b["out"]:
-		var opts: Array = spots.duplicate()
-		if plaza >= 0:
-			opts.append(plaza)
-		if opts.is_empty():
-			b["wait"] = 5.0
-			return
-		goal = opts[rng.randi() % opts.size()]
-	var gr := _road_next_to(goal)
-	var p: Vector2 = b["pos"]
-	var fr := Vector2i(p.floor())
-	if gr < 0 or not inside(fr.x, fr.y) or not is_road(grid[fr.y * W + fr.x]):
-		var r := _road_next_to(b["stop"])
-		if r >= 0:
-			b["pos"] = center(r)
-		b["wait"] = 3.0
-		return
-	var ids := astar.get_id_path(fr, cell(gr))
-	if ids.size() < 2:
-		b["wait"] = 4.0
-		b["out"] = not b["out"]
-		return
-	var pts := PackedVector2Array()
-	for q in ids:
-		pts.append(Vector2(q) + Vector2(0.5, 0.5))
-	b["path"] = pts
-	b["pi"] = 1
-	b["out"] = not b["out"]
 
 
 # ---------- economy: crops -> food, goods, storage, trade ----------
