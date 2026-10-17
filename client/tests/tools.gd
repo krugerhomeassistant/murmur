@@ -77,5 +77,38 @@ func _init() -> void:
 	if float(with.prod_rate["crops"]) <= plain * 1.1:
 		ok = false
 		print("FAIL tools bonus: %s vs %s" % [with.prod_rate["crops"], plain])
+	# sawmill: wood becomes planks, planks speed up building sites, no planks leaves the speed alone
+	var sm := _town()
+	sm.ground.fill(World.K.PLAIN)
+	_place(sm, Catalog.Id.SAWMILL)
+	sm.jobs = 100
+	sm.employed = 100
+	sm.coins = 0.0
+	sm.stock["wood"] = 50.0
+	sm.stock["planks"] = 0.0
+	sm._trade(1.0)
+	if float(sm.stock["planks"]) <= 0.0 or float(sm.stock["wood"]) >= 50.0:
+		ok = false
+		print("FAIL sawmill: planks %s wood %s" % [sm.stock["planks"], sm.stock["wood"]])
+	var site := -1
+	for i in sm.zones:
+		site = i
+		break
+	if site >= 0:
+		sm.lvl[site] = 0
+		sm.build[site] = 0.1
+		sm.stock["planks"] = 50.0
+		sm._trade(1.0)
+		if sm.plank_mult <= 1.0:
+			ok = false
+			print("FAIL planks should speed up a building site: %s" % sm.plank_mult)
+		sm.stock["planks"] = 0.0
+		sm.stock["wood"] = 0.0
+		sm._trade(1.0)
+		if sm.plank_mult != 1.0:
+			ok = false
+			print("FAIL no planks, no bonus: %s" % sm.plank_mult)
+	else:
+		print("NOTE no zone in the start town: site check skipped")
 	print("TOOLS_OK" if ok else "TOOLS_FAIL")
 	quit()

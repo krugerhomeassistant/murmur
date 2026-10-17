@@ -6,6 +6,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 ## [Unreleased]
 
 ### Added
+- Planks (E4 slice 2): a ninth market good and the Sawmill, which turns wood into planks. Building sites with planks in stock finish up to 25% faster. Planners build sawmills after a lumber camp. `tests/tools.gd` extended.
 - Sandbox and gods-eye view plan: `docs/SANDBOX_DESIGN.md` (phases G1 to G5: scenario setup, sandbox editor, god powers, globe view, real-world map) and an ordered work list in `docs/PLAN.md`. Design only; no gameplay change.
 - Wood and tools chain (E4 slice 1): two new goods on the market, wood (0.7) and tools (3.5). Lumber camps cut the forest around them; toolworks turn wood and metal into tools; farms, mines and factories with tools in stock produce up to 15% more. Planners build both. `tests/tools.gd`.
 - Culture score (D6): hegemony score now includes culture, population x (0.6 culture coverage + 0.4 education coverage) x 0.4 (20% more with free schools), the peaceful route's currency. The Empire standings show each side's culture part. `tests/victory.gd`.

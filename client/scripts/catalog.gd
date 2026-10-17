@@ -9,7 +9,7 @@ enum Id {
     PARK, PLAYGROUND, PLAZA, CINEMA, MUSEUM, STADIUM, THEME,
     BUS, TRAIN, WIND, SOLAR, COAL, WATER, LANDFILL, RECYCLE,
     MARKET, BANK, MALL, HOTEL, TOWNHALL, WIRE, PIPE, LIGHT, COURT, PRISON, COTTAGE, TOWNHOUSE, TENEMENT, CONDO, CHURCH, BAR, UNION_HALL, CHAMBER, BASE, BARRACKS, RADAR, MILL, WAREHOUSE, DEPOT, SEWAGE, SEWER, PORT, NAVYARD, FISHDOCK,
-    ORCHARD, RANCH, MINE, FOUNDRY, GREENHOUSE, FISHFARM, ARMOURY, LUMBER, TOOLWORKS,
+    ORCHARD, RANCH, MINE, FOUNDRY, GREENHOUSE, FISHFARM, ARMOURY, LUMBER, TOOLWORKS, SAWMILL,
 }
 
 const CATS := [
@@ -362,6 +362,10 @@ const DEFS := {
         "r": 0, "prov": {}, "jobs": 8, "poll": [2, 0.2], "chain": "tools", "shape": "chimney",
         "desc": "Makes tools from wood and metal (0.3 wood and 0.15 metal a second become 0.3 tools). Farms, mines and factories with tools in stock produce up to 15% more.",
         "tip": "Needs wood (a lumber camp) and metal (a foundry), or suppliers across the border."},
+    Id.SAWMILL: {"n": "Sawmill", "cat": "trade", "kind": "svc", "cost": 140, "up": 0.6, "unlock": 80, "col": Color("a07a4a"), "g": "Sa",
+        "r": 0, "prov": {}, "jobs": 6, "poll": [2, 0.1], "chain": "planks", "shape": "chimney",
+        "desc": "Saws wood into planks: 0.5 wood a second becomes 0.25 planks. Building sites with planks in stock finish up to 25% faster.",
+        "tip": "Needs wood: a lumber camp, or a supplier across the border."},
     Id.ARMOURY: {"n": "Armoury", "cat": "mil", "kind": "svc", "cost": 420, "up": 1.5, "unlock": 160, "col": Color("6b6a52"), "g": "Ar",
         "r": 0, "prov": {}, "jobs": 10, "poll": [3, 0.3], "chain": "arms", "shape": "fort",
         "desc": "Turns metal into arms (up to 0.25 metal a second becomes 0.5 arms). Every soldier, tank and plane costs arms to train: make them from your own metal, or buy them abroad at a premium that rises in wartime.",
