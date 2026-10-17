@@ -6,6 +6,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 ## [Unreleased]
 
 ### Added
+- Infrastructure design: `docs/INFRASTRUCTURE_DESIGN.md` for E5 (rail, ports, power tiers), including which OpenTTD mechanics are adopted or skipped (ideas only, no code or assets). Design only.
 - Household view (E4 household v2 part 2): hovering a home shows its residents' average savings and how many are broke. `tests/households.gd` checks the per-home totals.
 - Maintenance and wear (E4 slice 3): road upkeep is split into upkeep and a Maintenance budget line (same total). While the treasury is empty, wear builds up to 1 in about 8 minutes, cutting production up to 20% and mood by up to 10%; funded crews recover it in about 4. `tests/wear.gd` (in CI).
 - Planks (E4 slice 2): a ninth market good and the Sawmill, which turns wood into planks. Building sites with planks in stock finish up to 25% faster. Planners build sawmills after a lumber camp. `tests/tools.gd` extended.
