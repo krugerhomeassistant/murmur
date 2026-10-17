@@ -9,7 +9,7 @@ enum Id {
     PARK, PLAYGROUND, PLAZA, CINEMA, MUSEUM, STADIUM, THEME,
     BUS, TRAIN, WIND, SOLAR, COAL, WATER, LANDFILL, RECYCLE,
     MARKET, BANK, MALL, HOTEL, TOWNHALL, WIRE, PIPE, LIGHT, COURT, PRISON, COTTAGE, TOWNHOUSE, TENEMENT, CONDO, CHURCH, BAR, UNION_HALL, CHAMBER, BASE, BARRACKS, RADAR, MILL, WAREHOUSE, DEPOT, SEWAGE, SEWER, PORT, NAVYARD, FISHDOCK,
-    ORCHARD, RANCH, MINE, FOUNDRY, GREENHOUSE, FISHFARM, ARMOURY,
+    ORCHARD, RANCH, MINE, FOUNDRY, GREENHOUSE, FISHFARM, ARMOURY, LUMBER, TOOLWORKS,
 }
 
 const CATS := [
@@ -354,6 +354,14 @@ const DEFS := {
         "r": 0, "prov": {}, "jobs": 8, "poll": [3, 0.3], "chain": "foundry", "shape": "chimney",
         "desc": "Smelts ore into metal, up to 2 ore a second. Metal sells for far more than ore, and factories turn it into extra goods.",
         "tip": "Needs a mine. One foundry per 3-4 mine plots."},
+    Id.LUMBER: {"n": "Lumber camp", "cat": "trade", "kind": "svc", "cost": 90, "up": 0.4, "unlock": 40, "col": Color("6a8a4a"), "g": "Lu",
+        "r": 0, "prov": {}, "jobs": 5, "chain": "wood", "shape": "",
+        "desc": "Fells the forest within 5 tiles: up to 0.24 wood a second, more the more trees stand around it. Wood is the first raw material of the tool chain and sells on the market.",
+        "tip": "Site it at the edge of a forest (green on the map). Toolworks turn the wood into tools."},
+    Id.TOOLWORKS: {"n": "Toolworks", "cat": "trade", "kind": "svc", "cost": 200, "up": 0.8, "unlock": 150, "col": Color("7a6a5a"), "g": "To",
+        "r": 0, "prov": {}, "jobs": 8, "poll": [2, 0.2], "chain": "tools", "shape": "chimney",
+        "desc": "Makes tools from wood and metal (0.3 wood and 0.15 metal a second become 0.3 tools). Farms, mines and factories with tools in stock produce up to 15% more.",
+        "tip": "Needs wood (a lumber camp) and metal (a foundry), or suppliers across the border."},
     Id.ARMOURY: {"n": "Armoury", "cat": "mil", "kind": "svc", "cost": 420, "up": 1.5, "unlock": 160, "col": Color("6b6a52"), "g": "Ar",
         "r": 0, "prov": {}, "jobs": 10, "poll": [3, 0.3], "chain": "arms", "shape": "fort",
         "desc": "Turns metal into arms (up to 0.25 metal a second becomes 0.5 arms). Every soldier, tank and plane costs arms to train: make them from your own metal, or buy them abroad at a premium that rises in wartime.",
