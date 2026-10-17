@@ -234,7 +234,7 @@ off_dem = clamp((pop*0.25 - off_jobs) / 6 * (0.4 + 0.6*cov["edu"]) - tc + mod("d
 
 Demand gates two things:
 
-- Upgrading a built zone one level (`_grow`): needs `dem_for(t) > 0.15`, `mood > 0.45`, coins above the threshold in Construction, and passes a 8% per-second dice roll per zone.
+- Upgrading a built zone one level (`_grow`): needs `dem_for(t) > 0.15`, `mood > 0.35`, coins above the threshold in Construction, and passes a 8% per-second dice roll per zone.
 - The planner's choice of what to zone next (`_planner`): a kind is skipped if its demand is below -0.2 (mines are exempt), and the pick is random with weight `max(dem, 0) * 3 + 0.5`. Apartments are only offered when `res_dem >= 0.3` and `pop >= housing * 0.9`; mines need a pop of 60 and wait for foundry capacity (`mine_jobs < 8 + 12 * foundries`).
 
 Demand does not gate the first building on a freshly painted zone: any connected empty zone starts construction when the treasury allows (next section).
