@@ -2,7 +2,7 @@
 
 # Buildings and tiles
 
-68 placeable things in 12 categories. `unlock` is the population (peak) at which the Build menu offers it. Costs are coins; `upkeep` is coins per second before the town-size and policy multipliers (see [Economy](economy.md)).
+69 placeable things in 12 categories. `unlock` is the population (peak) at which the Build menu offers it. Costs are coins; `upkeep` is coins per second before the town-size and policy multipliers (see [Economy](economy.md)).
 
 How to read an entry: **Radius** is the service reach in tiles (Manhattan diamond); **Provides** lists the city-stat coverage it adds (see [City stats](stats.md)); **Output** is the network supply it adds (power, water, sewage units); **Jobs** is staff; **Pollution** is `[radius, strength]`; **Tourism** is visitor income strength; **Visited** means citizens walk there as a leisure destination; **Grant** is a free income (coins per second, scaled by `RATE`).
 
@@ -1194,6 +1194,7 @@ Turns metal into arms (up to 0.25 metal a second becomes 0.5 arms). Every soldie
 | [Foundry](#foundry) | 220 | 1 | 120 | svc |
 | [Lumber camp](#lumber-camp) | 90 | 0.4 | 40 | svc |
 | [Toolworks](#toolworks) | 200 | 0.8 | 150 | svc |
+| [Sawmill](#sawmill) | 140 | 0.6 | 80 | svc |
 | [Warehouse](#warehouse) | 120 | 0.4 | 30 | svc |
 | [Trade depot](#trade-depot) | 300 | 1 | 60 | svc |
 
@@ -1296,6 +1297,23 @@ Makes tools from wood and metal (0.3 wood and 0.15 metal a second become 0.3 too
 | Map colour / letter | `#7a6a5a` / `To` |
 
 *Tip:* Needs wood (a lumber camp) and metal (a foundry), or suppliers across the border.
+
+### Sawmill
+
+Saws wood into planks: 0.5 wood a second becomes 0.25 planks. Building sites with planks in stock finish up to 25% faster.
+
+| | |
+|---|---|
+| Id | `SAWMILL` |
+| Cost / upkeep | 140 / 0.6 per s |
+| Unlocks at | 80 population |
+| Kind | svc |
+| Jobs | 6 |
+| Pollution | radius 2, strength 0.1 |
+| Production chain | planks |
+| Map colour / letter | `#a07a4a` / `Sa` |
+
+*Tip:* Needs wood: a lumber camp, or a supplier across the border.
 
 ### Warehouse
 

@@ -1117,7 +1117,7 @@ var mk_stats: RichTextLabel
 var mk_note: Label
 var mk_towns: GridContainer
 var mk_tape: Label
-const MK_NAMES := {"crops": "Crops", "food": "Food", "goods": "Goods", "ore": "Ore", "metal": "Metal", "arms": "Arms", "wood": "Wood", "tools": "Tools"}
+const MK_NAMES := {"crops": "Crops", "food": "Food", "goods": "Goods", "ore": "Ore", "metal": "Metal", "arms": "Arms", "wood": "Wood", "tools": "Tools", "planks": "Planks"}
 const MK_TF := [["10 s", 1], ["1 min", 6], ["5 min", 30]]  # label, candles merged
 const MK_SHOW := 60  # candles on the chart
 const MK_UP := Color("6fbf73")
