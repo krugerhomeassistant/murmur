@@ -89,6 +89,19 @@ func _init() -> void:
 		w_paid += ct.wealth
 	if plain.citizens.size() > 3 and w_paid <= w_plain:
 		errs.append("cost-of-living payments should leave households with more savings (%.1f vs %.1f)" % [w_paid, w_plain])
+	# families: a jobless resident sharing a home with a richer one ends up closer to the home average
+	var fam := _town(Signals.new())
+	for ct in fam.citizens:
+		ct.wealth = 0.0
+	var grp: Array = []
+	for ct in fam.citizens:
+		if ct.home == fam.citizens[0].home:
+			grp.append(ct)
+	if grp.size() > 1:
+		grp[0].wealth = 100.0
+		fam._households()
+		if float(grp[1].wealth) < 5.0:
+			errs.append("family sharing: housemate of a saver stayed at %.1f" % float(grp[1].wealth))
 	# per-home view: residents and broke counts add up to the town's
 	var hres := 0
 	var hbroke := 0

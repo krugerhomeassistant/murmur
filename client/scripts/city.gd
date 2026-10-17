@@ -111,6 +111,7 @@ var net_val := {}  # metric -> PackedFloat32Array per cell: satisfaction 0..1 wh
 const WAGE := 0.30  # base wage per employed citizen per sim second, before tax
 const WAGE_LAG := 0.003  # wages chase the cost of living at this rate per second (about 5 minutes)
 const RENT := 0.04  # rent per resident per second at tier 1
+const FAMILY_SHARE := 0.2  # share of the gap to the home average that closes each second
 const BROKE := 8.0  # savings under this: the household cannot make ends meet
 const UPGRADE_WEALTH := 20.0  # average savings per resident needed per current building level to upgrade a home
 const WAGE_TIER := {"office": 1.8, "mine": 1.2, "ind": 1.1, "com": 1.0, "farm": 0.8, "orchard": 0.9, "ranch": 0.9, "green": 0.9, "fishfarm": 0.9}
@@ -1935,6 +1936,27 @@ func _households() -> void:
 		hw[1] = int(hw[1]) + 1
 		hw[2] = int(hw[2]) + (1 if c.wealth < BROKE else 0)
 		home_w[c.home] = hw
+	# families: residents of one home share their money, so a jobless member is carried by the earners and a broke home is one where nobody earns enough
+	for c in citizens:
+		var hw: Array = home_w.get(c.home, [])
+		if hw.size() > 2 and int(hw[1]) > 1:
+			var avg := float(hw[0]) / int(hw[1])
+			c.wealth += (avg - c.wealth) * FAMILY_SHARE
+	broke = 0
+	rich = 0
+	ws.clear()
+	home_w.clear()
+	for c in citizens:
+		if c.wealth < BROKE:
+			broke += 1
+		elif c.wealth > 120.0:
+			rich += 1
+		ws.append(c.wealth)
+		var hw2: Array = home_w.get(c.home, [0.0, 0, 0])
+		hw2[0] = float(hw2[0]) + c.wealth
+		hw2[1] = int(hw2[1]) + 1
+		hw2[2] = int(hw2[2]) + (1 if c.wealth < BROKE else 0)
+		home_w[c.home] = hw2
 	var n := citizens.size()
 	hardship = float(broke) / maxf(n, 1.0)
 	ws.sort()
