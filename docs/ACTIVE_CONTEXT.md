@@ -8,7 +8,7 @@ Standing rules: user authorised self-merge; NO authorship marks anywhere (user, 
 Process rule (see LESSONS_LEARNED): before waiting on a long action, delete the old output, confirm it started, poll liveness; max two unchanged waits.
 
 ## STATE 2026-10-17 (ages A1 merged, sprite engine S1 in PR)
-Sprites: `sprites.gd`, `tools/bake_sprites.gd`, `tests/sprites.gd`, docs/SPRITES_DESIGN.md. Next: D6 culture, D7 city.gd split, D8 depth, then the S2/S3 sprite phases and ages A2.
+Sprites: `sprites.gd`, `tools/bake_sprites.gd`, `tests/sprites.gd`, docs/SPRITES_DESIGN.md. Next: D6 culture, D7 city.gd split, D8 depth, ages A2; art (S2/S3, character detail) is LAST in the plan and gated on no performance loss (owner).
 
 ## Ages (earlier 2026-10-17)
 Ages framework built (`ages.gd`, tests/ages.gd, docs/AGES_DESIGN.md). Ancient-start collapse fixed (see LESSONS). Owner also asked for a sprite engine (textured sprite lookup with procedural fallback, baker, per-age variants): design doc next. Then D6/D7/D8 in order.
