@@ -148,6 +148,22 @@ Goal: Murmur, a cozy interactive city-builder (Godot) with an optional Live Data
 - [ ] D9 Perf pass, benchmark table, release.
 Found on 2026-10-09: the game has no victory condition at all, and war needs temper below -0.7 plus a 40% roll per event, which is why it feels rare.
 
+## Order of work (2026-10-17)
+1. D8 depth layers: E4 economy (wood, tools, planks done; next upkeep and maintenance, household v2), E5 infrastructure (rail, ports, power tiers), E6 military (sieges, air, command UI), E3 group multiplayer.
+2. Ages A2: early-age content (huts, wells, spearmen, galleys) and an Ancient default start.
+3. Sandbox and gods-eye view (G1 to G5, below).
+4. D9 performance pass, benchmark table, release.
+5. Art pass (last).
+D5 growth tuning and D7 `city.gd` splits continue alongside whenever a step touches them.
+
+## Sandbox and gods-eye view (owner, 2026-10-17): READ docs/SANDBOX_DESIGN.md
+Vision: a gods-eye-view world (like github.com/bilawalsidhu/gods-eye-view) with Black & White style powers; set the world to any age, place any number of towns or units in any age; the default game starts you in control of your own area (continent, province or state), also as a selector.
+- [ ] G1 Scenario setup: per-town age, number and size of towns, area to control (presets One town, Province, Continent), seed and world size. `tests/scenario.gd`. Needs ages A2.
+- [ ] G2 Sandbox editor: place towns and units, set ages, treasury, population, terrain brush; all host-only `Cmd`s with one undo. `tests/sandbox.gd`.
+- [ ] G3 God powers: belief pool, benevolent and wrathful powers built on the event and disaster code. `tests/powers.gd`.
+- [ ] G4 Globe and gods-eye view: whole-world view above the M view, overlays, click to enter a town; flat map first, sphere only if free. Rendering benchmark first.
+- [ ] G5 Real-world map mode: open data (Natural Earth), baked offline, real cities and coasts; licensing review first. `tests/realmap.gd`.
+
 ## LAST in the whole plan (owner, 2026-10-17): art
 Everything else comes first. Visual detail (characters, units, buildings, sprites S2/S3 in docs/SPRITES_DESIGN.md) is not crucial, and sprites ship only if the benchmark shows no performance loss; otherwise improve the procedural drawings instead.
 - [ ] Art pass: S2 units/terrain sprites, S3 generation pipeline, character and unit detail. Gate: standard benchmark equal or better.
