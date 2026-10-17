@@ -41,6 +41,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 - Planner towns could never link a border: the border road was laid as a straight line and gave up for good at the first building in the way (`tests/spectate.gd` failed about 1 run in 4). It now finds a route around buildings, preferring dry land.
 
 ### Changed
+- Efficiency engine: mood no longer halts building. `City.efficiency()` (mood / 0.5, at most 1) scales construction speed, the upgrade roll and how often the planner zones; only mood 0 stops it. Replaces the hard mood gates (planner 0.38, upgrades 0.35). Six fresh towns, two batches: 8 of 12 reach 300 people (before 5 to 7 of 12). `tests/efficiency.gd`.
 - Growth (D5, gate 2): buildings may be upgraded from mood 0.35 (was 0.45); planner towns hover at 0.30 to 0.43 mood, so they almost never levelled up. Six fresh towns, two batches: time to 100 people 610 to 978 s (was 830 to 1050 s), mean population at the 4800 s cap 265 (was 238). Households test town now reaches 322 people.
 - Growth (D5, gate 1): a town below the planner's mood gate that has no service left to build now keeps zoning when it needs homes, instead of sitting on its treasury. Six fresh towns: 0 of 6 reached 300 people in 4800 s before, 7 of 12 after.
 - Rivers of the endless world rise at the foot of the hills instead of crossing mountains, and are smoother; your starting town is always placed with some water nearby.

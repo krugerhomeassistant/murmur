@@ -23,6 +23,7 @@ const DIAMOND: Array[int] = [-2 * W, -W - 1, -W, -W + 1, -2, -1, 0, 1, 2, W - 1,
 const WALK := 2.4  # cells per sim second
 const GROW_COST := 25.0
 const BUILD_SECS := 8.0
+const EFF_FULL_MOOD := 0.5  # from this mood up the town works at full efficiency; below it efficiency falls in a straight line to 0 at mood 0
 const DIRS: Array[Vector2i] = [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]
 
 
@@ -1806,14 +1807,14 @@ func _grow() -> void:
 			continue
 		if lvl[i] == 0:
 			if build[i] > 0.0:
-				build[i] += maxf(mod("build_mult"), 1.0) / BUILD_SECS
+				build[i] += maxf(mod("build_mult"), 1.0) / BUILD_SECS * efficiency()
 				if build[i] >= 1.0:
 					build[i] = 0.0
 					lvl[i] = 1
 					msg = "A new %s opened." % String(Catalog.DEFS[t]["n"]).to_lower().replace(" zone", "")
 			else:
 				empties.append(i)
-		elif lvl[i] < int(Catalog.DEFS[t]["max"]) and mood > 0.35 and dem_for(t) > 0.15 and coins > GROW_COST * scale * 4.0 + saving_for and rng.randf() < 0.08 and _can_upgrade(i):
+		elif lvl[i] < int(Catalog.DEFS[t]["max"]) and dem_for(t) > 0.15 and coins > GROW_COST * scale * 4.0 + saving_for and rng.randf() < 0.08 * efficiency() and _can_upgrade(i):
 			lvl[i] += 1
 			coins -= GROW_COST * scale * 1.6
 			msg = "A building was upgraded."
@@ -1827,6 +1828,12 @@ func _grow() -> void:
 		coins -= cost
 		build[i] = 0.01
 		starts += 1
+
+
+## How well the town gets things done, 0 to 1: construction speed, upgrades and how often the planner zones all scale with it.
+## Mood never halts building by itself; only mood 0 does (docs/wiki/economy.md, "Efficiency").
+func efficiency() -> float:
+	return clampf(mood / EFF_FULL_MOOD, 0.0, 1.0)
 
 
 ## Housing upgrades are paid for by the people who live there; businesses upgrade when customers have money to spend.
@@ -2119,10 +2126,10 @@ func _planner() -> void:
 	if coins < saving_for:
 		return
 	if mood < (0.38 if pop >= 40 else 0.25):  # tiny towns must be allowed to bootstrap
-		if _plan_service(true):  # raise mood first, otherwise a low-mood town never zones again
+		if _plan_service(true):  # raise mood first
 			return
-		if res_dem <= 0.3:  # nothing left to build for mood: a town that needs homes must still grow, not sit on its treasury
-			return
+	if rng.randf() >= efficiency():  # an unhappy town zones less often, never not at all
+		return
 	var open := 0
 	for i in cells:
 		if is_zone(grid[i]) and lvl[i] == 0:

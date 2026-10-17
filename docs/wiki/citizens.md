@@ -256,7 +256,7 @@ Individual mood is shown in the citizen panel and used for the tribe averages; i
 
 | Mood | Consequence | Where |
 |---|---|---|
-| > 0.35 | zones may be upgraded a level (together with demand and coins) | `_grow` |
+| any (rate x efficiency) | zones may be upgraded a level (together with demand and coins); the 8% per-second roll is multiplied by `efficiency()` | `_grow` |
 | > 0.35 | immigration allowed if there is free housing | `_second` |
 | < 0.2 | one random citizen leaves each second; protest begins | `_second` |
 | < 0.25 (< 0.38 above pop 40) | the planner stops zoning and only builds services | `_planner` |
