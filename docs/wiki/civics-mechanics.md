@@ -10,7 +10,7 @@ Conventions used below:
 
 ## Summary
 
-- Approval is a slowly moving number between 0 and 1. Each second it moves at most 0.004 towards a target built from city mood, income, crime, tribe opinion, reputation and penalties (`City._civics`).
+- Approval is a slowly moving number between 0 and 1. Each second it moves at most 0.004 towards a target built from city mood, income, crime, tribe opinion, reputation and penalties (`Mayor.civics`).
 - Tribes send petitions. Accepting one creates a promise with a deadline in days. Delivering it raises favour and reputation; missing it, or ignoring or declining a petition, lowers them.
 - An election runs at the end of every 28-day year. The vote is approval plus or minus up to 4 points. Under 50% the game is over.
 - Events are picked at random every 35 to 75 seconds (scaled by difficulty), weighted by their `w`, by the season and by the town size. Their modifiers merge with policy, tribe, season and war modifiers in `City._collect_mods`.
@@ -37,7 +37,7 @@ Every decision button goes through `Cmd.run("answer", [idx, bool])`, `Cmd.run("r
 
 ## Approval
 
-`City._civics` runs once per second for a human town. After handling promises, petitions and the petition timer (below) it computes a target and nudges `approval` towards it:
+`Mayor.civics` runs once per second for a human town. After handling promises, petitions and the petition timer (below) it computes a target and nudges `approval` towards it:
 
 ```
 op     = sum over tribes of  tribe_share[k] * (tribe_mood[k] - 0.5)
@@ -112,14 +112,14 @@ Two hidden numbers carry the history of your decisions:
 - `rep` is a single city-wide reputation added directly to the approval target. Clamped to -0.3..0.3. It drifts to zero by 0.0004 per second (about 0.024 per day).
 - `favor[tribe]` is a per-tribe bonus or penalty added to that tribe's satisfaction score before the opinion is computed. Clamped to -0.4..0.4 and drifts to zero by 0.0008 per second (about 0.048 per day).
 
-Both decay in `City._civics`. The events that change them:
+Both decay in `Mayor.civics`. The events that change them:
 
 | Event | `favor[tribe]` | `rep` | Function |
 |---|---|---|---|
 | Accept a petition | +0.05 | none | `City.answer` |
 | Decline a petition (or let it expire) | -0.12 | -0.02 | `City.answer` with `yes = false` |
-| Promise kept | +0.20 | +0.06 | `City._civics` |
-| Promise broken | -0.30 | -0.10 | `City._civics` |
+| Promise kept | +0.20 | +0.06 | `Mayor.civics` |
+| Promise broken | -0.30 | -0.10 | `Mayor.civics` |
 | Fund a rebuild after a disaster | none | +0.04 | `City.answer` (kind `recover`) |
 | Campaign rally | none | +0.07 | `City.rally` |
 | Win a war by occupation | none | +0.10 (winner), -0.10 (loser) | `Diplo.surrender` |
@@ -130,7 +130,7 @@ Because `rep` goes straight into the target, +0.07 from a rally raises the targe
 
 ### Raising a petition
 
-`pet_t` starts at 40 and counts down by 1 each second in `_civics`. At zero it is reset to a random 70 to 130 seconds and `City._raise_petition` runs. The petition is dropped immediately (nothing happens until the next timer) if any of these hold:
+`pet_t` starts at 40 and counts down by 1 each second in `Mayor.civics`. At zero it is reset to a random 70 to 130 seconds and `City._raise_petition` runs. The petition is dropped immediately (nothing happens until the next timer) if any of these hold:
 
 - the town is not human, or `pop < 12`, or three or more decisions are already open (`petitions.size() >= 3`; offers, demands and recovery offers count in this list).
 
@@ -146,7 +146,7 @@ One candidate is chosen uniformly at random. It gets `kind = "petition"` and `ex
 
 ### Need types
 
-`City._met(need, have)` evaluates the need each second while a promise is open:
+`Mayor.met(need, have)` evaluates the need each second while a promise is open:
 
 | Need key | Condition |
 |---|---|
@@ -168,11 +168,11 @@ One candidate is chosen uniformly at random. It gets `kind = "petition"` and `ex
 - For kinds `offer` and `demand` it forwards to `Diplo.resolve` (see [war.md](war.md)).
 - For kind `recover` yes pays the rebuild cost, calls `_rebuild` and counts as a survived disaster; no clears the ruins and does not.
 
-A petition that sits unanswered past `expires` (`day > expires`) is auto-declined with `answer(idx, false)` inside `_civics`, which costs the same -0.12 favour and -0.02 reputation as a refusal.
+A petition that sits unanswered past `expires` (`day > expires`) is auto-declined with `answer(idx, false)` inside `Mayor.civics`, which costs the same -0.12 favour and -0.02 reputation as a refusal.
 
 ### Delivery and failure
 
-Each second `_civics` checks every promise:
+Each second `Mayor.civics` checks every promise:
 
 - if `_met` is true the promise is removed, `kept += 1`, favour +0.20, rep +0.06, a "good" sound and a headline;
 - else if `day > deadline` it is removed, `broken += 1`, favour -0.30, rep -0.10 and a "bad" sound.
@@ -184,7 +184,7 @@ The deadline is inclusive of the day it names: accepting a 3-day petition on day
 ## Elections and game over
 
 - `next_election` starts at `Civics.YEAR_DAYS + 1 = 29` and grows by 28 after each vote. The first election is on day 29, then 57, 85 and so on.
-- `City._new_day` (called when the day counter increments in `tick`) posts "Election in 3 days. Polls put you at N%." when `next_election - day == 3`.
+- `Mayor.new_day` (called when the day counter increments in `tick`) posts "Election in 3 days. Polls put you at N%." when `next_election - day == 3`.
 - On the election day: `vote = clamp(approval + uniform(-0.04, 0.04), 0, 1)`, stored in `last_vote`; `next_election += 28`; `rally_used = false`.
 - `vote >= 0.5` wins: `elections_won += 1`, a headline and the "chime" sound. Otherwise `over = "Voted out. You won only N% of the vote on day D."`.
 
@@ -221,7 +221,7 @@ Advisors can disagree with each other; they only describe one dimension each.
 
 ## Milestones
 
-`City._milestones` runs each second for a human town. For each entry of `Civics.MILESTONES`: if it is not yet in `done_ms` and `float(get(stat)) >= v`, then `done_ms[id] = day`, `coins += reward`, a "Milestone: ..." headline (with "(+$N)" when the reward is non-zero), a log line and the "chime" sound. The `stat` names are City properties read with `get()`:
+`Mayor.milestones` runs each second for a human town. For each entry of `Civics.MILESTONES`: if it is not yet in `done_ms` and `float(get(stat)) >= v`, then `done_ms[id] = day`, `coins += reward`, a "Milestone: ..." headline (with "(+$N)" when the reward is non-zero), a log line and the "chime" sound. The `stat` names are City properties read with `get()`:
 
 | `stat` | City property | Notes |
 |---|---|---|
@@ -427,11 +427,11 @@ Not saved, recomputed or reset on load: the countdowns `pet_t`, `ev_t`, `next_fi
 |---|---|
 | Static data: seasons, petitions, milestones, ranks, loans, rally cost | `client/scripts/civics.gd` (`Civics.SEASONS`, `PETITIONS`, `MILESTONES`, `RANKS`, `LOANS`, `RALLY_COST`, `YEAR_DAYS`) |
 | Event catalogue and `pick` | `client/scripts/events.gd` (`WorldEvents.EVENTS`, `pick`, `describe`) |
-| Approval, promises, petition timer | `City._civics` |
+| Approval, promises, petition timer | `Mayor.civics` |
 | Petition creation, answers | `City._raise_petition`, `City.answer`, `City._met`, `City._open_ids` |
-| Elections, rally | `City._new_day`, `City.rally`, `City.tick` (game-over checks) |
+| Elections, rally | `Mayor.new_day`, `City.rally`, `City.tick` (game-over checks) |
 | Advisors | `City.advisors` |
-| Milestones | `City._milestones` |
+| Milestones | `Mayor.milestones` |
 | Loans, budget | `City.take_loan`, `City._money` (`e_loan`, `budget_lines`) |
 | Mood | `City._second` (the `target` block) |
 | Tribes | `City._tribes`, `City._tm`, `City._roll_tribe`, `Catalog.TRIBES` |

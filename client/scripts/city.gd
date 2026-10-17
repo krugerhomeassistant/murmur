@@ -1689,8 +1689,8 @@ func _second() -> void:
 			_log("%s repaid." % l["n"])
 	_unlocks()
 	if human:
-		_civics()
-		_milestones()
+		Mayor.civics(self)
+		Mayor.milestones(self)
 	Traffic.sync_buses(self)
 
 	hist_t += 1
@@ -3002,7 +3002,7 @@ func tick(dt: float) -> void:
 	if clock >= 24.0:
 		clock -= 24.0
 		day += 1
-		_new_day()
+		Mayor.new_day(self)
 	flush()
 	if roads_dirty:
 		_rebuild_astar()
@@ -3052,262 +3052,24 @@ func tick(dt: float) -> void:
 
 # ---------- mayor: petitions, promises, approval, elections ----------
 
-func _met(n: Dictionary, have := 0) -> bool:
-	if n.has("build"):
-		return (bt.get(int(n["build"]), []) as Array).size() > have
-	if n.has("cov"):
-		return float(cov.get(n["cov"][0], 0.0)) >= float(n["cov"][1])
-	if n.has("tax"):
-		return float(get("tax_" + String(n["tax"][0]))) <= float(n["tax"][1]) + 0.001
-	if n.has("policy"):
-		return is_policy(n["policy"])
-	if n.has("policy_off"):
-		return not is_policy(n["policy_off"])
-	if n.has("unemp"):
-		return unemp <= float(n["unemp"])
-	if n.has("event"):
-		return is_active(n["event"])
-	return false
-
-
-func _open_ids() -> Dictionary:
-	var o := {}
-	for p in petitions + promises:
-		o[String(p.get("id", ""))] = true
-	return o
-
-
-func _raise_petition() -> void:
-	if not human or pop < 12 or petitions.size() >= 3:
-		return
-	var open := _open_ids()
-	var opts: Array = []
-	for p in Civics.PETITIONS:
-		var id: String = p["id"]
-		var n: Dictionary = p["need"]
-		if open.has(id) or day - int(pet_recent.get(id, -99)) < 6 or pop < int(p.get("minpop", 15)):
-			continue
-		if float(tribe_share.get(p["tribe"], 0.0)) < 0.05 or crime < float(p.get("crime", 0.0)) or pollution < float(p.get("poll", 0.0)):
-			continue
-		if n.has("build"):
-			if not unlocked(int(n["build"])) or (bt.get(int(n["build"]), []) as Array).size() >= 1 + pop / 100:
-				continue
-		elif _met(n):
-			continue
-		if n.has("event") and mood > 0.55:
-			continue
-		opts.append(p)
-	if opts.is_empty():
-		return
-	var p: Dictionary = opts[rng.randi() % opts.size()].duplicate(true)
-	p["kind"] = "petition"
-	p["expires"] = day + 2
-	pet_recent[p["id"]] = day
-	petitions.append(p)
-	pet_ver += 1
-	msg = "Petition from the %s: %s" % [Catalog.TRIBES[p["tribe"]]["n"], p["t"]]
-	_log(msg)
-	sounds.append("petition")
-
+# ---------- mayor (rules in mayor.gd) ----------
 
 ## Answers decision idx. yes = accept the petition / fund the rebuild.
 func answer(idx: int, yes: bool) -> void:
-	if idx < 0 or idx >= petitions.size():
-		return
-	var p: Dictionary = petitions[idx]
-	petitions.remove_at(idx)
-	pet_ver += 1
-	if p["kind"] == "offer" or p["kind"] == "demand":
-		Diplo.resolve(self, p, yes)
-		return
-	if p["kind"] == "build":
-		var id := int(p["bid"])
-		var at := int(p["cell"])
-		var d: Dictionary = Catalog.DEFS.get(id, {})
-		var free: bool = at >= 0 and at < grid.size() and (lamp[at] == 0 and is_road(grid[at]) if id == T.LIGHT else grid[at] == T.EMPTY)
-		if not yes or d.is_empty() or not free or coins < float(p["cost"]):
-			vetoed[str(id)] = day + 10
-			return
-		if id == T.LIGHT:
-			lamp[at] = 1
-		else:
-			grid[at] = id
-		coins -= float(p["cost"])
-		msg = "Planners built a %s." % String(d["n"]).to_lower()
-		_scan()
-		return
-	if p["kind"] == "recover":
-		if yes and coins >= float(p["cost"]):
-			disasters_survived += 1
-			coins -= float(p["cost"])
-			_rebuild()
-			rep += 0.04
-			_log("You funded the rebuild ($%d)." % int(p["cost"]))
-			msg = "Crews rebuild the damaged blocks overnight."
-		else:
-			ruins.clear()
-			_log("The city will recover on its own.")
-		return
-	var tb: String = p["tribe"]
-	if yes:
-		p["deadline"] = day + int(p["days"])
-		var n: Dictionary = p["need"]
-		p["have"] = (bt.get(int(n["build"]), []) as Array).size() if n.has("build") else 0
-		promises.append(p)
-		favor[tb] = float(favor.get(tb, 0.0)) + 0.05
-		_log("You promised the %s: %s (by day %d)." % [Catalog.TRIBES[tb]["n"], Civics.need_text(n), p["deadline"]])
-	else:
-		favor[tb] = float(favor.get(tb, 0.0)) - 0.12
-		rep -= 0.02
-		_log("You turned down the %s." % Catalog.TRIBES[tb]["n"])
-
-
-func _civics() -> void:
-	for p in promises.duplicate():
-		var tb: String = p["tribe"]
-		if _met(p["need"], int(p.get("have", 0))):
-			promises.erase(p)
-			kept += 1
-			favor[tb] = float(favor.get(tb, 0.0)) + 0.2
-			rep += 0.06
-			msg = "Promise kept: %s. The %s cheer." % [p["t"], Catalog.TRIBES[tb]["n"]]
-			_log(msg)
-			sounds.append("good")
-			pet_ver += 1
-		elif day > int(p["deadline"]):
-			promises.erase(p)
-			broken += 1
-			favor[tb] = float(favor.get(tb, 0.0)) - 0.3
-			rep -= 0.1
-			msg = "Promise broken: %s. The %s are furious." % [p["t"], Catalog.TRIBES[tb]["n"]]
-			_log(msg)
-			sounds.append("bad")
-			pet_ver += 1
-	for p in petitions.duplicate():
-		if day > int(p["expires"]):
-			answer(petitions.find(p), false)
-	pet_t -= 1.0
-	if pet_t <= 0.0:
-		pet_t = rng.randf_range(70.0, 130.0)
-		_raise_petition()
-	for k in favor:
-		favor[k] = clampf(move_toward(float(favor[k]), 0.0, 0.0008), -0.4, 0.4)
-	rep = clampf(move_toward(rep, 0.0, 0.0004), -0.3, 0.3)
-	var op := 0.0
-	for k in tribe_mood:
-		op += float(tribe_share.get(k, 0.0)) * (float(tribe_mood[k]) - 0.5)
-	var target := 0.35 + 0.5 * mood + 0.08 * clampf(income / 2.0, -1.0, 1.0) - (0.1 if coins < 0.0 else 0.0) - 0.1 * crime + 0.3 * op + rep
-	if tax_r > 0.12:
-		target -= (tax_r - 0.12) * 1.5
-	target -= 0.04 * wars() + 0.012 * minf(war_battles(), 12.0)  # war weariness
-	approval = clampf(move_toward(approval, target, 0.004), 0.0, 1.0)
+	Mayor.answer(self, idx, yes)
 
 
 func rally() -> bool:
-	if rally_used or coins < Civics.RALLY_COST or next_election - day > 7:
-		return false
-	coins -= Civics.RALLY_COST
-	rally_used = true
-	rep += 0.07
-	_log("Campaign rally in the square.")
-	msg = "Your rally fills the square. Approval rises."
-	return true
-
-
-func _new_day() -> void:
-	if next_election - day == 3:
-		msg = "Election in 3 days. Polls put you at %d%%." % int(approval * 100.0)
-		_log(msg)
-	if day < next_election or not human:
-		return
-	var vote := clampf(approval + rng.randf_range(-0.04, 0.04), 0.0, 1.0)
-	last_vote = vote
-	next_election += Civics.YEAR_DAYS
-	rally_used = false
-	if vote >= 0.5:
-		elections_won += 1
-		msg = "Re-elected with %d%% of the vote!" % int(vote * 100.0)
-		_log(msg)
-		sounds.append("chime")
-	else:
-		_log("Lost the election with %d%%." % int(vote * 100.0))
-		over = "Voted out. You won only %d%% of the vote on day %d." % [int(vote * 100.0), day]
-
-
-func _milestones() -> void:
-	for ms in Civics.MILESTONES:
-		if not done_ms.has(ms["id"]) and float(get(ms["stat"])) >= float(ms["v"]):
-			done_ms[ms["id"]] = day
-			coins += float(ms["reward"])
-			msg = "Milestone: %s%s" % [ms["n"], ("  (+$%d)" % ms["reward"]) if int(ms["reward"]) > 0 else ""]
-			_log(msg)
-			sounds.append("chime")
+	return Mayor.rally(self)
 
 
 func take_loan(k: int) -> bool:
-	var L: Dictionary = Civics.LOANS[k]
-	if loans.size() >= 3 or peak < float(L["minpop"]):
-		return false
-	var total := float(L["amt"]) * (1.0 + float(L["rate"]))
-	loans.append({"n": L["n"], "left": total, "pay": total / (float(L["days"]) * DAY_SECS)})
-	coins += float(L["amt"])
-	_log("Took a %s: $%d, repay $%d over %d days." % [String(L["n"]).to_lower(), L["amt"], int(total), L["days"]])
-	return true
+	return Mayor.take_loan(self, k)
 
 
 ## Advisors: [name, advice, happy]
 func advisors() -> Array:
-	var a: Array = []
-	var t := "Income is %+.2f a second. Keep taxes near 10%% unless we need the money." % income
-	if income < -0.2:
-		t = "We're losing $%.2f a second. Raise taxes, end a policy or take a loan." % -income
-	elif coins > 1500.0:
-		t = "We're sitting on $%d. Spend it on services, or cut taxes to win votes." % int(coins)
-	elif not loans.is_empty():
-		var pay := 0.0
-		for l in loans:
-			pay += float(l["pay"])
-		t = "We're repaying %d loan(s) at $%.2f a second. No new borrowing, please." % [loans.size(), pay]
-	a.append(["Treasurer", t, income >= 0.0])
-	t = "The streets are calm and the fire crews are bored."
-	if burning > 0:
-		t = "%d building(s) on fire! Fire stations within 7 tiles put fires out in seconds." % burning
-	elif crime > 0.3:
-		t = "Crime is at %d%%. Street lamps, police stations and courts in the red blocks (Crime overlay)." % int(crime * 100.0)
-	elif float(cov["fire"]) < 0.6 and pop > 30:
-		t = "Only %d%% of homes have fire cover. One spark and we lose a street." % int(float(cov["fire"]) * 100.0)
-	a.append(["Police & fire chief", t, burning == 0 and crime <= 0.3])
-	t = "Growth is steady. Demand: homes %+d, shops %+d, industry %+d." % [int(res_dem * 10), int(com_dem * 10), int(ind_dem * 10)]
-	if congestion > 0.3:
-		t = "Traffic is jammed (%d%%). Upgrade busy roads to avenues and add bus stops." % int(congestion * 100.0)
-	elif avg_commute > 18.0:
-		t = "Commutes average %d tiles. Zone jobs nearer homes, or add avenues." % int(avg_commute)
-	elif pop - employed > 4:
-		t = "%d people can't find work. Zone industry or offices." % (pop - employed)
-	a.append(["City planner", t, congestion <= 0.3 and avg_commute <= 18.0])
-	t = "People are healthy and fed."
-	if sick_n > 0:
-		t = "%d citizens are sick. Clinics and hospitals cure them faster and slow the spread." % sick_n
-	elif pop >= 30 and float(flow.get("food_local", 1.0)) < 0.4:
-		t = "We import most of our food. Farms plus a food mill would save money."
-	else:
-		for m in Catalog.METRICS:
-			if _need(m) > 0.3:
-				t = "%s reaches only %d%% of homes. That is hurting mood." % [Catalog.METRICS[m]["n"], int(float(cov[m]) * 100.0)]
-				break
-	a.append(["Health & welfare", t, sick_n == 0])
-	var dl := next_election - day
-	t = "Election in %d days. We poll at %d%%." % [dl, int(approval * 100.0)]
-	if approval < 0.5:
-		t += " We'd lose today! Keep promises, lift mood%s." % (", hold a rally" if dl <= 7 and not rally_used else "")
-	elif tax_r > 0.12:
-		t += " Voters hate the household tax. Cut it."
-	if not petitions.is_empty():
-		t += " %d petition(s) await your answer." % petitions.size()
-	a.append(["Campaign manager", t, approval >= 0.5])
-	if wars() > 0:
-		a.append(["General", "We are at war (%d x 20 s so far). Voters are tiring: mood and approval fall the longer it lasts. Barracks and bases train the infantry, tanks and jets that fight; radar posts allow jets. Keep the front or lose the border. Sue for peace after a minute." % int(war_battles()), false])
-	return a
+	return Mayor.advisors(self)
 
 
 # ---------- disasters ----------
@@ -3725,7 +3487,7 @@ static func selfcheck() -> String:
 	pt.petitions.append({"kind": "petition", "id": "tax_r", "tribe": "rebels", "t": "x", "need": {"tax": ["r", 0.08]}, "days": 2, "expires": 9})
 	pt.answer(0, true)
 	pt.tax_r = 0.05
-	pt._civics()
+	Mayor.civics(pt)
 	if pt.kept != 1:
 		errs.append("kept promise not counted")
 	var tw := City.new(Signals.new())

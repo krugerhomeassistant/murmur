@@ -395,7 +395,7 @@ Networks matter for money mainly through coverage: `_need("power")` and `_need("
 
 - `City.DEBT_LIMIT` = -150. In `City.tick`, a human town whose `coins` fall below it ends the game with "Bankrupt." Towns with `human == false` are floored at 30 coins.
 - Instant event losses (`coins`, `coins_pop` in `City.trigger`) cannot push the treasury below -40: `coins = max(coins + x, min(coins, -40))`.
-- Negative coins also stop growth (growth thresholds above), and approval takes -0.1 while `coins < 0` (`City._civics`).
+- Negative coins also stop growth (growth thresholds above), and approval takes -0.1 while `coins < 0` (`Mayor.civics`).
 - Loans (`City.take_loan`, data in `Civics.LOANS`; up to 3 open, town must have reached `minpop` as `peak`):
 
 | Loan | Amount | Term | Rate | Min peak pop | Total repaid | Per second |
@@ -423,7 +423,7 @@ Each item follows directly from the formulas above.
 1. Keep everyone employed. `r_tax` is proportional to `employed`, and `emp` scales factories, mines and offices. Match jobs to citizens: `jobs` should be near `pop`, not far above.
 2. Raise coverage of Education (up to +30% on residential and industrial tax, up to doubling office income from the 0.5 base), Banking (+12% on all taxes), and keep Health, Power and Water covered to avoid the `prodm` loss (up to 49%).
 3. Place Markets or a Mall near homes (`commerce` coverage, +25% sales) and keep shops within 8 tiles of homes (`avg_shop`).
-4. Mind the tax rates. Residential revenue is linear in `tax_r` but each point above 10% lowers the mood target by 0.02 and, over 12%, approval by 1.5 per unit (`City._civics`). Commercial and industrial revenue peak near 21.7%, but demand for those zones falls 0.04 per point.
+4. Mind the tax rates. Residential revenue is linear in `tax_r` but each point above 10% lowers the mood target by 0.02 and, over 12%, approval by 1.5 per unit (`Mayor.civics`). Commercial and industrial revenue peak near 21.7%, but demand for those zones falls 0.04 per point.
 5. Avoid protests (mood under 0.2): every tax and tourism line is halved.
 6. Land value raises `r_tax` by up to +25% (see [Citizens](citizens.md#land-value)); mixed housing tiers matter via `res_mult`.
 7. Produce food locally (farms plus a mill, ranches, fish farms, fishing docks) to avoid the import bill and mood penalty.

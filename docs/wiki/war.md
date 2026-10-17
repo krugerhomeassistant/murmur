@@ -376,7 +376,7 @@ Known limits listed by the design: units go home instantly when peace comes, def
 | Occupation, bombing | `Military._occupy`, `_bomb` |
 | Building damage | `City.strike`, `City._ruin`, `City._edge_dist`, `City._offer_recovery`, `City._rebuild` |
 | Threat and planner military | `City.threat`, `City.naval_threat`, `City._plan_service` |
-| War effects on the mayor | `City.wars`, `City.war_battles`, `City._collect_mods`, `City._civics`, `City.advisors` |
+| War effects on the mayor | `City.wars`, `City.war_battles`, `City._collect_mods`, `Mayor.civics`, `City.advisors` |
 | Temper | `Main.TEMPERS`, `Main._new_town`, `Main._fresh` |
 | Commands | `client/scripts/cmd.gd`: `diplo`, `train`, `train_w` |
 | UI | `Hud._army`, `Hud._army_refresh`, `Hud._rebuild_dipl`, `Hud._side_text`, `Hud._act_btn`; war drawing in `Main` (tracers, booms, blasts) |
