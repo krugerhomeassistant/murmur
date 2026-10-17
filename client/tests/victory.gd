@@ -15,6 +15,17 @@ func _world(areas: Array) -> Array[City]:
 
 func _init() -> void:
 	var ok := true
+	# culture: schooled and cultured people score more than the same number without
+	var ct := _world([10])[0]
+	ct.pop = 100
+	var plain := Victory.score(ct)
+	ct.cov["culture"] = 1.0
+	ct.cov["edu"] = 1.0
+	var cultured := Victory.score(ct)
+	ct.policies["free_school"] = true
+	if absf(Victory.culture(ct) - 100.0 * Victory.CULTURE_SCORE * 1.2) > 0.01 or cultured <= plain or Victory.score(ct) <= cultured:
+		ok = false
+		print("FAIL culture: %s %s %s" % [plain, cultured, Victory.culture(ct)])
 	# conquest: the state is enough, on the first second it holds
 	var ts := _world([80, 10, 10])
 	var v := Victory.new()

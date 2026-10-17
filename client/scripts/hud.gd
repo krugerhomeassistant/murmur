@@ -1382,7 +1382,7 @@ func _domination() -> String:
     if v.winner != "":
         out += v.describe() + "\n"
     for r: Dictionary in v.rows:
-        out += "%s%s  towns %d  land %d%%  allied %d%%  score %d   conquest %d%%  hegemony %d%%\n" % ["> " if r["side"] == Victory.side(m.city) else "   ", r["name"], r["towns"], int(float(r["land"]) * 100.0), int(float(r["allied"]) * 100.0), int(r["score"]), int(float(r["con"]) * 100.0), int(float(r["heg"]) * 100.0)]
+        out += "%s%s  towns %d  land %d%%  allied %d%%  score %d (culture %d)   conquest %d%%  hegemony %d%%\n" % ["> " if r["side"] == Victory.side(m.city) else "   ", r["name"], r["towns"], int(float(r["land"]) * 100.0), int(float(r["allied"]) * 100.0), int(r["score"]), int(r.get("cul", 0.0)), int(float(r["con"]) * 100.0), int(float(r["heg"]) * 100.0)]
     for w in Diplo.wars(m.towns):
         out += "\nWAR %s vs %s: %s wants %s, occupation %d/%d, %d s" % [w["a"], w["b"], w["a"], w["goal"], w["occ"], w["need"], w["secs"]]
     return out.strip_edges()

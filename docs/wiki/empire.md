@@ -184,7 +184,7 @@ Towns belong to a **side** (`Victory.side`): all towns of one multiplayer owner 
 | Conquest | The side holds at least 70% of all claimed land (live towns), or is the only side left once two or more have existed. The moment the state holds, the game is won. |
 | Hegemony | The side's score is at least 1.5 times the next side's, and its land plus the land of towns it has an alliance with is at least 40% of the whole. No timer: the state wins. |
 
-Score is population + land / 100 + units exported / 50. There are no timers. After a win the Victory or Defeat panel names the route; "Keep playing" dismisses it and the game continues as a sandbox with the winner kept. The Empire window lists each side's land, allied land, score and progress. Constants are in [constants](constants.md); `tests/victory.gd` covers both routes, a narrow lead, last side standing, a lone town and hostile snapshot input. A player who loses every town gets "Keep spectating" or "Quit" on the game-over panel (`tests/defeat.gd`).
+Score is population + land / 100 + units exported / 50 + culture. Culture is population x (0.6 x culture coverage + 0.4 x education coverage) x 0.4, 20% more with the free-school policy (`Victory.culture`). There are no timers. After a win the Victory or Defeat panel names the route; "Keep playing" dismisses it and the game continues as a sandbox with the winner kept. The Empire window lists each side's land, allied land, score and progress. Constants are in [constants](constants.md); `tests/victory.gd` covers both routes, a narrow lead, last side standing, a lone town and hostile snapshot input. A player who loses every town gets "Keep spectating" or "Quit" on the game-over panel (`tests/defeat.gd`).
 
 ## Where in the code
 
