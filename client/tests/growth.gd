@@ -1,6 +1,7 @@
 extends SceneTree
 ## Growth baseline: seconds for one fresh town (planner on) to reach 100 and 300 people.
 ## Not in CI: run it 3 times before and after a growth change and compare. Only fails if the town never grows past 20.
+## After the mood-gate fall-through (2026-10-17, 12 runs): 7 reach 300 people (2040 to 3155 s), the rest end at 80 to 206.
 ## Baseline 2026-10-09 (3 runs, 4800 s cap): to100 = never / 826 s / 1682 s; pop at cap 64 / 106 / 110. One run reached 218 at 2400 s. Very noisy: the sim is not deterministic.
 const LIMIT_SECS := 4800  # game seconds
 

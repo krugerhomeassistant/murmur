@@ -63,7 +63,7 @@ One planner run does at most one action, with the exception of `_plan_policy` wh
 6. If `congestion > 0.25`, avenues are unlocked and a 30% roll passes: `_plan_traffic()`; return if it widened a street.
 7. With 60% probability: `_plan_service()`; return if it built a service.
 8. Return if `coins < saving_for` (see below).
-9. **Mood gate**: if `mood < 0.38` (population 40 or more) or `mood < 0.25` (smaller towns): call `_plan_service(true)` (forced, ignoring its result) and return.
+9. **Mood gate**: if `mood < 0.38` (population 40 or more) or `mood < 0.25` (smaller towns): call `_plan_service(true)` (forced) and return if it built something. If it built nothing and residential demand is above 0.3, the planner carries on to zoning instead of returning (before 2026-10-17 it returned, so towns sat at the gate with idle coins and no growth). With demand at or below 0.3 it still returns.
 10. **Open plots cap**: count zone plots at level 0; return if `open >= 3 + pop / 80` (integer division). This stops the planner stacking up more unbuilt plots than the construction system can fund.
 11. Pick a zone type by demand weights, find candidate tiles, optionally extend a road or annex land, then place one plot (see [Zoning](#zoning-the-end-of-city_planner)).
 
