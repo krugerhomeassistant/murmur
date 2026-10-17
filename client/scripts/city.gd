@@ -217,6 +217,8 @@ var hardship := 0.0  # share of households that cannot make ends meet
 var home_w := {}  # runtime: home cell -> [wealth sum, residents]
 var stock := {"crops": 0.0, "food": 0.0, "goods": 0.0, "ore": 0.0, "metal": 0.0, "arms": 0.0, "wood": 0.0, "tools": 0.0}
 var wood_sig := 0
+var site_sig := -1
+var site_ok := false  # a free, road-side plot with forest around it exists (cached by scan_sig)
 var wood_yield := 0.0  # forest tiles around the lumber camps (each camp counts up to 12)
 var arms_use := 0.0  # arms the army is consuming per second (training), for the market
 var flow := {}
@@ -2300,7 +2302,7 @@ func _plan_service(force := false) -> bool:
 				continue
 			lim = 1 + mine_jobs / 12
 		if ch == "wood":
-			if pop < 40 or foc("industry") < 0.4 or float(stock.get("wood", 0.0)) >= 30.0:
+			if pop < 40 or not _lumber_site() or foc("industry") < 0.4 or float(stock.get("wood", 0.0)) >= 30.0:
 				continue
 			lim = 1 + pop / 250
 		if ch == "tools":
@@ -3181,6 +3183,17 @@ func _wood_rate(emp: float) -> float:
 		for i in bt.get(T.LUMBER, []):
 			wood_yield += minf(float(_forest_near(i)), 12.0)
 	return wood_yield * 0.02 * emp
+
+
+func _lumber_site() -> bool:
+	if site_sig != scan_sig:
+		site_sig = scan_sig
+		site_ok = false
+		for i in cells:
+			if grid[i] == T.EMPTY and water[i] == 0 and _road_next_to(i) >= 0 and _forest_near(i) >= 4:
+				site_ok = true
+				break
+	return site_ok
 
 
 func _forest_near(i: int) -> int:

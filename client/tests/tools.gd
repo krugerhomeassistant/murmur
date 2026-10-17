@@ -28,6 +28,9 @@ func _init() -> void:
 		if not c.stock.has(k) or not Market.GOODS.has(k):
 			ok = false
 			print("FAIL %s missing from stock or market" % k)
+	if c._lumber_site():  # the planner must not pick a camp it cannot place (it stalled every other service)
+		ok = false
+		print("FAIL lumber site without forest")
 	# a lumber camp in a forest cuts wood, one on bare land does not
 	var camp := _place(c, Catalog.Id.LUMBER)
 	for y in range(maxi(camp / City.W - 5, 0), mini(camp / City.W + 6, City.H)):
