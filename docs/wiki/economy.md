@@ -42,6 +42,7 @@ Related generated pages: [Buildings](buildings.md), [City stats](stats.md), [Pol
 | Military funding | `grant_sum * RATE * mod("grant_mult")` |
 | Regional trade | `trade_net` |
 | Roads | `-e_roads` |
+| Maintenance | `-e_maint` |
 | Buildings | `-e_zone` |
 | Services | `-e_svc` |
 | Policies | `-e_pol` |
@@ -141,7 +142,8 @@ Events and military:
 ```
 mult   = 1 + pop / 60
 um     = mod("upkeep_mult")
-e_roads = (roads * 0.08 + avenues * 0.12) * mult * um * RATE
+e_roads = (roads * 0.05 + avenues * 0.08) * mult * um * RATE
+e_maint = (roads * 0.03 + avenues * 0.04) * mult * um * RATE
 e_zone  = up_zone * mult * um * RATE
 e_svc   = up_svc  * mult * um * RATE
 e_pol   = (sum of policy "up" for active policies) * RATE
@@ -149,7 +151,7 @@ e_staff = pop * 0.3 * RATE
 e_crime = crime * pop * 0.3 * RATE
 ```
 
-- `roads` counts every road tile including avenues, and `avenues` counts avenues only, so a plain road costs 0.08 and an avenue 0.20 (0.08 + 0.12) before the multipliers, matching the catalogue.
+- `roads` counts every road tile including avenues, and `avenues` counts avenues only, so a plain road costs 0.08 (0.05 upkeep + 0.03 maintenance) and an avenue 0.20 (0.13 + 0.07) before the multipliers, matching the catalogue.
 - `up_zone` is the sum of `up * level` of every built, road-connected zone. Empty zone paint costs no upkeep.
 - `up_svc` is the sum of `up` over connected service buildings, plus 0.1 per street lamp, plus 0.015 per power/water/sewer line tile (`nets * 0.015`, added in `City._net`). The catalogue lists 0.03 for line tiles but the code charges 0.015 (see Open questions).
 - Policy upkeep is not multiplied by `mult` or `um`. Austerity has a negative `up` (-1.0) and therefore reduces `e_pol`.
@@ -468,3 +470,7 @@ Each item follows directly from the formulas above.
 ## Efficiency
 
 `City.efficiency()` is `clamp(mood / 0.5, 0, 1)` (`EFF_FULL_MOOD`). Mood never switches building off: construction progress per second, the upgrade roll and how often the planner zones are all multiplied by it. At mood 0.5 or more a town works at full speed, at 0.25 at half speed, and only mood 0 stops it. `tests/efficiency.gd` covers this.
+
+## Maintenance and wear
+
+`City.wear` (0 to 1) is how run-down the town is. Maintenance is the part of the road cost paid to crews. While the treasury is above zero wear falls 0.004 a second; at or below zero it rises 0.002 a second (about 8 minutes from kept to ruined). Wear cuts production (`prodm` x (1 - 0.2 x wear)) and the mood target by 0.1 x wear. It is not saved: a loaded town starts kept. Buildings are not charged separately yet. `tests/wear.gd` covers it.

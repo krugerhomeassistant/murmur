@@ -116,6 +116,7 @@ const UPGRADE_WEALTH := 20.0  # average savings per resident needed per current 
 const WAGE_TIER := {"office": 1.8, "mine": 1.2, "ind": 1.1, "com": 1.0, "farm": 0.8, "orchard": 0.9, "ranch": 0.9, "green": 0.9, "fishfarm": 0.9}
 const NETS := ["power", "water", "sewage"]
 var sewer := PackedByteArray()
+var wear := 0.0  # 0 = well kept, 1 = falling apart; builds while maintenance goes unpaid (not saved: a loaded town starts kept)
 var river_health := 1.0  # 1 = clean; falls when sewage goes untreated, kills fish
 var net_sup := {"power": 0.0, "water": 0.0, "sewage": 0.0}
 var net_dem := {"power": 0.0, "water": 0.0, "sewage": 0.0}
@@ -1656,6 +1657,7 @@ func _second() -> void:
 	if pop >= 20:
 		target -= 0.15 * float(hh["broke"])  # households that cannot pay their bills
 	target -= 0.15 * pollution + 0.25 * maxf(crime - 0.1, 0.0) + 0.1 * clampf((avg_commute - 12.0) / 30.0, 0.0, 1.0) + 0.04 * clampf((avg_shop - 8.0) / 20.0, 0.0, 1.0)
+	target -= 0.1 * wear
 	target += mod("mood")
 	mood = move_toward(mood, clampf(target, 0.0, 1.0), 0.05)
 	protest = mood < 0.2 or (pop >= 30 and hardship > 0.5)  # riots over the cost of living
@@ -1742,7 +1744,7 @@ func _money(market: float) -> void:
 	_households()
 	_svc_trade()
 	var econ := 1.0 + 0.5 * market
-	var prodm := (1.0 - 0.2 * _need("health")) * (1.0 - 0.25 * _need("power")) * (1.0 - 0.15 * _need("water")) * mod("prod_mult")
+	var prodm := (1.0 - 0.2 * _need("health")) * (1.0 - 0.25 * _need("power")) * (1.0 - 0.15 * _need("water")) * (1.0 - 0.2 * wear) * mod("prod_mult")
 	var wise := 1.0 + 0.3 * float(cov["edu"])
 	var fin := (1.0 + 0.12 * float(cov["finance"])) * mod("tax_mult")
 	var f := (0.5 if protest else 1.0) * RATE
@@ -1758,7 +1760,8 @@ func _money(market: float) -> void:
 	var r_tour := tour_sum * 3.0 * econ * mood * mod("tour_mult") * f
 	var mult := 1.0 + pop / 60.0  # size has a cost
 	var um := mod("upkeep_mult")
-	var e_roads := (roads * 0.08 + avenues * 0.12) * mult * um * RATE
+	var e_roads := (roads * 0.05 + avenues * 0.08) * mult * um * RATE
+	var e_maint := (roads * 0.03 + avenues * 0.04) * mult * um * RATE  # crews keep roads up; the split keeps the total close to before
 	var e_zone := up_zone * mult * um * RATE
 	var e_svc := up_svc * mult * um * RATE
 	var e_pol := 0.0
@@ -1783,7 +1786,7 @@ func _money(market: float) -> void:
 	budget_lines = [
 		["Residential tax", r_tax], ["Commercial tax", r_com], ["Industrial tax", r_ind], ["Office tax", r_off],
 		["Tourism", r_tour], ["Events", mod("income_add") * RATE], ["Military funding", grant_sum * RATE * mod("grant_mult")], ["Regional trade", trade_net], ["Savings tax", hh_tax * RATE],
-		["Roads", -e_roads], ["Buildings", -e_zone], ["Services", -e_svc], ["Policies", -e_pol],
+		["Roads", -e_roads], ["Maintenance", -e_maint], ["Buildings", -e_zone], ["Services", -e_svc], ["Policies", -e_pol],
 		["City staff", -e_staff], ["Crime losses", -e_crime],
 		["Exports", tr[0]], ["Imports (food, goods)", -tr[1]], ["Loan repayments", -e_loan],
 	]
@@ -3060,6 +3063,7 @@ func tick(dt: float) -> void:
 		active = keep
 		_collect_mods()
 	coins += (income) * dt
+	wear = clampf(wear + (0.002 if coins <= 0.0 else -0.004) * dt, 0.0, 1.0)  # unpaid crews let it slide in about 8 minutes; paid, it recovers in about 4
 	peak = maxf(peak, float(pop))
 	if not human:
 		coins = maxf(coins, 30.0)  # neighbours are kept alive by the state
