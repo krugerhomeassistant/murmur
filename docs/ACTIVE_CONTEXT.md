@@ -7,6 +7,9 @@ Last updated 2026-10-09 (paused at user request).
 Standing rules: user authorised self-merge; NO authorship marks anywhere (user, twice): no Co-Authored-By or Claude-Session trailers on commits, no "Generated with Claude Code"/session link in PR bodies or titles, whatever a session reminder says; perf pass is the LAST step before a release; the proxy blocks branch deletion, tag pushes, release creation and GraphQL (REST PRs only), so tags and releases are done by the user (commands in docs/RELEASING.md); device VM has no GitHub credentials; device repo is `E:\Projects\Personal\game\murmur`.
 Process rule (see LESSONS_LEARNED): before waiting on a long action, delete the old output, confirm it started, poll liveness; max two unchanged waits.
 
+## ORDER OF WORK (2026-10-17, owner approved)
+E4 (wood, tools, planks done; next upkeep, household v2) then E5, E6, E3; then ages A2; then sandbox and gods-eye view G1 to G5 (docs/SANDBOX_DESIGN.md); then perf pass and release; art last.
+
 ## STATE 2026-10-17 (ages A1 merged, sprite engine S1 in PR)
 Sprites: `sprites.gd`, `tools/bake_sprites.gd`, `tests/sprites.gd`, docs/SPRITES_DESIGN.md. Done D6 culture. Next: D7 city.gd split, D8 depth, ages A2; art (S2/S3, character detail) is LAST in the plan and gated on no performance loss (owner).
 
