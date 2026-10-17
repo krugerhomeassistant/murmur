@@ -13,7 +13,7 @@ Everything described here is in `client/scripts/city.gd` (class `City`) unless n
 - [Border roads and gates](#border-roads-and-gates)
 - [Ore roads](#ore-roads-city_plan_ore_road)
 - [Power, water and sewer lines](#power-water-and-sewer-lines-city_plan_net)
-- [Traffic: avenues](#traffic-avenues-city_plan_traffic)
+- [Traffic: avenues](#traffic-avenues-trafficwiden)
 - [Services](#services-city_plan_service)
 - [Zoning](#zoning-the-end-of-city_planner)
 - [Expansion and annexing](#expansion-and-annexing)
@@ -60,7 +60,7 @@ One planner run does at most one action, with the exception of `_plan_policy` wh
 3. If the town is not human: `_plan_gate()`; return if it laid a road.
 4. `_plan_ore_road()`; return if it laid a road.
 5. `_plan_net()`; return if it laid lines.
-6. If `congestion > 0.25`, avenues are unlocked and a 30% roll passes: `_plan_traffic()`; return if it widened a street.
+6. If `congestion > 0.25`, avenues are unlocked and a 30% roll passes: `Traffic.widen`; return if it widened a street.
 7. With 60% probability: `_plan_service()`; return if it built a service.
 8. Return if `coins < saving_for` (see below).
 9. **Mood and efficiency**: if `mood < 0.38` (population 40 or more) or `mood < 0.25` (smaller towns): call `_plan_service(true)` (forced) and return if it built something. Then the planner zones only with probability `efficiency()` (mood / 0.5, at most 1), so an unhappy town zones less often but never stops until mood is 0 (before 2026-10-17 a hard gate stopped it).
@@ -136,9 +136,9 @@ Gate: `coins >= 30`. The three networks are tried in random order. For each netw
 
 So planned lines follow roads, always connect to the existing live network or a plant, and extend by up to 30 tiles per run. The plants themselves are built by `_plan_service`.
 
-## Traffic: avenues (`City._plan_traffic`)
+## Traffic: avenues (`Traffic.widen`)
 
-Called at step 6 only if congestion (`congestion`, from `City._traffic`) exceeds 0.25, avenues are unlocked (peak population 25), and a 30% roll passes. It picks the plain road tile with the highest traffic above 3, finds the axis (east-west if a road lies east or west of it, else north-south) and converts that tile and the tiles within 2 along the axis to avenues, 7 coins each (the price difference), only for tiles that are plain roads. Returns true if at least one tile changed.
+Called at step 6 only if congestion (`congestion`, from `Traffic.tick`) exceeds 0.25, avenues are unlocked (peak population 25), and a 30% roll passes. It picks the plain road tile with the highest traffic above 3, finds the axis (east-west if a road lies east or west of it, else north-south) and converts that tile and the tiles within 2 along the axis to avenues, 7 coins each (the price difference), only for tiles that are plain roads. Returns true if at least one tile changed.
 
 ## Services (`City._plan_service`)
 
@@ -283,7 +283,7 @@ The large bonuses exist because scores are divided by cost, so military would ot
 ## Known limitations
 
 - **One action per 8 seconds**, no look-ahead. Roads are single straight stubs of 3 to 6 tiles; there is no block or grid design, so layouts are loose and can leave plots without a second road.
-- **No demolition or replacement.** The planner never bulldozes and never rebuilds a lost building except by zoning anew. Roads are never upgraded except by `_plan_traffic` widening.
+- **No demolition or replacement.** The planner never bulldozes and never rebuilds a lost building except by zoning anew. Roads are never upgraded except by `Traffic.widen` widening.
 - **Lines follow roads only.** `_plan_net` searches along road tiles, serves one random unserved building per run and lays at most 30 tiles, so large unserved areas take many runs.
 - **Few lamps.** A lamp counts as a service with `lim = 1 + pop / 60`, so the planner lights only a handful of tiles in a large town.
 - **No ports, fishing docks or other water buildings**, and only a Naval yard under river threat. The planner does not use bridges except in `_plan_gate`'s fallback route (and never to reach ore: `_plan_ore_road` avoids water completely).
@@ -303,7 +303,7 @@ The large bonuses exist because scores are divided by cost, so military would ot
 | Gates | `City._plan_gate`, `City._gate_route`, `City._road_net`; `Diplo.side`, `Diplo.linked`, `Diplo.tmult` (`client/scripts/diplomacy.gd`) |
 | Ore road | `City._plan_ore_road` |
 | Lines | `City._plan_net`, `City._has_plant` |
-| Avenues | `City._plan_traffic`, `City._traffic` |
+| Avenues | `Traffic.widen`, `Traffic.tick` |
 | Services | `City._plan_service`, `City.threat`, `City.naval_threat`, `City._lamp_near` |
 | Zoning | `City.dem_for`, `City._farm_variant`, `City._style_for`, `City._site_score`, `City._extend_road`, `City._land` |
 | Annexing | `City._expand_auto`, `City.expand`, `City.expand_cost`, `City.can_expand` |

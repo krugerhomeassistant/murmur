@@ -6,7 +6,7 @@ func _init() -> void:
 	for i in 5000:
 		c.sig.tick(0.25); c.tick(0.25)
 	print("pop=%d day=%d" % [c.pop, c.day])
-	for f in ["_scan","_crime","_land","_tribes","_collect_mods","_sickness","_traffic","_grow","_planner","_net","_sync_buses","_civics","_milestones","_unlocks","_second"]:
+	for f in ["_scan","_crime","_land","_tribes","_collect_mods","_sickness","_grow","_planner","_net","_civics","_milestones","_unlocks","_second"]:
 		var t0 := Time.get_ticks_usec()
 		for i in 20:
 			c.call(f)

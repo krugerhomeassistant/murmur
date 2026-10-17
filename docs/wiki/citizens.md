@@ -140,13 +140,13 @@ if car: step *= 2.2 / (1 + jam * 0.25)   with jam = max(0, traffic[cell] - (8 if
 
 - `fast` is true when the home's transit coverage exceeds 0.5 (`cov_home(home, "transit") > 0.5`), giving +30%. The stat text says "walk 30% faster" for covered homes; the code uses a threshold of 50% coverage.
 - `speed_mult` comes from weather events and winter (see Weather and seasons).
-- Buses are cosmetic vehicles that shuttle between a bus stop and a random spot (`_sync_buses`, `_bus_route`); they do not carry citizens, they only reflect the presence of stops. Transit effect comes from coverage.
+- Buses are cosmetic vehicles that shuttle between a bus stop and a random spot (`Traffic.sync_buses`, `Traffic.bus_route`); they do not carry citizens, they only reflect the presence of stops. Transit effect comes from coverage.
 
 ### Driving
 
 `car` is true when the citizen has a job, `commute > 9` tiles and the home is not in `fast` transit coverage. Cars move 2.2 times faster but leave traffic (next section).
 
-## Traffic and congestion (`City._traffic`, ~3139)
+## Traffic and congestion (`Traffic.tick`, `client/scripts/traffic.gd`)
 
 Once per second:
 
@@ -158,7 +158,7 @@ congestion = mean over cells with traffic > 0.3 of clamp((traffic - (8 if avenue
 
 - A plain road tolerates traffic 3 before it counts as jammed, an avenue 8. Congestion is 0 when no cell exceeds the limit and 1 when every busy cell is at the limit plus 4.
 - `congestion` lowers the mood target by `0.08 * congestion` and shows in the needs list over 0.3.
-- The planner widens the busiest plain road into an avenue (up to 5 tiles in line, 7 coins each) when `congestion > 0.25`, avenues are unlocked (population 25) and a 30% roll succeeds (`City._plan_traffic`).
+- The planner widens the busiest plain road into an avenue (up to 5 tiles in line, 7 coins each) when `congestion > 0.25`, avenues are unlocked (population 25) and a 30% roll succeeds (`Traffic.widen`).
 - Avenues thus help twice: faster walking (1.5x) and a higher jam threshold (8 against 3).
 - Free public transport and bus stops reduce the number of drivers because they set `fast`.
 
@@ -202,7 +202,7 @@ Starting `mood` is 0.6. Each term:
 | Weather | Table below. |
 | Needs | See below. |
 | Bonuses | `cov["culture"]` x 0.05, `cov["defence"]` x 0.02, `cov["gov"]` x 0.04 (max +0.11). Retail and banking have weight 0. |
-| Congestion | `City._traffic`. |
+| Congestion | `Traffic.tick`. |
 | Sickness | Share of citizens sick, up to 0.25. |
 | Food | Only when most food is imported. |
 | Pollution | Mean of homes' pollution, 0..1, see below. |
@@ -410,7 +410,7 @@ Every 5-11 s a random citizen shows a speech bubble from `City.thought(c)`. The 
 | Pollution | `City.poll_at` (~1092), `polluters` in `City._scan` |
 | Land value | `City._land` (~2291) |
 | Sickness | `City._sickness` (~3112) |
-| Traffic | `City._traffic` (~3139), `City._plan_traffic` |
+| Traffic | `Traffic.tick` (~3139), `Traffic.widen` |
 | Weather | `signals.gd`, `City.WEATHER_PENALTY`, `City.trigger` |
 | Seasons | `Civics.SEASONS`, `City._second` season switch, `City._collect_mods` |
 | Mod merging | `City._collect_mods` (~1249), `City._add_mods` |

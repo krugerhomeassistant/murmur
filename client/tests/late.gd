@@ -4,7 +4,7 @@ func _init() -> void:
 	var c := City.new(Signals.new())
 	c.seed_start()
 	c.peak = 3000.0
-	var fs := ["_scan", "_crime", "_land", "_tribes", "_traffic", "_grow", "_planner", "_net", "_second"]
+	var fs := ["_scan", "_crime", "_land", "_tribes", "_grow", "_planner", "_net", "_second"]
 	for blk in 12:
 		for i in 4000:
 			if i % 200 == 0:
