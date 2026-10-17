@@ -872,6 +872,9 @@ func _maptip_text(x: int, y: int) -> String:
     s += "\n" + ("Road access" if c.connected[i] == 1 else "[color=#e07a5f]NO road access[/color]")
     if c.home_load.has(i):
         s += "\nResidents %d / %d" % [c.home_load[i], int(d.get("home", 0)) * c.lvl[i]]
+        var hw: Array = c.home_w.get(i, [])
+        if not hw.is_empty() and int(hw[1]) > 0:
+            s += "\nHousehold savings: average $%d%s" % [int(float(hw[0]) / int(hw[1])), (", [color=#e07a5f]%d broke[/color]" % int(hw[2])) if int(hw[2]) > 0 else ""]
     if c.work_load.has(i):
         s += "\nWorkers %d / %d" % [c.work_load[i], int(d.get("jobs", 0)) * maxi(c.lvl[i], 1)]
     if c.burn[i] > 0.0:
