@@ -63,7 +63,7 @@ One planner run does at most one action, with the exception of `_plan_policy` wh
 6. If `congestion > 0.25`, avenues are unlocked and a 30% roll passes: `_plan_traffic()`; return if it widened a street.
 7. With 60% probability: `_plan_service()`; return if it built a service.
 8. Return if `coins < saving_for` (see below).
-9. **Mood gate**: if `mood < 0.38` (population 40 or more) or `mood < 0.25` (smaller towns): call `_plan_service(true)` (forced) and return if it built something. If it built nothing and residential demand is above 0.3, the planner carries on to zoning instead of returning (before 2026-10-17 it returned, so towns sat at the gate with idle coins and no growth). With demand at or below 0.3 it still returns.
+9. **Mood and efficiency**: if `mood < 0.38` (population 40 or more) or `mood < 0.25` (smaller towns): call `_plan_service(true)` (forced) and return if it built something. Then the planner zones only with probability `efficiency()` (mood / 0.5, at most 1), so an unhappy town zones less often but never stops until mood is 0 (before 2026-10-17 a hard gate stopped it).
 10. **Open plots cap**: count zone plots at level 0; return if `open >= 3 + pop / 80` (integer division). This stops the planner stacking up more unbuilt plots than the construction system can fund.
 11. Pick a zone type by demand weights, find candidate tiles, optionally extend a road or annex land, then place one plot (see [Zoning](#zoning-the-end-of-city_planner)).
 
@@ -287,7 +287,7 @@ The large bonuses exist because scores are divided by cost, so military would ot
 - **Lines follow roads only.** `_plan_net` searches along road tiles, serves one random unserved building per run and lays at most 30 tiles, so large unserved areas take many runs.
 - **Few lamps.** A lamp counts as a service with `lim = 1 + pop / 60`, so the planner lights only a handful of tiles in a large town.
 - **No ports, fishing docks or other water buildings**, and only a Naval yard under river threat. The planner does not use bridges except in `_plan_gate`'s fallback route (and never to reach ore: `_plan_ore_road` avoids water completely).
-- **Mood gate stall.** Under the mood gate the planner returns after `_plan_service(true)` whether or not it built anything. If no service passes the lowered threshold (0.02) and mood stays under 0.38 (0.25 for tiny towns), the town stops zoning. The self-check in `City.selfcheck` retries up to three fresh towns because of a known earlier stall.
+- **Mood gate stall (fixed).** The old hard mood gate stopped zoning for towns hovering below 0.38; it is now the efficiency factor (see step 9).
 - **Gates need an orthogonal neighbour.** `Diplo.side` only knows N, E, S, W, so diagonal neighbours never get a border road.
 - **Policy decisions are threshold-based** and ignore their cost over time; the planner never uses `garrison`, `insurance`, or the commercial/industrial tax rates, and never takes loans.
 - **Annex only on zoning shortage.** A walled-in town with free candidate tiles will not annex even if its roads are stuck; and with `auto_mode == 1` it never annexes.
