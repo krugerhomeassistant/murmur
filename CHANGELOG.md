@@ -5,6 +5,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-10-18
+
 ### Added
 - Globe markers (G4c, first form): below zoom 0.06 each town is a disc (size by population, colour by relation to you: you, ally, war, vassal, pact, embargo) with its name, age and population under the mouse; the live thumbnails hide there. Clicking a disc flies to that town; lines join neighbouring towns (red at war, green with a road, grey without). Checked headless only, not yet on screen.
 - Globe tier (G4b): zoomed out beyond the chunk view the land layer now draws coarse land and sea blocks (`World.coarse`, one sample per 8 tiles, about 2 ms per 128-tile block, same per-frame budget) instead of nothing. Checked headless only, not yet on screen.
