@@ -43,6 +43,8 @@ var people_l: RichTextLabel
 var act_l: RichTextLabel
 var log_l: RichTextLabel
 var pol_btns := {}
+var banner_l: Label
+var banner_t := 0.0
 var tech_btns := {}  # age -> [button, button]
 var auto_opt: OptionButton
 var focus_auto: CheckButton
@@ -126,6 +128,15 @@ func _ready() -> void:
     pintip_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
     pintip.add_child(pintip_lbl)
     add_child(pintip)
+    banner_l = Label.new()
+    banner_l.add_theme_font_size_override("font_size", 30)
+    banner_l.add_theme_color_override("font_color", Color("fff3c4"))
+    banner_l.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.8))
+    banner_l.add_theme_constant_override("outline_size", 6)
+    banner_l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    banner_l.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    banner_l.visible = false
+    add_child(banner_l)
     perf_l = Label.new()
     perf_l.position = Vector2(8, 62)
     perf_l.visible = false
@@ -971,7 +982,20 @@ func _draw_perf_graph() -> void:
     perf_g.draw_line(Vector2(0, y), Vector2(perf_g.size.x, y), Color(1, 1, 1, 0.4))
 
 
+## A big line near the top that fades out: the age you have just entered.
+func banner(text: String, sub := "") -> void:
+    banner_l.text = text + ("\n" + sub if sub != "" else "")
+    banner_t = 6.0
+    banner_l.visible = true
+
+
 func _process(_d: float) -> void:
+    if banner_t > 0.0:
+        banner_t -= _d
+        banner_l.modulate.a = clampf(banner_t / 1.5, 0.0, 1.0)
+        banner_l.size = Vector2(size.x, 0)
+        banner_l.position = Vector2(0, 70)
+        banner_l.visible = banner_t > 0.0
     var c: City = m.city
     tick_n += 1
     _update_maptip()

@@ -206,6 +206,7 @@ var broken := 0
 var next_election := Civics.YEAR_DAYS + 1
 var age := Ages.LAST  # see Ages; saves from before ages count as Modern, where everything is open
 var know := 0.0  # knowledge toward the next age
+var age_up := -1  # set for one tick when the town enters an age; the UI shows a banner
 var tech: Array = [-1, -1, -1, -1]  # chosen option (0 or 1) per age, -1 = not chosen yet (Research)
 var age_t := 1.0e9  # seconds since the town entered its age (grace period for the services the age expects)
 var elections_won := 0
@@ -1532,6 +1533,7 @@ func _second() -> void:
 	if up >= 0:
 		msg = "%s enters the %s age." % [town_name, Ages.name_of(up)]
 		_log("The town enters the %s age." % Ages.name_of(up))
+		age_up = up
 		if not human:
 			Research.auto(self)
 		else:

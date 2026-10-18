@@ -5,7 +5,7 @@ extends SceneTree
 func _init() -> void:
 	var ok := true
 	var t0 := Time.get_ticks_msec()
-	for t in [Painter.car(Color("c0392b")), Painter.cart(), Painter.person()]:
+	for t in [Painter.car(Color("c0392b")), Painter.car(Color("c0392b"), true), Painter.cart(), Painter.person()]:
 		var im: Image = t.get_image()
 		var seen := 0
 		for y in im.get_height():
