@@ -55,7 +55,7 @@ static func service(ci: CanvasItem, r: Rect2, id: int, ok: bool, night: bool) ->
 
 
 static func _has(id: int) -> bool:
-	return id in [T.FIRE, T.POLICE, T.CLINIC, T.HOSPITAL, T.SCHOOL, T.LIBRARY, T.UNIVERSITY, T.PARK, T.PLAYGROUND, T.PLAZA, T.CINEMA, T.MUSEUM, T.STADIUM, T.THEME, T.CHURCH, T.BAR, T.BUS, T.TRAIN, T.WIND, T.SOLAR, T.COAL, T.WATER, T.LANDFILL, T.RECYCLE, T.MARKET, T.BANK, T.MALL, T.HOTEL, T.UNION_HALL, T.CHAMBER, T.COURT, T.PRISON, T.BASE, T.BARRACKS, T.RADAR, T.MILL, T.WAREHOUSE, T.DEPOT, T.TOWNHALL, T.SEWAGE, T.PORT, T.NAVYARD, T.FISHDOCK, T.FOUNDRY, T.WELL, T.LAMP, T.LUMBER, T.SAWMILL, T.TOOLWORKS, T.RAILYARD, T.REFINERY, T.ARMOURY, T.HYDRO, T.RESERVOIR, T.GAS, T.NUCLEAR, T.DESAL]
+	return id in [T.FIRE, T.POLICE, T.CLINIC, T.HOSPITAL, T.SCHOOL, T.LIBRARY, T.UNIVERSITY, T.PARK, T.PLAYGROUND, T.PLAZA, T.CINEMA, T.MUSEUM, T.STADIUM, T.THEME, T.CHURCH, T.BAR, T.BUS, T.TRAIN, T.WIND, T.SOLAR, T.COAL, T.WATER, T.LANDFILL, T.RECYCLE, T.MARKET, T.BANK, T.MALL, T.HOTEL, T.UNION_HALL, T.CHAMBER, T.COURT, T.PRISON, T.BASE, T.BARRACKS, T.RADAR, T.MILL, T.WAREHOUSE, T.DEPOT, T.TOWNHALL, T.SEWAGE, T.PORT, T.NAVYARD, T.FISHDOCK, T.FOUNDRY, T.WELL, T.LIGHT, T.LUMBER, T.SAWMILL, T.TOOLWORKS, T.RAILYARD, T.REFINERY, T.ARMOURY, T.HYDRO, T.RESERVOIR, T.GAS, T.NUCLEAR, T.DESAL]
 
 
 static func _draw(ci: CanvasItem, id: int, night: bool, k: Color) -> void:
@@ -452,7 +452,7 @@ static func _draw(ci: CanvasItem, id: int, night: bool, k: Color) -> void:
 			_r(ci, 22, 8, 2, 10, Color("5a432a") * k)
 			_tri(ci, Vector2(6, 9), Vector2(26, 9), Vector2(16, 3), Color("b8964a") * k)
 			ci.draw_line(Vector2(16, 9), Vector2(16, 15), Color("5a432a"), 1.0)
-		T.LAMP:
+		T.LIGHT:
 			ci.draw_circle(Vector2(16, 27), 2.5, Color(0, 0, 0, 0.16))
 			_r(ci, 15, 9, 2, 19, Color("3a3a3e") * k)
 			_r(ci, 12, 6, 8, 4, Color("3a3a3e") * k)
