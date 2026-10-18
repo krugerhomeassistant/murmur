@@ -167,6 +167,7 @@ var occ := {}  # enemy town name -> seconds it has held our border
 var raid := {}  # runtime: raid progress against a foe
 var train_on := true  # auto-train troops from barracks and bases
 var train_t := {}
+var group := 0  # multiplayer group (0 = none): towns in one group are allied and cannot fight or embargo each other; see Diplo.set_group
 var stance := "advance"  # army orders in war: advance (march on the enemy), hold (defend home) or retreat (fall back home); see Military.STANCES
 var train_w := {}  # per-kind training priority 0-3, missing = Military.DEF_W
 var road_comp := PackedByteArray()  # 1 on every road tile of the town's biggest connected road network
@@ -3442,7 +3443,7 @@ func _trade(_market: float) -> Array:
 const SAVE_KEYS := ["age", "know", "age_t", "town_name", "grid", "lvl", "build", "wire", "pipe", "sewer", "lamp", "water", "ore", "ground", "coins", "mood", "tax_r", "tax_c", "tax_i", "clock", "day",
 	"policies", "auto_mode", "auto_policy", "peak", "announced", "next_id", "recent", "active", "approval", "rep", "favor",
 	"petitions", "promises", "pet_recent", "kept", "broken", "next_election", "elections_won", "rally_used", "last_vote",
-	"season", "wage_ix", "price_loc", "stock", "exported", "loans", "done_ms", "disasters_survived", "burned", "hist_coins", "hist_pop", "ruins", "offline", "lamp", "terr", "expansions", "auto_expand", "human", "owner", "temper", "rel", "treaty", "liege", "ev_scale", "gpos", "war_n", "war_sc", "war_goal", "tension", "occ", "train_on", "train_t", "train_w", "stance", "focus", "auto_focus", "ask_build", "vetoed"]
+	"season", "wage_ix", "price_loc", "stock", "exported", "loans", "done_ms", "disasters_survived", "burned", "hist_coins", "hist_pop", "ruins", "offline", "lamp", "terr", "expansions", "auto_expand", "human", "owner", "temper", "rel", "treaty", "liege", "ev_scale", "gpos", "war_n", "war_sc", "war_goal", "tension", "occ", "train_on", "train_t", "train_w", "stance", "group", "focus", "auto_focus", "ask_build", "vetoed"]
 
 func to_dict() -> Dictionary:
 	var cs: Array = []

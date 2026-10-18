@@ -39,3 +39,6 @@ Decided with the owner, 2026-10-08: **competitive towns** in one shared world (e
 - **From the game:** start menu > Multiplayer > Host. Friends on the same network join with your LAN address; over the internet forward UDP 7777 on your router (or use a VPN/overlay network such as Tailscale or ZeroTier, no port forwarding needed).
 - **Dedicated (headless):** `godot --headless --path client -- --server [--port 7777] [--towns 6] [--speed 1]`. It prints joins, leaves and chat. Players take free towns; empty towns run on the planner. The server world is not saved yet (a restart makes a new world).
 - Open the port in the server's firewall (UDP). There is no password yet: anyone who can reach the port can join, up to 8 players.
+
+## Groups (E3, first slice)
+`City.group` (0 = none, 1 to 99) is set with the validated `group` command (`Cmd.run`, `Diplo.set_group`) and saved with the town. Joining a group signs an alliance with every other town already in it, and within a group `Diplo.act` refuses war, embargo and cancel. Planner towns never attack allies, so the group is safe from them too. Still to do: a group economy (shared treasury or aid), group-wide diplomacy and war, a lobby and HUD for forming groups, and joining mid-game (needs the rejoin token and snapshot backpressure). Test: `client/tests/group.gd`.

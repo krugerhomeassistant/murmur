@@ -122,8 +122,20 @@ static func _say(a: City, b: City, text: String) -> void:
 
 
 ## Player actions. Returns a headline.
+## Puts a town in a group (0 leaves it). Every other town of the same group becomes an ally.
+static func set_group(c: City, g: int, towns: Array) -> void:
+	c.group = g
+	if g <= 0:
+		return
+	for o in towns:
+		if o != c and (o as City).group == g:
+			sign_treaty(c, o, "alliance")
+
+
 static func act(a: City, b: City, what: String) -> String:
 	var t := treaty(a, b)
+	if a.group > 0 and a.group == b.group and (what == "war" or what == "embargo" or what == "cancel"):
+		return "%s is in your group." % b.town_name
 	var cost: float = COSTS.get(what, 0.0)
 	if a.coins < cost:
 		return "That needs $%d." % int(cost)

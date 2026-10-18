@@ -5,6 +5,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+### Added
+- Groups (E3, first slice): a town can join a group (`group` command, saved). Towns in one group are allied automatically and cannot declare war on, embargo or cancel the treaty with each other. `Diplo.set_group`, `tests/group.gd` (in CI).
+
 ## [0.5.0] - 2026-10-18
 
 ## [0.5.0] - 2026-10-18

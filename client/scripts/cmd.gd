@@ -73,6 +73,10 @@ static func run(towns: Array[City], t: City, name: String, a: Array) -> Variant:
 			if a.size() == 1 and a[0] is String and a[0] in Military.STANCES:
 				t.stance = a[0]
 				return true
+		"group":
+			if _ints(a, 1) and a[0] >= 0 and a[0] <= 99:
+				Diplo.set_group(t, a[0], towns)
+				return true
 		"train_w":
 			if a.size() == 2 and a[0] is String and Military.KIND.has(a[0]) and a[1] is int:
 				t.train_w[a[0]] = clampi(a[1], 0, 3)
