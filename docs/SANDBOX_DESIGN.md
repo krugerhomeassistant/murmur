@@ -1,6 +1,6 @@
 # Sandbox and gods-eye view: design
 
-Status: planned (owner vision, 2026-10-17), not built. Phases G1 to G5 below; each ships behind the usual CI and has its own acceptance tests. This is the document to work towards.
+Status: G1 to G3 partly built (first forms); G4 designed, G5 planned. Phases G1 to G5 below; each ships behind the usual CI and has its own acceptance tests. This is the document to work towards.
 
 ## The vision (owner's words, condensed)
 A gods-eye-view world, in the spirit of [gods-eye-view](https://github.com/bilawalsidhu/gods-eye-view), combined with the game Black & White. The player can set the world to any age, place any number of units, and start with any number of villages or towns in any age. The default game starts you in control of your own area (a continent, province or state), and that area can also be a selector.
@@ -47,11 +47,16 @@ Powers are events (`Events`) with a target, a radius and a cooldown; they reuse 
 Acceptance: `tests/powers.gd` per power: effect applied, belief spent, cooldown respected.
 
 ### G4 Globe and gods-eye view
-A new top zoom tier above the M view:
-- A whole-world view: terrain colour, town markers sized by population, borders coloured by side, wars and trade lines; click a marker to drop into that town.
-- Overlays: age, population, wealth, military, culture score, victory progress.
-- Design question to settle with a prototype first: flat map with a globe shader versus a true sphere. The flat map is the baseline and ships first; the sphere is an option if it costs no performance.
-Needs its own design pass (rendering budget, LOD for thousands of towns) and a measured benchmark before it ships.
+Design pass (2026-10-18). Build on what exists instead of a second renderer:
+- **Today.** Zoom below `Main.WORLD_ZOOM` (0.25) is level of detail 3: live town thumbnails, names and a rim per town, over `WorldLayer` (the endless `World` drawn one texel per tile, chunk textures, generated a few ms per frame, `KEEP` 700 chunks). `Main.fit_prev` and 'fit world' already jump to it.
+- **New tier, "globe" (zoom below about 0.05).** `WorldLayer` samples one texel per 8x8 tiles (`World` is a pure function of seed and tile, so a coarse sample costs 1/64 of the work) and caches one small texture per 128x128-tile block. Same nearest filter, same per-frame budget, so no new hitch source. Cap: the number of blocks on screen (about 400 at the lowest zoom) bounds the work; beyond that the camera stops zooming out.
+- **Flat first, sphere optional.** The flat map is the baseline and ships first. A sphere is only a shader on the same texture (equirectangular to orthographic) and is attempted last, behind a setting, and only if the benchmark shows no loss; it is not on the critical path.
+- **Markers.** At globe zoom each town is a disc: area proportional to population (clamped), colour by side (you, ally, neutral, enemy, vassal), a ring while at war, a line to each trade partner (width by volume) and a crossed-swords mark per active war from `Diplo.wars`. Everything comes from data the sim already keeps; nothing new is simulated. Markers are drawn in one `_draw` pass with no per-town node, so 1000 towns is 1000 draw calls at most, and under a screen-space size of 3 px a town collapses to a dot and is batched.
+- **Overlays** (key `O` cycles, a legend in the corner): age, population, wealth (treasury per person), military power (`Military.power`), culture score, victory progress (share of land per group, `Victory`). Each is a function City -> 0..1 mapped to the marker ring colour with the validated palette from the dataviz skill, in light and dark.
+- **Interaction.** Hover shows a card (name, age, population, treasury, treaty with your town); click flies the camera to that town and drops to level of detail 0..2 by the existing `glide`; middle-drag pans, wheel zooms, as today. In multiplayer the globe is read-only for other players' towns (snapshots already carry what it needs).
+- **Performance budget and acceptance.** `tests/globe.gd`: builds 200 headless towns and checks marker data (`Globe.markers(towns, overlay)`) is produced in under 5 ms and is pure (no sim state changes). Windowed benchmark: the standard 8-town scene with the globe tier open must hold the README numbers (no more than 5% fps loss at normal zoom, since the tier costs nothing when it is off screen); a 200-town sandbox scene is the new stress case.
+- **Slices.** G4a `Globe` data module (pure, tested): markers, overlays, legend. G4b globe zoom tier in `WorldLayer` (coarse texels, block cache). G4c marker and overlay drawing plus hover card in `Main`. G4d trade and war lines, minimap link. G4e sphere shader (optional, last).
+- **Out of scope.** Terrain editing from the globe, real-world data (G5), a creature or avatar.
 
 ### G5 Real-world map mode
 Start from a real map: pick a continent, country or state; towns are seeded at real cities with real coastlines and rivers.
