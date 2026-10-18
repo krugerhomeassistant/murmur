@@ -28,6 +28,7 @@ Acceptance: `tests/scenario.gd` builds three scenarios headless (1 town Ancient,
 Depends on: ages A2 (without early-age content an Ancient world is empty).
 
 ### G2 Sandbox editor
+Progress: the `grant` and `spawn` commands (gated by `Cmd.sandbox`, set by the setup screen's Sandbox option, never in multiplayer) and three buttons in the Empire window (`tests/sandbox.gd`); `set_age` already existed. Left: town placement, terrain brush, population and tribe edits, clock and season, undo, saving the sandbox flag.
 A Sandbox mode (`Main.sandbox`, saved) with a toolbar:
 - Place or remove towns of a chosen size and age anywhere on a free plot (no cost, no distance rule).
 - Place units (any type of the town's age or a chosen age) singly or by the dozen, owned by any town.

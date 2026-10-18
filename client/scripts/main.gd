@@ -399,6 +399,7 @@ func start_game(o: Dictionary) -> void:
 	ephemeral = bool(o.get("temp", false))
 	if not o.get("mp", false) and not ephemeral:
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(SAVE))
+	Cmd.sandbox = bool(o.get("sandbox", false)) and not o.get("mp", false)
 	_fresh(o)
 	_begin()
 	hud.guide.visible = false

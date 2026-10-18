@@ -993,6 +993,7 @@ var army_l: RichTextLabel
 var army_chk: CheckButton
 var stance_btn: Button
 var emp_grp: Button
+var emp_sand: HBoxContainer
 var army_rows := {}
 
 
@@ -1120,6 +1121,12 @@ func _empire() -> void:
         if not (m.net != null and m.net.active and not m.net.is_host()):  # a client hears the answer in Main._net_reply
             m.headline = "Moved $%d between your towns." % int(float(n)) if n != null else "Nothing to balance.")
     bb.tooltip_text = "Rich towns (over $600) give half of what they hold above $400; towns under $200 are topped up. No money is created."
+    emp_sand = HBoxContainer.new()
+    body.add_child(emp_sand)
+    _lbl(emp_sand, 70).text = "Sandbox"
+    _btn(emp_sand, "+$1000", func() -> void: m.cmd("grant", [1000]))
+    _btn(emp_sand, "+12 troops", func() -> void: m.cmd("spawn", ["spear" if m.city.age < 2 else "inf", 12]))
+    _btn(emp_sand, "Next age", func() -> void: m.cmd("set_age", [mini(m.city.age + 1, Ages.LAST)]))
     win_open["empire"] = false
     (wins["empire"] as PanelContainer).visible = false
 
@@ -1414,6 +1421,7 @@ func _empire_refresh(c: City) -> void:
         return
     var mine := Empire.mine(m.towns, c)
     var tt := Empire.totals(mine)
+    emp_sand.visible = Cmd.sandbox
     emp_grp.text = "Group: %s (click to change)" % (str(c.group) if c.group > 0 else "none")
     emp_dom.text = _domination()
     emp_tot.text = "%d of your towns   pop %d   treasury $%d   net %+.1f/s" % [tt["towns"], tt["pop"], int(tt["coins"]), tt["income"]]

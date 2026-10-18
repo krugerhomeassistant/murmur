@@ -6,6 +6,7 @@ var m: Node2D
 var has_save := false
 var o_name: LineEdit
 var o_seed: LineEdit
+var o_sand: CheckButton
 var o_towns: OptionButton
 var o_mood: OptionButton
 var o_diff: OptionButton
@@ -93,6 +94,10 @@ func _ready() -> void:
 	o_spec.text = "Spectator: no mayor, watch towns run themselves"
 	o_spec.focus_mode = Control.FOCUS_NONE
 	v.add_child(o_spec)
+	o_sand = CheckButton.new()
+	o_sand.text = "Sandbox: free money, instant troops (Empire window)"
+	o_sand.focus_mode = Control.FOCUS_NONE
+	v.add_child(o_sand)
 	o_guide = CheckButton.new()
 	o_guide.text = "Show the new-player guide"
 	o_guide.button_pressed = not has_save
@@ -163,4 +168,5 @@ func _go() -> void:
 		"expand": o_exp.button_pressed,
 		"guide": o_guide.button_pressed and not o_spec.button_pressed,
 		"spectate": o_spec.button_pressed,
+		"sandbox": o_sand.button_pressed,
 	})
