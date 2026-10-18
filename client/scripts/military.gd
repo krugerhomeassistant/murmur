@@ -35,6 +35,8 @@ const RANK_HP := 0.10
 const ARMY_MAX := 150  # per town: training stops here (upkeep, and fights cost O(n^2))
 const INF_D := 1 << 29
 const BUILD_GAP_MS := 30  # at most one flow-field build per this many ms
+## Army orders (`City.stance`): advance marches on the enemy heart; hold stays at home and fights what comes; retreat falls back home without chasing.
+const STANCES := ["advance", "hold", "retreat"]
 const AGGRO := 520.0  # px: foes closer than this (or 1.5x weapon range) are chased instead of marching on
 const FIELD_TTL := 3000  # fight calls a cached flow field lives at most; terrain_changed() (bridges built or removed) clears it at once
 const TCLS := {"soft": 0, "armor": 1, "air": 2, "ship": 3}
@@ -524,6 +526,10 @@ static func fight(a: City, b: City) -> void:
 		var spd := float(kd["spd"]) * (1.0 + 0.12 * float(u["l"]))  # jitter so a column does not arrive as one clump
 		var jit := Vector2(float(u["l"]), fposmod(float(u["l"]) * 7.3, 1.0) - 0.5) * TILE * 0.4
 		var goal: Vector2 = centre[side[i]]
+		var owner_c: City = a if side[i] == 0 else b
+		var stance: String = owner_c.stance
+		if stance != "advance":
+			goal = terr_px(owner_c).get_center()
 		var q := p
 		if kd.has("heal"):
 			var cand: Array = []
@@ -570,7 +576,7 @@ static func fight(a: City, b: City) -> void:
 				u["fp"] = pos[best]
 				u["h"] = (pos[best] - p).angle()
 				continue
-			if near >= 0 and sqrt(nd) <= maxf(AGGRO, rng_ * 1.5):
+			if near >= 0 and stance != "retreat" and sqrt(nd) <= maxf(AGGRO, rng_ * 1.5):
 				var tp: Vector2 = pos[near]
 				var stand := maxf(rng_ * 0.8, 10.0)
 				q = _slide(p, tp - (tp - p).normalized() * stand, spd, cls) if cls != 2 else p + (tp - p).limit_length(spd)

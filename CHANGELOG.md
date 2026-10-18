@@ -5,6 +5,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+### Added
+- Army orders (E6 command UI, first slice): a stance for the whole army, set from the Army window or the `stance` command (works in multiplayer and is saved): advance marches on the enemy, hold stays home and fights what comes, retreat falls back home without chasing. `tests/stance.gd` (in CI).
+
 ### Changed
 - Bombing runs: any anti-air gun, fighter or jet used to stop them outright; now each guard slows the run to 1/(1 + 2 x guards) of its rate, so a defended town is hit more slowly instead of never. `tests/air.gd` (in CI).
 

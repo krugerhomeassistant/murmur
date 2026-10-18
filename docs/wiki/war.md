@@ -292,6 +292,9 @@ Boats follow a field over river tiles to the river tile nearest the enemy heart 
 
 Air units (`jet`, `fighter`, `bomber`, `heli`) fly straight (`p + (goal - p).limit_length(spd)`), with no pathing and no terrain. They are limited by radar posts if flagged (`radar: true`: jet, fighter, bomber; the helicopter is not flagged). Anti-air has `air` multiplier 3; fighters 2.2. Bombers have damage multipliers on armour and ships but 0 against air, so they cannot defend themselves against aircraft.
 
+### Army orders
+`City.stance` (`advance`, `hold` or `retreat`, set with the `stance` command or the Army window button, saved with the town) changes the goal in `Military.fight`: advance marches on the enemy heart, hold and retreat head for the home territory's centre; retreating units also stop chasing foes. Test: `client/tests/stance.gd`.
+
 ### Raids, bombing and buildings
 
 War damage to buildings is not simulated per shot. Two mechanisms destroy buildings, through `City.strike(n, from)`:

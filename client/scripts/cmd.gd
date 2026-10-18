@@ -69,6 +69,10 @@ static func run(towns: Array[City], t: City, name: String, a: Array) -> Variant:
 			if a.size() == 1 and a[0] is bool:
 				t.train_on = a[0]
 				return true
+		"stance":
+			if a.size() == 1 and a[0] is String and a[0] in Military.STANCES:
+				t.stance = a[0]
+				return true
 		"train_w":
 			if a.size() == 2 and a[0] is String and Military.KIND.has(a[0]) and a[1] is int:
 				t.train_w[a[0]] = clampi(a[1], 0, 3)
