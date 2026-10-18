@@ -20,6 +20,8 @@ static func _tri(ci: CanvasItem, a: Vector2, b: Vector2, c: Vector2, col: Color)
 static func _win(ci: CanvasItem, x: float, y: float, w: float, h: float, night: bool) -> void:
 	_r(ci, x, y, w, h, LIT if night else GLASS)
 	_r(ci, x, y, w, 1, Color(1, 1, 1, 0.35))
+	_r(ci, x - 0.5, y + h, w + 1, 1, Color(1, 1, 1, 0.5))  # sill
+	_r(ci, x + w - 1, y + 1, 1, h - 1, Color(0, 0, 0, 0.12))  # soft inner shade
 
 
 static func _cols(ci: CanvasItem, x: float, y: float, w: float, h: float, n: int, c: Color) -> void:
@@ -514,7 +516,13 @@ static func building(ci: CanvasItem, r: Rect2, shape: String, body: Color, lv: i
 			_r(ci, 2, 27, 28, 2, Color("c9bfa0") * k)
 			var top := 10.0 - 4.0 * (lv - 1)
 			_r(ci, 6, top + 6, 20, 21 - top - 6 + 6, wall)
+			var wh := 21.0 - top  # painted wall: light from above, soft shade at the foot and on the right
+			_r(ci, 6, top + 6 + wh * 0.5, 20, wh * 0.5, Color(0.25, 0.15, 0.05, 0.1))
+			_r(ci, 6, top + 6 + wh * 0.75, 20, wh * 0.25, Color(0.25, 0.15, 0.05, 0.1))
+			_r(ci, 22, top + 6, 4, wh, Color(0, 0, 0, 0.07))
 			_tri(ci, Vector2(4, top + 6), Vector2(28, top + 6), Vector2(16, top - 3), roof)
+			_r(ci, 5, top + 6, 22, 2, Color(0, 0, 0, 0.18))  # eave shadow on the wall
+			_tri(ci, Vector2(4, top + 6), Vector2(16, top - 3), Vector2(13, top + 6), Color(1, 1, 1, 0.1))
 			_tri(ci, Vector2(16, top - 3), Vector2(28, top + 6), Vector2(18, top + 6), Color(0, 0, 0, 0.14))
 			_r(ci, 14, 20, 5, 8, Color("5a3a22") * k)
 			_win(ci, 8, top + 9, 4, 4, night)
