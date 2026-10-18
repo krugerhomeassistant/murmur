@@ -632,6 +632,9 @@ func _unhandled_input(e: InputEvent) -> void:
 				if spectating():
 					follow_t = 0.0
 					switch_town((towns.find(city) + 1) % towns.size())
+			KEY_O:  # globe view: cycle the colour ring (side, age, population, wealth, military)
+				globe_ov = (globe_ov + 1) % Globe.OVERLAYS.size()
+				headline = "Globe overlay: %s." % Globe.OVERLAYS[globe_ov]
 			KEY_F:
 				follow = not follow
 				headline = "Auto-follow %s." % ("on" if follow else "off")
@@ -1021,6 +1024,7 @@ func _draw_borders(tr: Rect2i) -> void:
 		if int(city.gate[k]) > 0:
 			ci.draw_circle(mids[k] * TILE, 6.0, Color("f2cf4a"))
 
+var globe_ov := 0  # index into Globe.OVERLAYS
 const GLOBE_ZOOM := 0.06  # below this the towns are discs on the coarse map (docs/SANDBOX_DESIGN.md G4)
 const GLOBE_COL := {"you": Color("f2cf4a"), "ally": Color("5fbf6a"), "war": Color("d9534f"), "vassal": Color("9b6fd1"), "pact": Color("4fa3d9"), "embargo": Color("d98a3d"), "none": Color("c9c9c9")}
 
@@ -1029,7 +1033,8 @@ const GLOBE_COL := {"you": Color("f2cf4a"), "ally": Color("5fbf6a"), "war": Colo
 func _draw_globe() -> void:
 	var mp := get_global_mouse_position()
 	var hov := ""
-	var ms := Globe.markers(towns, city, "side")
+	var ov: String = Globe.OVERLAYS[globe_ov]
+	var ms := Globe.markers(towns, city, ov)
 	for m in ms:  # links first, so the discs sit on top: red = war, green = joined by road, grey = neighbours without a road
 		for d in m.t.partners:
 			if towns.find(d) > towns.find(m.t):  # each pair once
@@ -1041,6 +1046,8 @@ func _draw_globe() -> void:
 		var r: float = m.r * TILE
 		draw_circle(p, r, GLOBE_COL[m.side])
 		draw_arc(p, r, 0.0, TAU, 24, Color(0, 0, 0, 0.7), 2.0 / cam.zoom.x)
+		if ov != "side":  # ring from cool (low) to hot (high)
+			draw_arc(p, r * 1.25, 0.0, TAU, 24, Color("4fa3d9").lerp(Color("d9382a"), m.v), 6.0 / cam.zoom.x)
 		if mp.distance_to(p) <= maxf(r, 8.0 / cam.zoom.x):
 			hov = "%s  %s  pop %d" % [m.name, Ages.name_of(m.t.age), m.t.pop]
 	if hov != "":
