@@ -1446,6 +1446,15 @@ func draw_chunk(c_item: CanvasItem, t_: City, x0: int, y0: int, x1: int, y1: int
 			match String(d["kind"]):
 				"road":
 					ci.draw_rect(r, d["col"])
+					var kerb: Color = d["col"].lightened(0.25)  # pale kerb on every side that is not another road
+					if x == 0 or not city.is_road(city.grid[i - 1]):
+						ci.draw_rect(Rect2(r.position, Vector2(2, TILE)), kerb)
+					if x + 1 >= City.W or not city.is_road(city.grid[i + 1]):
+						ci.draw_rect(Rect2(r.position + Vector2(TILE - 2, 0), Vector2(2, TILE)), kerb)
+					if y == 0 or not city.is_road(city.grid[i - City.W]):
+						ci.draw_rect(Rect2(r.position, Vector2(TILE, 2)), kerb)
+					if y + 1 >= City.H or not city.is_road(city.grid[i + City.W]):
+						ci.draw_rect(Rect2(r.position + Vector2(0, TILE - 2), Vector2(TILE, 2)), kerb)
 					var c := r.get_center()
 					ci.draw_circle(c, 1.5, lane)
 					if x + 1 < City.W and city.is_road(city.grid[i + 1]):
