@@ -1,6 +1,6 @@
 extends SceneTree
 const T := Catalog.Id
-## Power tiers: each generator adds its rated output to a connected grid, and output, cost and age rise by tier.
+## Utility tiers: each plant adds its rated output to a connected grid (power) or pipe network (water), and output rises by tier.
 
 
 func _free(c: City, wet: bool) -> Vector2i:
@@ -13,7 +13,7 @@ func _free(c: City, wet: bool) -> Vector2i:
 
 func _init() -> void:
 	var ok := true
-	var tiers := [T.WIND, T.SOLAR, T.COAL, T.HYDRO, T.GAS, T.NUCLEAR]
+	var tiers := [T.WIND, T.SOLAR, T.COAL, T.HYDRO, T.GAS, T.NUCLEAR, T.WATER, T.RESERVOIR, T.DESAL]
 	var prev := 0.0
 	for t in [T.COAL, T.HYDRO, T.GAS, T.NUCLEAR]:
 		var o := float(Catalog.DEFS[t]["out"]["power"])
@@ -21,6 +21,9 @@ func _init() -> void:
 			ok = false
 			print("FAIL output not rising at %s" % Catalog.DEFS[t]["n"])
 		prev = o
+	if float(Catalog.DEFS[T.WATER]["out"]["water"]) >= float(Catalog.DEFS[T.RESERVOIR]["out"]["water"]) or float(Catalog.DEFS[T.RESERVOIR]["out"]["water"]) >= float(Catalog.DEFS[T.DESAL]["out"]["water"]):
+		ok = false
+		print("FAIL water output not rising")
 	if Ages.building(T.NUCLEAR) < Ages.building(T.COAL) or Ages.building(T.HYDRO) < 1:
 		ok = false
 		print("FAIL age gating")
@@ -30,6 +33,7 @@ func _init() -> void:
 		c.peak = 100000
 		c.age = 3
 		c.coins = 100000.0
+		var m: String = Catalog.DEFS[t]["out"].keys()[0]
 		var p := _free(c, bool(Catalog.DEFS[t].get("water", false)))
 		if p.x < 0:
 			print("SKIP no site for %s" % Catalog.DEFS[t]["n"])
@@ -39,15 +43,15 @@ func _init() -> void:
 			c.place(p.x, p.y + 1, T.ROAD)  # a river site far from any road
 		c._scan()
 		c._net()
-		var before: float = c.net_own["power"]
-		if not c.place(p.x, p.y, t) or not c.place(p.x + 1, p.y, T.WIRE):
+		var before: float = c.net_own[m]
+		if not c.place(p.x, p.y, t) or not c.place(p.x + 1, p.y, T.WIRE if m == "power" else T.PIPE):
 			ok = false
 			print("FAIL could not place %s" % Catalog.DEFS[t]["n"])
 			continue
 		c._scan()
 		c._net()
-		var got: float = float(c.net_own["power"]) - before
-		var want := float(Catalog.DEFS[t]["out"]["power"])
+		var got: float = float(c.net_own[m]) - before
+		var want := float(Catalog.DEFS[t]["out"][m])
 		if got < want * 0.5:
 			ok = false
 			print("FAIL %s supplies %.1f, expected about %.1f" % [Catalog.DEFS[t]["n"], got, want])
