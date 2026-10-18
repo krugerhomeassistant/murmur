@@ -684,6 +684,10 @@ class IconView extends Control:
 static func ground(ci: CanvasItem, x: int, y: int, owned: bool, season: int) -> void:
 	var h := (x * 73856093 ^ y * 19349663) & 255
 	var p := Vector2(x, y) * 32.0
+	# Soft per-tile and per-patch shading so open land is not one flat colour (baked into cached chunks).
+	var patch := ((x >> 2) * 40503 ^ (y >> 2) * 9973) & 7
+	var shade := (h % 5) * 0.005 + patch * 0.01
+	ci.draw_rect(Rect2(p, Vector2(32, 32)), Color(0.1, 0.3, 0.05, shade) if patch < 4 else Color(1, 0.95, 0.6, shade * 0.7))
 	if not owned:
 		if h < 70:
 			_tree(ci, p + Vector2(8 + (h % 16), 12 + ((h / 4) % 14)), h, season)
