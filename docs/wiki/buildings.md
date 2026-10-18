@@ -1371,7 +1371,7 @@ Saws wood into planks: 0.5 wood a second becomes 0.25 planks. Building sites wit
 
 ### Rail yard
 
-Loads goods onto trains. When both towns of a trade link have a rail yard, freight costs 60% less and the link carries twice as much.
+Loads goods onto trains. When both towns of a trade link have a rail yard, freight costs up to 60% less and the link carries up to twice as much. The effect scales with how many farms, mines and factories lie within 14 tiles of a yard.
 
 | | |
 |---|---|
@@ -1384,7 +1384,7 @@ Loads goods onto trains. When both towns of a trade link have a rail yard, freig
 | Production chain | rail |
 | Map colour / letter | `#5a5f6b` / `Ry` |
 
-*Tip:* Both ends need one. Worth it between towns that trade a lot.
+*Tip:* Both ends need one. Build it beside your industry, not at the edge of town.
 
 ### Warehouse
 

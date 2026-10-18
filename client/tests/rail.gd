@@ -31,11 +31,21 @@ func _run(rail: bool, port := false, road := true) -> float:
 	return float(b.stock["food"])
 
 
+func _reach(at: Vector2i) -> float:
+	var c := City.new(Signals.new())
+	c.grid[5 * c.W + 5] = Catalog.Id.FARM
+	c.works = [5 * c.W + 5]
+	c.bt[Catalog.Id.RAILYARD] = [at.y * c.W + at.x]
+	return c._rail_share()
+
+
 func _init() -> void:
 	var plain := _run(false)
 	var fast := _run(true)
 	var noroad := _run(false, false, false)
 	var sea := _run(false, true, false)
-	var ok := plain > 0.0 and fast > plain * 1.5 and noroad == 0.0 and sea > 0.0
-	print("RAIL_OK plain=%.2f rail=%.2f sea=%.2f (no road: %.2f)" % [plain, fast, sea, noroad] if ok else "RAIL_FAIL plain=%.2f rail=%.2f sea=%.2f noroad=%.2f" % [plain, fast, sea, noroad])
+	var close := _reach(Vector2i(8, 8))
+	var far := _reach(Vector2i(40, 40))
+	var ok := close > far and far >= 0.4 and close <= 1.0 and plain > 0.0 and fast > plain * 1.5 and noroad == 0.0 and sea > 0.0
+	print("RAIL_OK plain=%.2f rail=%.2f sea=%.2f (no road: %.2f) reach near=%.2f far=%.2f" % [plain, fast, sea, noroad, close, far] if ok else "RAIL_FAIL plain=%.2f rail=%.2f sea=%.2f noroad=%.2f near=%.2f far=%.2f" % [plain, fast, sea, noroad, close, far])
 	quit(0 if ok else 1)
