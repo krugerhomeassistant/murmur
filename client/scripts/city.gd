@@ -1716,6 +1716,9 @@ func _second() -> void:
 ## `SVC_FEE` per resident per point, to that neighbour, and only while we can afford a minute of it. No coin is created.
 func _svc_trade() -> void:
 	svc_buy.clear()
+	var tm := {}  # one treaty lookup per partner instead of one per partner and service
+	for p in partners:
+		tm[p] = Diplo.tmult(self, p)
 	for m in SHARED:
 		svc_in[m] = 0.0
 		if not cov_own.has(m) or homes.is_empty():
@@ -1727,7 +1730,7 @@ func _svc_trade() -> void:
 		for p in partners:
 			if gap <= 0.0:
 				break
-			var t := Diplo.tmult(self, p)
+			var t: float = tm[p]
 			if t <= 0.0 or not p.cov_own.has(m) or p.homes.is_empty():
 				continue
 			var offer := clampf(float(p.cov_own[m]) - 0.3, 0.0, 1.0) * 0.5 * minf(t, 1.0) * clampf(float(p.homes.size()) / float(homes.size()), 0.3, 1.0)
@@ -1742,8 +1745,11 @@ func _svc_trade() -> void:
 
 
 func _money(market: float) -> void:
+	var mt := Time.get_ticks_usec()
 	_households()
+	mt = _pf("m_households", mt)
 	_svc_trade()
+	mt = _pf("m_svc_trade", mt)
 	var econ := 1.0 + 0.5 * market
 	var prodm := (1.0 - 0.2 * _need("health")) * (1.0 - 0.25 * _need("power")) * (1.0 - 0.15 * _need("water")) * (1.0 - 0.2 * wear) * mod("prod_mult")
 	var wise := 1.0 + 0.3 * float(cov["edu"])
@@ -1780,7 +1786,9 @@ func _money(market: float) -> void:
 	for q in svc_buy:
 		trade_net -= float(svc_buy[q])
 	var e_crime := crime * pop * 0.3 * RATE
+	mt = Time.get_ticks_usec()
 	var tr := _trade(market)
+	mt = _pf("m_trade", mt)
 	var e_loan := 0.0
 	for l in loans:
 		e_loan += float(l["pay"])
@@ -1902,8 +1910,26 @@ func trade_want(k: String) -> float:
 	return maxf(0.0, nr * 45.0 - float(stock.get(k, 0.0))) if nr > 0.02 else 0.0
 
 
+## Per building id: the wage multiplier of its sector and the rent tier of a home, built once (the dictionary lookups per citizen per second were the biggest cost of _households).
+static var _wage_tier := PackedFloat32Array()
+static var _rent_tier := PackedFloat32Array()
+
+
+static func _build_tiers() -> void:
+	var n := 0
+	for id in Catalog.DEFS:
+		n = maxi(n, int(id) + 1)
+	_wage_tier.resize(n)
+	_rent_tier.resize(n)
+	for id in Catalog.DEFS:
+		_wage_tier[int(id)] = float(WAGE_TIER.get(String(Catalog.DEFS[id].get("sector", "")), 1.0))
+		_rent_tier[int(id)] = float(Catalog.DEFS[id].get("tier", 1.0))
+
+
 ## Wages, bills and savings of every household, once per sim second (see docs/wiki/households.md).
 func _households() -> void:
+	if _wage_tier.is_empty():
+		_build_tiers()
 	var mk: Market = sig.mk
 	var pf: float = price_loc["food"]  # what households pay is this town's price, not the world's
 	var pg: float = price_loc["goods"]
@@ -1923,8 +1949,8 @@ func _households() -> void:
 	for c in citizens:
 		var wage := 0.0
 		if c.work >= 0:
-			wage = net * float(WAGE_TIER.get(String(Catalog.DEFS[grid[c.work]].get("sector", "")), 1.0)) if grid[c.work] != T.EMPTY else net
-		var rent := RENT * float(Catalog.DEFS[grid[c.home]].get("tier", 1.0)) if grid[c.home] != T.EMPTY else 0.0
+			wage = net * float(_wage_tier[grid[c.work]]) if grid[c.work] != T.EMPTY else net
+		var rent := RENT * float(_rent_tier[grid[c.home]]) if grid[c.home] != T.EMPTY else 0.0
 		var bills := 0.05 * pf + 0.03 * pg + rent
 		rent_pool += rent
 		c.wealth += wage - bills
@@ -1935,38 +1961,22 @@ func _households() -> void:
 			var out := (c.wealth - 150.0) * 0.004  # the well-off spend and invest elsewhere
 			c.wealth -= out
 			hh_tax += out * clampf(tax_r * 5.0, 0.0, 1.0)  # the town taxes part of it, more at higher residential rates
-		if c.wealth < BROKE:
-			broke += 1
-		elif c.wealth > 120.0:
-			rich += 1
 		tot += c.wealth
-		ws.append(c.wealth)
 		var hw: Array = home_w.get(c.home, [0.0, 0, 0])
 		hw[0] = float(hw[0]) + c.wealth
 		hw[1] = int(hw[1]) + 1
-		hw[2] = int(hw[2]) + (1 if c.wealth < BROKE else 0)
 		home_w[c.home] = hw
-	# families: residents of one home share their money, so a jobless member is carried by the earners and a broke home is one where nobody earns enough
+	# families: residents of one home share their money, so a jobless member is carried by the earners and a broke home is one where nobody earns enough (pooling keeps each home's sum, so the sums above stay right)
 	for c in citizens:
-		var hw: Array = home_w.get(c.home, [])
-		if hw.size() > 2 and int(hw[1]) > 1:
-			var avg := float(hw[0]) / int(hw[1])
-			c.wealth += (avg - c.wealth) * FAMILY_SHARE
-	broke = 0
-	rich = 0
-	ws.clear()
-	home_w.clear()
-	for c in citizens:
+		var hw: Array = home_w[c.home]
+		if int(hw[1]) > 1:
+			c.wealth += (float(hw[0]) / int(hw[1]) - c.wealth) * FAMILY_SHARE
 		if c.wealth < BROKE:
 			broke += 1
+			hw[2] = int(hw[2]) + 1
 		elif c.wealth > 120.0:
 			rich += 1
 		ws.append(c.wealth)
-		var hw2: Array = home_w.get(c.home, [0.0, 0, 0])
-		hw2[0] = float(hw2[0]) + c.wealth
-		hw2[1] = int(hw2[1]) + 1
-		hw2[2] = int(hw2[2]) + (1 if c.wealth < BROKE else 0)
-		home_w[c.home] = hw2
 	var n := citizens.size()
 	hardship = float(broke) / maxf(n, 1.0)
 	ws.sort()
