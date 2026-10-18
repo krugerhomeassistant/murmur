@@ -837,7 +837,7 @@ func _chunks() -> void:
 		vis[t] = on
 		L.visible = on
 		L.cr.visible = on and lv < 3
-		L.spr_thumb.visible = on and lv == 3
+		L.spr_thumb.visible = on and lv == 3 and cam.zoom.x >= GLOBE_ZOOM
 		if not on:
 			continue
 		L.queue_redraw()
@@ -1011,8 +1011,31 @@ func _draw_borders(tr: Rect2i) -> void:
 		if int(city.gate[k]) > 0:
 			ci.draw_circle(mids[k] * TILE, 6.0, Color("f2cf4a"))
 
+const GLOBE_ZOOM := 0.06  # below this the towns are discs on the coarse map (docs/SANDBOX_DESIGN.md G4)
+const GLOBE_COL := {"you": Color("f2cf4a"), "ally": Color("5fbf6a"), "war": Color("d9534f"), "vassal": Color("9b6fd1"), "pact": Color("4fa3d9"), "embargo": Color("d98a3d"), "none": Color("c9c9c9")}
+
+
+## Globe view: one disc per town (size = population, colour = relation to you) and a name under the mouse.
+func _draw_globe() -> void:
+	var mp := get_global_mouse_position()
+	var hov := ""
+	for m in Globe.markers(towns, city, "side"):
+		var p: Vector2 = m.pos * TILE
+		var r: float = m.r * TILE
+		draw_circle(p, r, GLOBE_COL[m.side])
+		draw_arc(p, r, 0.0, TAU, 24, Color(0, 0, 0, 0.7), 2.0 / cam.zoom.x)
+		if mp.distance_to(p) <= maxf(r, 8.0 / cam.zoom.x):
+			hov = "%s  %s  pop %d" % [m.name, Ages.name_of(m.t.age), m.t.pop]
+	if hov != "":
+		var fs := int(18.0 / cam.zoom.x)
+		draw_string(ThemeDB.fallback_font, mp + Vector2(14, -14) / cam.zoom.x, hov, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Color.WHITE)
+
+
 func _draw() -> void:  # world level: weather and the links between towns; every town draws itself in its TownLayer
 	ci = self
+	if cam.zoom.x < GLOBE_ZOOM:
+		_draw_globe()
+		return
 	var vp := get_viewport_rect().size / cam.zoom
 	var view := Rect2(cam.position - vp * 0.5, vp)
 	if _lod() < 3:
