@@ -5,6 +5,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-10-18
+
 ### Added
 - Release standard: every finished milestone is released (a minor release per roadmap milestone or about 40 commits, a patch per player-visible fix), with a fast path in `docs/RELEASING.md` and a rule in `CLAUDE.md`.
 - Sea trade (E5c): two neighbouring towns that both have a port trade by sea even without a road (link strength 0.8), and a road link between two ports pays 30% less freight. Rail keeps its bigger discount. `tests/rail.gd` extended.
@@ -54,6 +56,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 - Planner towns could never link a border: the border road was laid as a straight line and gave up for good at the first building in the way (`tests/spectate.gd` failed about 1 run in 4). It now finds a route around buildings, preferring dry land.
 
 ### Changed
+- Performance note for this release: the headless 8-town stage profile (3000 sim-s) averages about 2.8 to 3.5 ms a step, against 1.66 ms at v0.2.0. Towns are about 40% bigger and the household, goods, maintenance and trade systems are new, so it is not like-for-like; the largest regression (service trade) is fixed above. The windowed benchmark was not re-run for this release; the README table is still the v0.2.0 measurement.
 - Performance: the cross-town service trade no longer rescans every building definition each second (`Catalog.need_pop` is cached): that stage went from about 7.4 s to 1.2 s over the 3000 s, 8-town headless profile. Household accounting uses per-building tables and one loop fewer. `stageprof` now reports `m_households`, `m_svc_trade` and `m_trade` inside the money stage.
 - `city.gd` split (D7): traffic, avenue widening and buses moved to `scripts/traffic.gd` (`Traffic`, `tests/traffic.gd`); petitions, promises, approval, elections, loans, milestones and advisors moved to `scripts/mayor.gd` (`Mayor`). `City.answer`, `rally`, `take_loan` and `advisors` stay as its API. Behaviour unchanged; city.gd is 3836 to 3504 lines.
 - Efficiency engine: mood no longer halts building. `City.efficiency()` (mood / 0.5, at most 1) scales construction speed, the upgrade roll and how often the planner zones; only mood 0 stops it. Replaces the hard mood gates (planner 0.38, upgrades 0.35). Six fresh towns, two batches: 8 of 12 reach 300 people (before 5 to 7 of 12). `tests/efficiency.gd`.
