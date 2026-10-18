@@ -209,6 +209,22 @@ func kind(x: int, y: int) -> int:
 	return _chunk(x, y)["k"][_at(x, y)]
 
 
+## A coarse land map for the globe view: `n` x `n` kinds sampled every `step` tiles from the elevation alone (no rivers, no forest),
+## about 1/step^2 of the cost of the real chunks. Row-major, starting at tile (x0, y0). Reads the elevation lattice directly, so
+## `x0`, `y0` and `step` are rounded down to multiples of STEP.
+func coarse(x0: int, y0: int, n: int, step: int) -> PackedByteArray:
+	var out := PackedByteArray()
+	out.resize(n * n)
+	for j in n:
+		for i in n:
+			var e := _lat(F.ELEV, floori(float(x0 + i * step) / STEP), floori(float(y0 + j * step) / STEP))
+			var k := K.SEA
+			if e >= SEA_LEVEL:
+				k = K.SAND if e < SEA_LEVEL + 0.03 else (K.ROCK if e > 0.72 else (K.HILL if e > 0.64 else K.PLAIN))
+			out[j * n + i] = k
+	return out
+
+
 func ore(x: int, y: int) -> int:
 	return _chunk(x, y)["o"][_at(x, y)]
 

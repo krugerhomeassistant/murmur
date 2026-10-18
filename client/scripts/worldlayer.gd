@@ -6,10 +6,15 @@ extends Node2D
 const TILE := 32.0
 const BUDGET_US := 6000
 const KEEP := 700  # chunk textures kept; the farthest are dropped first
+const G_TILES := 128  # globe tier: one block covers this many tiles (a 16 x 16 texture, one texel per 8 tiles)
+const G_STEP := 8
+const G_KEEP := 600
 
 var world: World
 var season := 0
 var _tex := {}  # Vector2i chunk -> ImageTexture
+var _gtex := {}  # Vector2i globe block -> ImageTexture (coarse land from World.coarse)
+var _globe := false  # zoomed so far out that the chunk tier is skipped and coarse blocks are drawn instead
 var _cam: Camera2D
 var _view := Vector2.ONE * 1280.0
 
@@ -24,6 +29,7 @@ func setup(w: World, cam: Camera2D) -> void:
 
 func clear() -> void:
 	_tex.clear()
+	_gtex.clear()
 	queue_redraw()
 
 
@@ -71,7 +77,12 @@ func _process(_d: float) -> void:
 	var vp := get_viewport_rect().size / _cam.zoom
 	var c0 := Vector2i(((_cam.position - vp * 0.5) / span).floor()) - Vector2i.ONE
 	var c1 := Vector2i(((_cam.position + vp * 0.5) / span).floor()) + Vector2i.ONE
-	if (c1.x - c0.x + 1) * (c1.y - c0.y + 1) > 420:  # zoomed far out: the town thumbnails carry the picture
+	var globe := (c1.x - c0.x + 1) * (c1.y - c0.y + 1) > 420  # zoomed far out: coarse blocks replace chunks (the town thumbnails sit on top)
+	if globe != _globe:
+		_globe = globe
+		queue_redraw()
+	if globe:
+		_process_globe(vp)
 		return
 	var mid := (c0 + c1) / 2
 	var want: Array[Vector2i] = []
@@ -95,7 +106,49 @@ func _process(_d: float) -> void:
 	queue_redraw()
 
 
+func _bake_globe(bx: int, by: int) -> ImageTexture:
+	var grass: Color = Civics.SEASONS[season]["grass"]
+	var kinds := world.coarse(bx * G_TILES, by * G_TILES, G_TILES / G_STEP, G_STEP)
+	var n := G_TILES / G_STEP
+	var img := Image.create(n, n, false, Image.FORMAT_RGBA8)
+	for j in n:
+		for i in n:
+			img.set_pixel(i, j, _base(kinds[j * n + i], grass))
+	return ImageTexture.create_from_image(img)
+
+
+func _process_globe(vp: Vector2) -> void:
+	var span := G_TILES * TILE
+	var b0 := Vector2i(((_cam.position - vp * 0.5) / span).floor())
+	var b1 := Vector2i(((_cam.position + vp * 0.5) / span).floor())
+	var mid := (b0 + b1) / 2
+	var want: Array[Vector2i] = []
+	for y in range(b0.y, b1.y + 1):
+		for x in range(b0.x, b1.x + 1):
+			if not _gtex.has(Vector2i(x, y)):
+				want.append(Vector2i(x, y))
+	if want.is_empty():
+		return
+	want.sort_custom(func(a: Vector2i, b: Vector2i) -> bool: return (a - mid).length_squared() < (b - mid).length_squared())
+	var t0 := Time.get_ticks_usec()
+	for bp in want:
+		_gtex[bp] = _bake_globe(bp.x, bp.y)
+		if Time.get_ticks_usec() - t0 > BUDGET_US:
+			break
+	if _gtex.size() > G_KEEP:
+		var keys := _gtex.keys()
+		keys.sort_custom(func(a: Vector2i, b: Vector2i) -> bool: return (a - mid).length_squared() > (b - mid).length_squared())
+		for k in keys.slice(0, _gtex.size() - G_KEEP):
+			_gtex.erase(k)
+	queue_redraw()
+
+
 func _draw() -> void:
+	if _globe:
+		var gs := G_TILES * TILE
+		for bp in _gtex:
+			draw_texture_rect(_gtex[bp], Rect2(Vector2(bp) * gs, Vector2(gs, gs)), false)
+		return
 	var span := world.csize * TILE if world != null else 1024.0
 	for cp in _tex:
 		draw_texture_rect(_tex[cp], Rect2(Vector2(cp) * span, Vector2(span, span)), false)
