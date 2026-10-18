@@ -1336,6 +1336,14 @@ func draw_overlay(node: CanvasItem, t: City) -> void:
 				var dv := c.path[mini(c.pi, c.path.size() - 1)] - c.pos
 				var lane := Vector2(-dv.y, dv.x).normalized() * 0.19 if dv.length() > 0.01 else Vector2.ZERO  # keep to the right-hand lane so opposite traffic and followers do not stack
 				ci.draw_set_transform((c.pos + lane) * TILE, dv.angle() if dv.length() > 0.01 else 0.0)
+				if city.age < 2:  # before the Industrial age there are no cars: wooden carts
+					ci.draw_rect(Rect2(-5, -2.5, 9, 5), Color("8a6a40"))
+					ci.draw_rect(Rect2(-4, -3.5, 2, 1.5), Color("3a2a1a"))
+					ci.draw_rect(Rect2(-4, 2, 2, 1.5), Color("3a2a1a"))
+					ci.draw_rect(Rect2(2, -3.5, 2, 1.5), Color("3a2a1a"))
+					ci.draw_rect(Rect2(2, 2, 2, 1.5), Color("3a2a1a"))
+					ci.draw_set_transform(Vector2.ZERO, 0.0)
+					continue
 				ci.draw_rect(Rect2(-5, -3, 10, 6), CAR_COLS[c.id % CAR_COLS.size()])
 				ci.draw_rect(Rect2(0, -2, 3, 4), Color(0.6, 0.75, 0.85))
 				if night:
