@@ -1047,11 +1047,32 @@ func _draw_globe() -> void:
 	for m in ms:
 		var p: Vector2 = m.pos * TILE
 		var r: float = maxf(m.r * TILE, 9.0 / cam.zoom.x)  # never smaller than a readable dot
-		draw_circle(p, r, GLOBE_COL[m.side])
-		draw_arc(p, r, 0.0, TAU, 24, Color(0, 0, 0, 0.7), 2.0 / cam.zoom.x)
-		if ov != "side":  # ring from cool (low) to hot (high)
-			draw_arc(p, r * 1.25, 0.0, TAU, 24, Color("4fa3d9").lerp(Color("d9382a"), m.v), 6.0 / cam.zoom.x)
-		if mp.distance_to(p) <= maxf(r, 8.0 / cam.zoom.x):
+		var poly := Globe.outline(m.t)
+		var inside := false
+		if poly.size() >= 3:  # the outline of where the town has built, filled in its relation colour
+			var pw := PackedVector2Array()
+			var bb := Rect2(poly[0] * TILE, Vector2.ZERO)
+			for q in poly:
+				pw.append(q * TILE)
+				bb = bb.expand(q * TILE)
+			var lw := 2.0 / cam.zoom.x
+			var fill: Color = GLOBE_COL[m.side]
+			fill.a = 0.55
+			draw_colored_polygon(pw, fill)
+			pw.append(pw[0])
+			draw_polyline(pw, Color(0, 0, 0, 0.75), lw * 1.5)
+			draw_polyline(pw, GLOBE_COL[m.side], lw)
+			if ov != "side":  # overlay value as a thicker coloured edge
+				draw_polyline(pw, Color("4fa3d9").lerp(Color("d9382a"), m.v), 6.0 / cam.zoom.x)
+			inside = Geometry2D.is_point_in_polygon(mp, pw)
+			if bb.size.length() * cam.zoom.x < 16.0:  # too small to find: keep a ring around it
+				draw_arc(p, 9.0 / cam.zoom.x, 0.0, TAU, 24, GLOBE_COL[m.side], 2.0 / cam.zoom.x)
+		else:  # nothing built yet: the old disc
+			draw_circle(p, r, GLOBE_COL[m.side])
+			draw_arc(p, r, 0.0, TAU, 24, Color(0, 0, 0, 0.7), 2.0 / cam.zoom.x)
+			if ov != "side":  # ring from cool (low) to hot (high)
+				draw_arc(p, r * 1.25, 0.0, TAU, 24, Color("4fa3d9").lerp(Color("d9382a"), m.v), 6.0 / cam.zoom.x)
+		if inside or mp.distance_to(p) <= maxf(r, 8.0 / cam.zoom.x):
 			hov = "%s  %s  pop %d" % [m.name, Ages.name_of(m.t.age), m.t.pop]
 	if hov != "":
 		var fs := int(18.0 / cam.zoom.x)

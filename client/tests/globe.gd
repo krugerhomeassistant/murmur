@@ -39,6 +39,14 @@ func _init() -> void:
 			if (a[j * 16 + i] == World.K.SEA) == (real == World.K.SEA):
 				agree += 1
 	var coarse_ok: bool = det and agree >= 240 and seen.size() >= 2
-	var ok: bool = all_ok and sides and grows and pure and ms < 5.0 and coarse_ok
-	print("GLOBE_OK ms=%.2f" % ms if ok else "GLOBE_FAIL coarse=%s agree=%d all=%s sides=%s grows=%s pure=%s ms=%.2f" % [coarse_ok, agree, all_ok, sides, grows, pure, ms])
+	var o := ts[3]  # outline: empty before building, a polygon around the built cells (offset to its place on the map) after
+	var none: bool = Globe.outline(o).size() == 0
+	for i in o.cells.size():
+		if i % 5 == 0:
+			o.grid[o.cells[i]] = Catalog.Id.RES
+	Globe._outlines.clear()  # the cache keeps a town for one second
+	var poly := Globe.outline(o)
+	var outline_ok: bool = none and poly.size() >= 3 and Geometry2D.is_point_in_polygon((Vector2(o.gpos) + Vector2(0.4, 0.3)) * Vector2(City.W, City.H) + Vector2(o.cells[0] % City.W, o.cells[0] / City.W) + Vector2(0.5, 0.5), poly)
+	var ok: bool = outline_ok and all_ok and sides and grows and pure and ms < 5.0 and coarse_ok
+	print("GLOBE_OK ms=%.2f" % ms if ok else "GLOBE_FAIL outline=%s coarse=%s agree=%d all=%s sides=%s grows=%s pure=%s ms=%.2f" % [outline_ok, coarse_ok, agree, all_ok, sides, grows, pure, ms])
 	quit(0 if ok else 1)
