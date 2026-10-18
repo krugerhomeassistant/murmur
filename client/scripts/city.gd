@@ -93,6 +93,8 @@ var next_id := 1
 var acc := 0.0
 var murmur_t := 6.0
 var next_fire := 60.0
+var belief := 20.0  # god-power currency (Powers); regenerates with mood
+var power_cd := {}  # power id -> seconds of cooldown left
 var ev_t := 50.0
 var ev_scale := 1.0
 var land_t := 0
@@ -3115,6 +3117,7 @@ func tick(dt: float) -> void:
 	acc += dt
 	if acc >= 1.0:
 		acc -= 1.0
+		Powers.tick(self)
 		_second()
 	_fires(dt)
 	if not twister.is_empty():
@@ -3443,7 +3446,7 @@ func _trade(_market: float) -> Array:
 const SAVE_KEYS := ["age", "know", "age_t", "town_name", "grid", "lvl", "build", "wire", "pipe", "sewer", "lamp", "water", "ore", "ground", "coins", "mood", "tax_r", "tax_c", "tax_i", "clock", "day",
 	"policies", "auto_mode", "auto_policy", "peak", "announced", "next_id", "recent", "active", "approval", "rep", "favor",
 	"petitions", "promises", "pet_recent", "kept", "broken", "next_election", "elections_won", "rally_used", "last_vote",
-	"season", "wage_ix", "price_loc", "stock", "exported", "loans", "done_ms", "disasters_survived", "burned", "hist_coins", "hist_pop", "ruins", "offline", "lamp", "terr", "expansions", "auto_expand", "human", "owner", "temper", "rel", "treaty", "liege", "ev_scale", "gpos", "war_n", "war_sc", "war_goal", "tension", "occ", "train_on", "train_t", "train_w", "stance", "group", "focus", "auto_focus", "ask_build", "vetoed"]
+	"season", "wage_ix", "price_loc", "stock", "exported", "loans", "done_ms", "disasters_survived", "burned", "hist_coins", "hist_pop", "ruins", "offline", "lamp", "terr", "expansions", "auto_expand", "human", "owner", "temper", "rel", "treaty", "liege", "ev_scale", "gpos", "war_n", "war_sc", "war_goal", "tension", "occ", "train_on", "train_t", "train_w", "stance", "group", "belief", "power_cd", "focus", "auto_focus", "ask_build", "vetoed"]
 
 func to_dict() -> Dictionary:
 	var cs: Array = []

@@ -6,6 +6,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 ## [Unreleased]
 
 ### Added
+- God powers (G3 first form, sandbox games only): a belief pool that a happy town regenerates, and eight powers that spend it (bloom, boom, cure, lightning, earthquake, tornado, plague, famine), each reusing the matching event. Buttons in the Empire window. `Powers`, `tests/powers.gd` (in CI).
 - Sandbox option in the setup screen (G2 first piece): free money, instant troops and age jumps from the Empire window. Refused in normal games and in multiplayer. `tests/sandbox.gd` (in CI).
 - World seed option in the setup screen (G1 first piece): a number gives the same world and town sites every time; empty is random. `tests/scenario.gd` (in CI).
 

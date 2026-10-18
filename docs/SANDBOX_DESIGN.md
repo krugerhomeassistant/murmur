@@ -38,6 +38,7 @@ All actions are `Cmd`s (host only in multiplayer), logged, undoable once (last a
 Acceptance: `tests/sandbox.gd` runs each command, checks the state change, that a save and load round-trip keeps them, and that a client without host rights is refused.
 
 ### G3 God powers (Black & White flavour)
+Progress: built in a first form (`scripts/powers.gd`, `tests/powers.gd`): belief pool (`City.belief`, regenerates with mood), cooldowns, eight powers reusing events, sandbox only. Left: radius and target on the map, rain and bless and grant knowledge and incite war, enabling them in multiplayer by host option.
 Powers cost "belief" (a regenerating pool that rises with the towns' mood and culture, so a well-run world has more) and act through the simulation:
 - Benevolent: rain on crops (harvest bonus), heal (cure sickness), bless a town (mood), grant knowledge (age progress).
 - Wrathful: lightning strike (fire), tornado and earthquake (existing disaster code), plague (sickness), famine (market shock), incite war (raises tension).
