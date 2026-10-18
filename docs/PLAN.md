@@ -161,7 +161,7 @@ Vision: a gods-eye-view world (like github.com/bilawalsidhu/gods-eye-view) with 
 - [ ] G1 Scenario setup (world seed done, `tests/scenario.gd`): per-town age, number and size of towns, area to control (presets One town, Province, Continent), seed and world size. `tests/scenario.gd`. Needs ages A2.
 - [ ] G2 Sandbox editor: place towns and units, set ages, treasury, population, terrain brush; all host-only `Cmd`s with one undo. `tests/sandbox.gd`. (first piece done, `tests/sandbox.gd`)
 - [ ] G3 God powers: belief pool, benevolent and wrathful powers built on the event and disaster code. `tests/powers.gd`. (first form done, `tests/powers.gd`)
-- [ ] G4 Globe and gods-eye view: whole-world view above the M view, overlays, click to enter a town; flat map first, sphere only if free. Rendering benchmark first.
+- [ ] G4 (design done in docs/SANDBOX_DESIGN.md, slices G4a to G4e) Globe and gods-eye view: whole-world view above the M view, overlays, click to enter a town; flat map first, sphere only if free. Rendering benchmark first.
 - [ ] G5 Real-world map mode: open data (Natural Earth), baked offline, real cities and coasts; licensing review first. `tests/realmap.gd`.
 
 ## LAST in the whole plan (owner, 2026-10-17): art
