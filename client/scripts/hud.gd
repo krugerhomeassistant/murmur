@@ -991,6 +991,7 @@ func _process(_d: float) -> void:
 
 var army_l: RichTextLabel
 var army_chk: CheckButton
+var stance_btn: Button
 var army_rows := {}
 
 
@@ -1002,6 +1003,11 @@ func _army() -> void:
     army_chk.tooltip_text = "Barracks and bases train units while you can afford them. Units cost upkeep; unpaid troops desert."
     army_chk.toggled.connect(func(on: bool) -> void: m.cmd("train", [on]))
     body.add_child(army_chk)
+    stance_btn = Button.new()
+    stance_btn.focus_mode = Control.FOCUS_NONE
+    stance_btn.tooltip_text = "Army orders in war. Advance: march on the enemy. Hold: stay home and fight what comes. Retreat: fall back home without chasing."
+    stance_btn.pressed.connect(func() -> void: m.cmd("stance", [Military.STANCES[(Military.STANCES.find(m.city.stance) + 1) % Military.STANCES.size()]]))
+    body.add_child(stance_btn)
     army_l = _rich(body, 0)
     _hdr(body, "TRAINING PRIORITY (0 off, 1 slow, 2 normal, 3 fast)")
     var sc := ScrollContainer.new()
@@ -1036,6 +1042,7 @@ func _army_refresh(c: City) -> void:
     if not bool(win_open["army"]):
         return
     army_chk.set_pressed_no_signal(c.train_on)
+    stance_btn.text = "Orders: %s (click to change)" % String(c.stance).capitalize()
     var n := Military.counts(c)
     var cap := Military.caps(c)
     var w := Military.weights(c)
