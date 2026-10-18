@@ -10,6 +10,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ### Changed
 - Roads have a pale kerb on every side that is not joined to another road; drawn into the cached chunks, so no per-frame cost.
+- Citizens are drawn smaller (a 2 px head on a small body, with a smaller shadow) instead of a large head.
+- Performance: the planner's service-site scoring works out each home's missing services once per decision instead of once per candidate site (same choices, less work).
 - F3 performance panel: fps, average / p99 / worst frame time over the last 240 frames, sim and draw cost, draw calls, objects, nodes, memory, video memory, towns, population and speed, plus a frame-time bar graph (green under 16.7 ms, amber under 25, red above).
 - Floating windows start minimised on a first launch and on every new game, leaving just the tutorial open.
 - Houses get a soft ground shadow and a shaded roof side, drawn in the same cached art as before (no extra per-frame work).
