@@ -43,6 +43,7 @@ var people_l: RichTextLabel
 var act_l: RichTextLabel
 var log_l: RichTextLabel
 var pol_btns := {}
+var tech_btns := {}  # age -> [button, button]
 var auto_opt: OptionButton
 var focus_auto: CheckButton
 var ask_chk: CheckButton
@@ -639,6 +640,22 @@ func _right() -> void:
     ask_chk = ab
     ab.toggled.connect(func(on: bool) -> void: m.cmd("ask_build", [on]))
     po.add_child(ab)
+    _hdr(po, "RESEARCH (one choice for each age you reach)")
+    for a in Research.TECHS.size():
+        var rh := HBoxContainer.new()
+        po.add_child(rh)
+        _lbl(rh, 80, "Choice made on entering this age.").text = Ages.name_of(a)
+        var pair := []
+        for o in 2:
+            var tb := Button.new()
+            tb.text = String(Research.TECHS[a][o]["n"])
+            tb.tooltip_text = String(Research.TECHS[a][o]["d"])
+            tb.toggle_mode = true
+            tb.focus_mode = Control.FOCUS_NONE
+            tb.pressed.connect(func() -> void: m.cmd("tech", [a, o]))
+            rh.add_child(tb)
+            pair.append(tb)
+        tech_btns[a] = pair
     _hdr(po, "POLICIES (continuous cost or saving)")
     for k in Catalog.POLICIES:
         var cb := CheckButton.new()
@@ -1037,6 +1054,11 @@ func _process(_d: float) -> void:
         at += "[b]%s[/b]  %ds left\n" % [WorldEvents.EVENTS[a["id"]]["n"], int(a["left"])]
     act_l.text = at if at != "" else "Nothing happening."
     log_l.text = "\n".join(c.event_log.slice(0, 14))
+    for a in tech_btns:
+        for o in 2:
+            var tb: Button = tech_btns[a][o]
+            tb.set_pressed_no_signal(int(c.tech[a]) == o)
+            tb.disabled = a > c.age or int(c.tech[a]) >= 0
     for k in pol_btns:
         var pb: CheckButton = pol_btns[k]
         if pb.button_pressed != bool(c.policies.get(k, false)):

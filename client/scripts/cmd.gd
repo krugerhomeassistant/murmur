@@ -50,6 +50,9 @@ static func run(towns: Array[City], t: City, name: String, a: Array) -> Variant:
 				t.focus[a[0]] = clampi(a[1], 0, 200) / 100.0
 				t.auto_focus = false
 				return true
+		"tech":  # research: [age, option]
+			if a.size() == 2 and a[0] is int and a[1] is int:
+				return true if Research.pick(t, a[0], a[1]) else null
 		"set_age":  # sandbox: puts the town in an age (setup and tests)
 			if a.size() == 1 and a[0] is int:
 				Ages.set_age(t, a[0])

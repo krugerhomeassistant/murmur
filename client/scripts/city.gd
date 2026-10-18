@@ -206,6 +206,7 @@ var broken := 0
 var next_election := Civics.YEAR_DAYS + 1
 var age := Ages.LAST  # see Ages; saves from before ages count as Modern, where everything is open
 var know := 0.0  # knowledge toward the next age
+var tech: Array = [-1, -1, -1, -1]  # chosen option (0 or 1) per age, -1 = not chosen yet (Research)
 var age_t := 1.0e9  # seconds since the town entered its age (grace period for the services the age expects)
 var elections_won := 0
 var rally_used := false
@@ -1327,6 +1328,7 @@ func _collect_mods() -> void:
 	for a in active:
 		_add_mods(a["mods"])
 	_add_mods(tribe_mods)
+	_add_mods(Research.mods(self))
 	_add_mods(Civics.SEASONS[season]["mods"])
 	if wars() > 0:
 		_add_mods({"mood": -0.03 * wars() - 0.004 * minf(war_battles(), 15.0)})
@@ -1530,6 +1532,10 @@ func _second() -> void:
 	if up >= 0:
 		msg = "%s enters the %s age." % [town_name, Ages.name_of(up)]
 		_log("The town enters the %s age." % Ages.name_of(up))
+		if not human:
+			Research.auto(self)
+		else:
+			msg += " Choose its research in the Mayor's office."
 	_scan()
 	pt = _pf("scan", pt)
 	lod_n += 1
@@ -3451,7 +3457,7 @@ func _trade(_market: float) -> Array:
 # ---------- save / load ----------
 
 ## What a save or snapshot carries (also the only keys from_dict accepts, since snapshots come from a possibly hostile host).
-const SAVE_KEYS := ["age", "know", "age_t", "town_name", "grid", "lvl", "build", "wire", "pipe", "sewer", "lamp", "water", "ore", "ground", "coins", "mood", "tax_r", "tax_c", "tax_i", "clock", "day",
+const SAVE_KEYS := ["age", "tech", "know", "age_t", "town_name", "grid", "lvl", "build", "wire", "pipe", "sewer", "lamp", "water", "ore", "ground", "coins", "mood", "tax_r", "tax_c", "tax_i", "clock", "day",
 	"policies", "auto_mode", "auto_policy", "peak", "announced", "next_id", "recent", "active", "approval", "rep", "favor",
 	"petitions", "promises", "pet_recent", "kept", "broken", "next_election", "elections_won", "rally_used", "last_vote",
 	"season", "wage_ix", "price_loc", "stock", "exported", "loans", "done_ms", "disasters_survived", "burned", "hist_coins", "hist_pop", "ruins", "offline", "lamp", "terr", "expansions", "auto_expand", "human", "owner", "temper", "rel", "treaty", "liege", "ev_scale", "gpos", "war_n", "war_sc", "war_goal", "tension", "occ", "train_on", "train_t", "train_w", "stance", "group", "belief", "power_cd", "focus", "auto_focus", "ask_build", "vetoed"]
