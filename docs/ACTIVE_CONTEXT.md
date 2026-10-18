@@ -2,6 +2,9 @@
 
 Last updated 2026-10-18.
 
+## Release v0.6.0 next
+E3 group multiplayer (first form) is done and merged (PRs #123-#126): the next step under the release standard is the fast path for v0.6.0 (stageprof vs v0.5.0, verify, `scripts/bump.py 0.6.0`). Then ages A2.
+
 ## Release v0.5.0
 E6 military (first form: sieges, air defence, army stance) is released as v0.5.0 once its release PR merges. Tags v0.3.0, v0.4.0 and v0.5.0 are still waiting for the owner to double-click `release-tag.bat` (one run tags all of them, oldest first). Owed: the windowed benchmark and README table refresh (the Godot editor must be open on the PC with the godot-ai plugin). Next: E3 group multiplayer, then ages A2, sandbox G1-G5, the deep perf pass before 1.0, art last. E5e (moving trains, highways, airports) and E6b (hit points, group select, production queue, research, logistics) are deferred polish.
 
