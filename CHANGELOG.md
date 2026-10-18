@@ -6,6 +6,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 ## [Unreleased]
 
 ### Added
+- Painted houses and windows: soft wall shading toward the foot and right side, an eave shadow under the roof, a light catch on the roof slope, and window sills. Baked into the cached chunks, so no per-frame cost.
 - Before the Industrial age, citizens who would drive are drawn as wooden carts instead of cars.
 - Homes and terraces change look with the age: pale plaster under thatch in the Medieval age, brick under slate in the Industrial age (Ancient huts and the Modern look as before).
 - Ancient-age homes are drawn as round mud huts under a straw cone (bigger with level) instead of the generic house; other ages keep the house look (first step of per-age building looks).
