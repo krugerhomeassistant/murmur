@@ -5,6 +5,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+### Added
+- Sieges (E6, first slice): artillery, tanks and destroyers inside an enemy town with no defenders left there flatten its buildings (artillery 0.10 a second each, heavy tank 0.08, destroyer 0.08, battle tank 0.05, light tank 0.02). `tests/siege.gd` (in CI).
+
 ## [0.4.0] - 2026-10-18
 
 ## [0.4.0] - 2026-10-18

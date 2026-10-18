@@ -246,7 +246,7 @@ The Army window shows `Military.summary(c)`: total units, per-kind counts, and t
 3. Damage: `hp = min(hp - hits + heals, max_hp)`.
 4. Units at 0 hp or less are removed from their owner's `army`, the opposing town's `war_sc[owner]` increases by one, an explosion is queued (`Military.booms`, shown for 3 s) and the owner gets the alarm sound.
 5. `a.war_t` counts down from 25 (initial) and then every 20 seconds both towns' `war_n` for each other rises by one (the "war counter").
-6. `_occupy(a, b)`, `_occupy(b, a)`, `_bomb(a, b)`, `_bomb(b, a)`.
+6. `_occupy(a, b)`, `_occupy(b, a)`, `_bomb(a, b)`, `_bomb(b, a)`, `_shell(a, b)`, `_shell(b, a)`.
 7. The stalemate check (`war_n >= 30` and fewer than 6 units in total) ends the war.
 
 ### Targeting and damage
@@ -298,6 +298,7 @@ War damage to buildings is not simulated per shot. Two mechanisms destroy buildi
 
 - `Diplo._raid(from, to)`: severity `sev = 1 - 0.7 * clamp(cov["defence"], 0, 1)`; `n = round(3 * sev)` buildings are destroyed if `to.pop > 15`; a recovery offer is queued. Alarm sounds play. Defence coverage comes from bases (full strength within 25 tiles), radar posts (60% within 20), the Garrison policy (`cov_defence +0.3`), and alliances (`+0.25` each).
 - `Military._bomb(att, vic)`: bombers inside the victim's territory add 0.15 each per second to a counter; the counter only advances if the victim has no Anti-air, Fighter or Strike jet in its army aimed at the attacker (their location does not matter). At 1.0 it destroys one building. One bomber destroys one building about every 6.7 seconds; ten about once per second.
+- `Military._shell(att, vic)` (sieges): siege guns inside the victim's territory add per second to a counter (`SIEGE`: artillery 0.10, heavy tank 0.08, destroyer 0.08, battle tank 0.05, light tank 0.02), but only while the victim has no unit of its own in its territory facing the attacker. At 1.0 it destroys one building (`City.strike`). Test: `client/tests/siege.gd`.
 
 `City.strike` chooses the `n` buildings closest to the attacker's border side (`_edge_dist`) with a random offset of 0 to 2 positions in that ordering, spawns a blast marker and calls `_ruin`, which empties non-zone tiles or resets zone level to 0, leaves a record in `ruins` (for recovery) and pays insurance (30 coins per building) if the `insured` modifier is above zero. The recovery decision costs `20 * ruins`.
 
@@ -358,7 +359,7 @@ The Region tab shows the state of each war: elapsed time (`war_n * 20` s), enemi
 
 From [WAR_DESIGN.md](../WAR_DESIGN.md), phase 1 (foundation) is implemented. The document lists:
 
-2. Sieges: units damage and destroy buildings, capture points, retreat, building hit points. Only the coarse raid and bomb mechanics above exist; units do not attack individual buildings.
+2. Sieges: units damage and destroy buildings, capture points, retreat, building hit points. Raid, bomb and siege-gun mechanics (`_shell`) exist; units still do not attack individual buildings, and there are no building hit points yet.
 3. Air: take-off and landing at bases, dogfights, bombing runs, AA. Dogfights and bombing runs exist in a simple form; take-off, landing and bases as air fields do not.
 4. Command UI and rally: group select, move and attack orders, production queue. None of this exists; the only control is training priority and the declare war and peace buttons.
 5. Battle footage for the README and a benchmark update.

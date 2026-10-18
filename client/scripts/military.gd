@@ -600,6 +600,8 @@ static func fight(a: City, b: City) -> void:
 	_occupy(b, a)
 	_bomb(a, b)
 	_bomb(b, a)
+	_shell(a, b)
+	_shell(b, a)
 	if a.war_n.get(b.town_name, 0) >= 30 and a.army.size() + b.army.size() < 6:
 		Diplo.sign_treaty(a, b, "")
 		Diplo._say(a, b, "%s and %s, with their armies spent, agree to a ceasefire." % [a.town_name, b.town_name])
@@ -668,6 +670,28 @@ static func _occupy(att: City, vic: City) -> void:
 			Diplo.surrender(att, vic)
 	else:
 		vic.occ[att.town_name] = maxf(float(vic.occ.get(att.town_name, 0.0)) - 1.0, 0.0)
+
+
+const SIEGE := {"art": 0.10, "htank": 0.08, "tank": 0.05, "ltank": 0.02, "destroyer": 0.08}  # buildings flattened per second per unit, with no defender left in the town
+
+
+## Siege guns (artillery, tanks, destroyers) inside an enemy town that has no defenders there left flatten its buildings.
+static func _shell(att: City, vic: City) -> void:
+	var zone := terr_px(vic)
+	var rate := 0.0
+	for u in _of(att, vic.town_name):
+		if SIEGE.has(u["k"]) and u.has("p") and zone.has_point(u["p"]):
+			rate += float(SIEGE[u["k"]])
+	if rate <= 0.0:
+		return
+	for u in _of(vic, att.town_name):
+		if u.has("p") and zone.has_point(u["p"]):
+			return  # defenders still hold the town
+	var key := "s" + vic.town_name
+	att.raid[key] = float(att.raid.get(key, 0.0)) + rate
+	if float(att.raid[key]) >= 1.0:
+		att.raid[key] = 0.0
+		vic.strike(1, att)
 
 
 ## Bombers over an enemy town with no fighters, jets or anti-air left to stop them flatten its buildings, one strike per bomber every few seconds.
