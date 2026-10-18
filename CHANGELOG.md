@@ -5,6 +5,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-10-18
+
 ### Added
 - Medieval terraces (a row of timber-framed houses) and tenements (stone, jettied upper floor, tiled roof).
 - Units and vehicles by age (ages finish line AF5): Industrial-age cars are boxy open tourers in dark colours with brass lamps (Modern cars keep the sleek painted look), and people's clothes shift with the age (earth tones, dyed wool, grey cloth, bright) while the mood colour still shows.

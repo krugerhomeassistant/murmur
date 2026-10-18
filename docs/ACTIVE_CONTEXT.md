@@ -52,3 +52,5 @@ Flaky test: `tests/market.gd` "towns that cannot feed themselves should lift the
 
 ## Gotchas learned
 See LESSONS_LEARNED.md. Latest: always A/B sim changes 3x (non-deterministic); lowering planner mood gates hurt; `from_dict` whitelists `SAVE_KEYS`; showcase scripts must be loaded fresh in a running game (`GDScript.new()` + `source_code`) because `load()` caches.
+
+v0.8.0 released (all four ages finished: art, units, research, banner, ages playthrough test). Owner: double-click scripts/release-tag.bat to push the tag; build.yml then publishes the zip.
