@@ -19,5 +19,5 @@ All six towns survive and keep growing (pop 240 to 700). Before the planner and 
 
 ## Phases
 - A1 (this change): framework, gating, expectations, setup option, tests (`tests/ages.gd`).
-- A2: early-age content, then make Ancient the default start. Done: spearmen (Ancient unit trained at barracks, now an Ancient building; `tests/spear.gd`). Left: huts, wells, galleys, Ancient default start.
+- A2: early-age content, then make Ancient the default start. Done: spearmen (Ancient unit trained at barracks, now an Ancient building; `tests/spear.gd`). Wells done (Ancient water source, 6 units, `tests/power.gd`). Left: huts, galleys, Ancient default start.
 - A3: research choices. Scenario setup, god powers, globe view and the real-world map are planned in `docs/SANDBOX_DESIGN.md` (G1 to G5).

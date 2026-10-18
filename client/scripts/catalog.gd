@@ -9,7 +9,7 @@ enum Id {
     PARK, PLAYGROUND, PLAZA, CINEMA, MUSEUM, STADIUM, THEME,
     BUS, TRAIN, WIND, SOLAR, COAL, WATER, LANDFILL, RECYCLE,
     MARKET, BANK, MALL, HOTEL, TOWNHALL, WIRE, PIPE, LIGHT, COURT, PRISON, COTTAGE, TOWNHOUSE, TENEMENT, CONDO, CHURCH, BAR, UNION_HALL, CHAMBER, BASE, BARRACKS, RADAR, MILL, WAREHOUSE, DEPOT, SEWAGE, SEWER, PORT, NAVYARD, FISHDOCK,
-    ORCHARD, RANCH, MINE, FOUNDRY, GREENHOUSE, FISHFARM, ARMOURY, LUMBER, TOOLWORKS, SAWMILL, RAILYARD, HYDRO, GAS, NUCLEAR, REFINERY, RESERVOIR, DESAL,
+    ORCHARD, RANCH, MINE, FOUNDRY, GREENHOUSE, FISHFARM, ARMOURY, LUMBER, TOOLWORKS, SAWMILL, RAILYARD, HYDRO, GAS, NUCLEAR, REFINERY, RESERVOIR, DESAL, WELL,
 }
 
 const CATS := [
@@ -273,6 +273,10 @@ const DEFS := {
         "r": 0, "prov": {}, "out": {"power": 200}, "jobs": 24, "shape": "chimney",
         "desc": "200 units of clean power and 24 jobs for a large city. Very expensive to build and run.",
         "tip": "Only worth it for big cities. One plant can power a whole region."},
+    Id.WELL: {"n": "Well", "cat": "util", "kind": "svc", "cost": 40, "up": 0.2, "unlock": 0, "col": Color("8a9aa8"), "g": "We",
+        "r": 0, "prov": {}, "out": {"water": 6}, "jobs": 1, "shape": "tower",
+        "desc": "A hand-dug well: 6 units of water into the pipe network, a little under half a water tower. Cheap, and open from the first age.",
+        "tip": "Lay a pipe beside it. Replace with towers as the town grows."},
     Id.WATER: {"n": "Water tower", "cat": "util", "kind": "svc", "cost": 120, "up": 0.8, "unlock": 25, "col": Color("6aa8c8"), "g": "Wa",
         "r": 0, "prov": {}, "out": {"water": 14}, "jobs": 2, "shape": "tower",
         "desc": "Pumps 14 units of water into the pipe network. Droughts and burst mains cut coverage, so overlap two towers in big districts.",

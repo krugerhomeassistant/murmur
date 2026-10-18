@@ -2,7 +2,7 @@
 
 # Buildings and tiles
 
-76 placeable things in 12 categories. `unlock` is the population (peak) at which the Build menu offers it. Costs are coins; `upkeep` is coins per second before the town-size and policy multipliers (see [Economy](economy.md)).
+77 placeable things in 12 categories. `unlock` is the population (peak) at which the Build menu offers it. Costs are coins; `upkeep` is coins per second before the town-size and policy multipliers (see [Economy](economy.md)).
 
 How to read an entry: **Radius** is the service reach in tiles (Manhattan diamond); **Provides** lists the city-stat coverage it adds (see [City stats](stats.md)); **Output** is the network supply it adds (power, water, sewage units); **Jobs** is staff; **Pollution** is `[radius, strength]`; **Tourism** is visitor income strength; **Visited** means citizens walk there as a leisure destination; **Grant** is a free income (coins per second, scaled by `RATE`).
 
@@ -737,6 +737,7 @@ Rail across 14 tiles. Full transit coverage, a boost to nearby shops, 8 jobs and
 | [Hydro dam](#hydro-dam) | 700 | 1.2 | 150 | svc |
 | [Gas power plant](#gas-power-plant) | 900 | 4 | 250 | svc |
 | [Nuclear plant](#nuclear-plant) | 2400 | 9 | 600 | svc |
+| [Well](#well) | 40 | 0.2 | 0 | svc |
 | [Water tower](#water-tower) | 120 | 0.8 | 25 | svc |
 | [Reservoir](#reservoir) | 450 | 1 | 120 | svc |
 | [Desalination plant](#desalination-plant) | 1100 | 6 | 400 | svc |
@@ -845,6 +846,22 @@ A dam on the river: 55 units of clean power and 6 jobs, with low upkeep. Must to
 | Map colour / letter | `#8aa09a` / `Nu` |
 
 *Tip:* Only worth it for big cities. One plant can power a whole region.
+
+### Well
+
+A hand-dug well: 6 units of water into the pipe network, a little under half a water tower. Cheap, and open from the first age.
+
+| | |
+|---|---|
+| Id | `WELL` |
+| Cost / upkeep | 40 / 0.2 per s |
+| Unlocks at | 0 population |
+| Kind | svc |
+| Output | water 6 |
+| Jobs | 1 |
+| Map colour / letter | `#8a9aa8` / `We` |
+
+*Tip:* Lay a pipe beside it. Replace with towers as the town grows.
 
 ### Water tower
 
