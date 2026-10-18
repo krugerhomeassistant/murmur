@@ -6,6 +6,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 ## [Unreleased]
 
 ### Added
+- Globe tier (G4b): zoomed out beyond the chunk view the land layer now draws coarse land and sea blocks (`World.coarse`, one sample per 8 tiles, about 2 ms per 128-tile block, same per-frame budget) instead of nothing. Checked headless only, not yet on screen.
 - Globe data module (G4a): `Globe.markers` gives one marker per town (radius by population, side, overlay value for age, population, wealth and military), pure and fast (0.8 ms for 200 towns). No view yet. `tests/globe.gd` (in CI).
 - God powers (G3 first form, sandbox games only): a belief pool that a happy town regenerates, and eight powers that spend it (bloom, boom, cure, lightning, earthquake, tornado, plague, famine), each reusing the matching event. Buttons in the Empire window. `Powers`, `tests/powers.gd` (in CI).
 - Sandbox option in the setup screen (G2 first piece): free money, instant troops and age jumps from the Empire window. Refused in normal games and in multiplayer. `tests/sandbox.gd` (in CI).
