@@ -6,6 +6,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 ## [Unreleased]
 
 ### Added
+- Release standard: every finished milestone is released (a minor release per roadmap milestone or about 40 commits, a patch per player-visible fix), with a fast path in `docs/RELEASING.md` and a rule in `CLAUDE.md`.
 - Sea trade (E5c): two neighbouring towns that both have a port trade by sea even without a road (link strength 0.8), and a road link between two ports pays 30% less freight. Rail keeps its bigger discount. `tests/rail.gd` extended.
 - Rail yard (E5b, first slice): a trade building from the Industrial age. When both towns of a trade link have one, freight costs 60% less and the link carries twice as much. Planner towns of 80 people with a neighbour build one. `tests/rail.gd` (in CI). The fuel good is dropped from E4 and folded into E5.
 - Families (E4 household v2 part 2b): residents of one home share their savings (20% of the gap to the home average closes each second), so jobless members are carried by earning housemates. `tests/households.gd` extended.
