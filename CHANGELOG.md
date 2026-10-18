@@ -5,6 +5,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+### Added
+- Power tiers: hydro dam (55 units, on the river, Industrial age), gas plant (80 units, half the pollution of coal, Modern) and nuclear plant (200 units, clean, very costly, Modern), with `tests/power.gd`.
+
 ### Changed
 - `scripts/release-tag.bat`: one double-click pushes the tag for the current VERSION.
 

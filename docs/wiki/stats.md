@@ -13,7 +13,7 @@ Each stat is the share of homes covered by the services that provide it (0-100%)
 | [Leisure](#leisure) | need | 0.12 | Park, Playground, Plaza, Cinema, Church, Bar, Stadium, Theme park, Shopping mall |
 | [Culture](#culture) | bonus | 0.05 | Library, University, Plaza, Cinema, Museum, Church, Stadium |
 | [Public transport](#public-transport) | need | 0.06 | Bus stop, Train station |
-| [Electricity](#electricity) | need | 0.15 | Wind turbine, Solar farm, Coal power plant |
+| [Electricity](#electricity) | need | 0.15 | Wind turbine, Solar farm, Coal power plant, Hydro dam, Gas power plant, Nuclear plant |
 | [Water](#water) | need | 0.15 | Water tower |
 | [Sewage](#sewage) | need | 0.1 | Sewage plant |
 | [Waste disposal](#waste-disposal) | need | 0.08 | Landfill, Recycling centre |
@@ -86,7 +86,7 @@ Key `power`. Uncovered homes lower mood (up to -15%) and reduce productivity by 
 
 > "The lights keep going out."
 
-Provided by: Wind turbine, Solar farm, Coal power plant.
+Provided by: Wind turbine, Solar farm, Coal power plant, Hydro dam, Gas power plant, Nuclear plant.
 
 ## Water
 
