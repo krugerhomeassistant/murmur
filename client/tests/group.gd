@@ -9,7 +9,7 @@ func _init() -> void:
 		var t := City.new(sig)
 		t.town_name = "G%d" % k
 		t.gpos = Vector2i(k, 0)
-		t.human = k < 2
+		t.human = k == 0  # so group aid, not same-side, is what lets 0 pay 1
 		t.seed_start()
 		ts.append(t)
 	for a in ts:
@@ -26,6 +26,9 @@ func _init() -> void:
 	var outside := Diplo.treaty(ts[0], ts[2]) != "alliance"
 	var war := Diplo.act(ts[0], ts[1], "war")
 	var held := Diplo.treaty(ts[0], ts[1]) != "war" and war.find("group") >= 0
-	var ok := bad == 0 and allied and outside and held
-	print("GROUP_OK allied=%s war_msg=%s" % [allied, war] if ok else "GROUP_FAIL bad=%d allied=%s outside=%s held=%s" % [bad, allied, outside, held])
+	ts[0].coins = 500.0
+	var aid: bool = Cmd.run(ts, ts[0], "send", [1, 100]) == 100
+	var denied: bool = Cmd.run(ts, ts[0], "send", [2, 100]) == 0
+	var ok := bad == 0 and allied and outside and held and aid and denied
+	print("GROUP_OK allied=%s war_msg=%s" % [allied, war] if ok else "GROUP_FAIL bad=%d allied=%s outside=%s held=%s aid=%s denied=%s" % [bad, allied, outside, held, aid, denied])
 	quit(0 if ok else 1)

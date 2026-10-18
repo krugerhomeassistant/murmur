@@ -51,9 +51,14 @@ static func totals(list: Array[City]) -> Dictionary:
 	return {"towns": list.size(), "pop": pop, "coins": coins, "income": inc}
 
 
-## Move `amount` coins from one town to another on the same side. Returns what moved (0 if refused).
+## Same player, or two towns in one multiplayer group (they may send each other aid).
+static func can_aid(a: City, b: City) -> bool:
+	return same_side(a, b) or (a.group > 0 and a.group == b.group)
+
+
+## Move `amount` coins from one town to another on the same side or in the same group. Returns what moved (0 if refused).
 static func send(from: City, to: City, amount: int) -> int:
-	if from == to or not same_side(from, to) or amount <= 0 or from.over != "" or to.over != "":
+	if from == to or not can_aid(from, to) or amount <= 0 or from.over != "" or to.over != "":
 		return 0
 	var a := mini(amount, int(from.coins))
 	if a <= 0:
