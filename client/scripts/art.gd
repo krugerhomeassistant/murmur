@@ -481,7 +481,7 @@ static func _draw(ci: CanvasItem, id: int, night: bool, k: Color) -> void:
 
 
 ## Grown zone buildings (houses, shops, factories...). `h` varies colours per plot, `lv` is the level 1-3.
-static func building(ci: CanvasItem, r: Rect2, shape: String, body: Color, lv: int, ok: bool, night: bool, h: int) -> bool:
+static func building(ci: CanvasItem, r: Rect2, shape: String, body: Color, lv: int, ok: bool, night: bool, h: int, age := 3) -> bool:
 	if not shape in ["house", "terrace", "tower", "condo", "shop", "factory", "office", "farm", "orchard", "ranch", "green", "fishfarm"]:
 		return false
 	ci.draw_set_transform(r.position)
@@ -492,6 +492,16 @@ static func building(ci: CanvasItem, r: Rect2, shape: String, body: Color, lv: i
 	var roof: Color = roofs[h % roofs.size()] * k
 	var wall: Color = walls[(h / 5) % walls.size()] * k
 	match shape:
+		"house" when age == 0:  # Ancient age: a round mud hut under a straw cone, bigger with level
+			ci.draw_rect(Rect2(1, 1, 30, 30), Color("86ab6c") * k)
+			var rad := 8.0 + 1.5 * (lv - 1)
+			ci.draw_circle(Vector2(16, 24), rad, Color(0, 0, 0, 0.16))
+			ci.draw_circle(Vector2(16, 22), rad, Color("b8946a") * k)
+			_tri(ci, Vector2(16 - rad - 3, 19), Vector2(16 + rad + 3, 19), Vector2(16, 5 - lv), Color("d8bf6a") * k)
+			_tri(ci, Vector2(16, 5 - lv), Vector2(16 + rad + 3, 19), Vector2(19, 19), Color(0, 0, 0, 0.14))
+			_r(ci, 14, 21, 4, 6, Color("4a3220") * k)
+			if night:
+				_win(ci, 9, 20, 3, 3, night)
 		"house":
 			ci.draw_rect(Rect2(1, 1, 30, 30), Color("86ab6c") * k)
 			_r(ci, 8, 26, 22, 4, Color(0, 0, 0, 0.16))
