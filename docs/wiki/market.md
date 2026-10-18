@@ -1,6 +1,6 @@
 # Market
 
-Nine goods are traded: crops, food, goods, ore, metal, arms, wood, tools and planks. Each good has its own price with its own base (crops 0.6, food 1.5, goods 2.0, ore 0.8, metal 3.0, arms 4.0, wood 0.7, tools 3.5, planks 1.4) and moves on its own supply and demand; no two share a price. There are two levels: the **world price** of each good (the outside market, set by all towns together) and each town's **local price** (scarcity inside the town, between selling abroad at 80% and buying abroad at 120% of the world price). Linked towns also trade goods with each other when the price gap pays for freight. Implementation: `client/scripts/market.gd` (class `Market`), owned by `Signals` (`sig.mk`), used by `City._trade`. Tests: `client/tests/market.gd`, `client/tests/marketwin.gd` (the window).
+Ten goods are traded: crops, food, goods, ore, metal, arms, wood, tools, planks and fuel. Each good has its own price with its own base (crops 0.6, food 1.5, goods 2.0, ore 0.8, metal 3.0, arms 4.0, wood 0.7, tools 3.5, planks 1.4, fuel 1.6) and moves on its own supply and demand; no two share a price. There are two levels: the **world price** of each good (the outside market, set by all towns together) and each town's **local price** (scarcity inside the town, between selling abroad at 80% and buying abroad at 120% of the world price). Linked towns also trade goods with each other when the price gap pays for freight. Implementation: `client/scripts/market.gd` (class `Market`), owned by `Signals` (`sig.mk`), used by `City._trade`. Tests: `client/tests/market.gd`, `client/tests/marketwin.gd` (the window).
 
 ## Price formation
 Every sim second `Market.tick` closes a window. For each good:
@@ -12,7 +12,7 @@ target = BASE[good] * signal * clamp((D / S) ^ 0.6, 0.35, 3.0)
 price += (target - price) * min(0.12 * window, 1)
 ```
 
-`signal` is `1 + 0.3 * market` from `Signals` (the world market signal, -1..1). Base prices: crops 0.6, food 1.5, goods 2.0, ore 0.8, metal 3.0, arms 4.0, wood 0.7, tools 3.5, planks 1.4. The outside world keeps prices bounded and stops one idle town from moving a price alone. A good nobody trades stays at base.
+`signal` is `1 + 0.3 * market` from `Signals` (the world market signal, -1..1). Base prices: crops 0.6, food 1.5, goods 2.0, ore 0.8, metal 3.0, arms 4.0, wood 0.7, tools 3.5, planks 1.4, fuel 1.6. The outside world keeps prices bounded and stops one idle town from moving a price alone. A good nobody trades stays at base.
 
 Every sim second the price, offered and wanted units and units cleared (`min(offered, wanted)`) are folded into a **candle** per good: ten seconds make one candle `[open, high, low, close, volume, offered/s, wanted/s]` and the last 360 (one hour) are kept in `Market.candles`. `Market.merged` combines candles for the 1 and 5 minute charts, `Market.sma` gives moving averages and `Market.stats` gives high, low, average, change and volatility (standard deviation of close-to-close change). `Market.status` calls a good a shortage (wanted over offered by 25%), a glut (the reverse) or balanced. The older 15-minute line (`hist`, 90 closes) is kept for saves. Clients of a multiplayer game receive prices and last-window supply and demand inside every town snapshot (`City.to_dict` key `mk`) and build their own candles from them, one sample per snapshot.
 
@@ -60,6 +60,9 @@ Armouries (military building, cost 420) turn up to 0.25 metal/s into 2x arms; th
 
 ### Wood and tools
 A **Lumber camp** (cost 90, unlock 40 people) fells the forest within 5 tiles, up to 12 trees counted per camp, at 0.02 wood per tree per second. A **Toolworks** (cost 200, unlock 150, Medieval age) turns 0.3 wood and 0.15 metal a second into 0.3 tools (`City._trade`). Farms, orchards, mines and factories use tools: `(farm + orchard + mine + factory jobs) x employment x 0.004` a second; a workforce with its tools in stock produces up to 15% more crops, ore and goods (`tool_mult`), and the baseline without. Both goods trade on the market like the others and are bought when the treasury is above 120. Planners build a lumber camp from 40 people (only beside 4 or more forest tiles) and a toolworks once they have a camp and a foundry. Test: `client/tests/tools.gd`. A **Sawmill** (cost 140, unlock 80 people) turns 0.5 wood a second into 0.25 planks, using the wood the toolworks left. Every building site (a zone under construction) uses 0.02 planks a second; sites with their planks in stock finish up to 25% faster (`plank_mult`, applied in `City._grow`), and build at the normal speed without. Planners build a sawmill from 60 people once they have a lumber camp. Tools as a construction cost are not built yet.
+
+## Fuel
+A **Refinery** (`Catalog.Id.REFINERY`, Industrial age, cost 500, unlock 260 people) turns 1 ore a second (what the foundries left) into 0.8 fuel (`City._trade`). Coal plants burn 0.4 fuel a second and gas plants 0.3 (the `burn` field in the catalog). The share of fuel burnt sets `City.fuel_ok` (0.5 with none, 1 with all), which scales those plants' power output; towns buy fuel from the market when the treasury is above 120. Planners build a refinery from 100 people when they have mines and a coal or gas plant. Test: `client/tests/fuel.gd`.
 
 ## Where in the code
 | Topic | Code |

@@ -218,7 +218,8 @@ var hh := {"avg": 0.0, "median": 0.0, "broke": 0.0, "rich": 0.0, "real": 1.0}  #
 var hh_tax := 0.0  # savings tax collected from the well-off this second
 var hardship := 0.0  # share of households that cannot make ends meet
 var home_w := {}  # runtime: home cell -> [wealth sum, residents, broke residents]
-var stock := {"crops": 0.0, "food": 0.0, "goods": 0.0, "ore": 0.0, "metal": 0.0, "arms": 0.0, "wood": 0.0, "tools": 0.0, "planks": 0.0}
+var stock := {"crops": 0.0, "food": 0.0, "goods": 0.0, "ore": 0.0, "metal": 0.0, "arms": 0.0, "wood": 0.0, "tools": 0.0, "planks": 0.0, "fuel": 0.0}
+var fuel_ok := 1.0  # share of the plants' fuel burnt this second, 0.5 to 1; set by _trade
 var plank_mult := 1.0  # construction speed from planks in stock, set every second by _trade
 var wood_sig := 0
 var site_sig := -1
@@ -954,12 +955,12 @@ func _net() -> void:
 	for m in NETS:
 		var layer: PackedByteArray = _nl(m)
 		var reach: PackedByteArray = net_reach[m]
-		var sig := hash([scan_sig, layer, str(offline.keys()), cells.size(), mod(m + "_out"), mod("power_dem")])  # scan_sig already covers grid, lvl and lamp (connected derives from grid)
+		var sig := hash([scan_sig, layer, str(offline.keys()), cells.size(), mod(m + "_out"), mod("power_dem"), snappedf(fuel_ok, 0.1)])  # scan_sig already covers grid, lvl and lamp (connected derives from grid)
 		nt = _pf("net_hash", nt)
 		var nc: Dictionary = net_cache.get(m, {})
 		if nc.is_empty() or nc["sig"] != sig:
 			# the flood fill depends on lines, plants and outages only; growth (lvl) just changes demand, so keep `reach` and supply then
-			var rsig := hash([grid, layer, str(offline.keys()), cells.size(), mod(m + "_out")])
+			var rsig := hash([grid, layer, str(offline.keys()), cells.size(), mod(m + "_out"), snappedf(fuel_ok, 0.1)])
 			var keep: bool = not nc.is_empty() and nc.get("rsig", 0) == rsig
 			nc = _net_solve(m, layer, reach, keep, float(nc["sup"]) if keep else 0.0, nc if keep else {})
 			nc["rsig"] = rsig
@@ -1045,6 +1046,7 @@ func _flood(m: String, layer: PackedByteArray, reach: PackedByteArray, q: Array[
 		var out: Dictionary = Catalog.DEFS[id].get("out", {})
 		if not out.has(m):
 			continue
+		var burn_f := fuel_ok if Catalog.DEFS[id].has("burn") else 1.0
 		for i in bt[id]:
 			if offline.has(i):
 				continue
@@ -1056,7 +1058,7 @@ func _flood(m: String, layer: PackedByteArray, reach: PackedByteArray, q: Array[
 						reach[j] = 1
 						q.append(j)
 			if hit:
-				sup += float(out[m]) * (1.0 + mod(m + "_out"))
+				sup += float(out[m]) * (1.0 + mod(m + "_out")) * burn_f
 	while not q.is_empty():
 		var cur: int = q.pop_back()
 		for d in DIRS:
@@ -2385,6 +2387,10 @@ func _plan_service(force := false) -> bool:
 			if (bt.get(T.LUMBER, []) as Array).is_empty() or pop < 60 or foc("industry") < 0.4 or float(stock.get("planks", 0.0)) >= 30.0:
 				continue
 			lim = 1 + pop / 300
+		if ch == "fuel":
+			if mine_jobs == 0 or pop < 100 or foc("industry") < 0.4 or float(stock.get("fuel", 0.0)) >= 20.0 or (bt.get(T.COAL, []) as Array).size() + (bt.get(T.GAS, []) as Array).size() == 0:
+				continue
+			lim = 1 + pop / 400
 		if ch == "rail":
 			if partners.is_empty() or pop < 80 or foc("industry") < 0.4:
 				continue
@@ -2408,7 +2414,7 @@ func _plan_service(force := false) -> bool:
 			sc += 0.5 + thr
 		if ch == "foundry" and (float(stock.get("ore", 0.0)) > 4.0 or have == 0):
 			sc += 0.9
-		if ch == "wood" or ch == "tools" or ch == "planks" or ch == "rail":
+		if ch == "wood" or ch == "tools" or ch == "planks" or ch == "rail" or ch == "fuel":
 			sc += 0.6
 		if ch == "store":
 			for sk in stock:
@@ -3301,7 +3307,7 @@ func _trade(_market: float) -> Array:
 	var mills := (bt.get(T.MILL, []) as Array).size()
 	var deps := (bt.get(T.DEPOT, []) as Array).size() + 2 * (bt.get(T.PORT, []) as Array).size()
 	cap = 60.0 + 250.0 * (bt.get(T.WAREHOUSE, []) as Array).size()
-	for k in ["ore", "metal", "arms", "wood", "tools", "planks"]:  # saves from before mining, arms, wood and tools
+	for k in ["ore", "metal", "arms", "wood", "tools", "planks", "fuel"]:  # saves from before mining, arms, wood and tools
 		if not stock.has(k):
 			stock[k] = 0.0
 	var want := {}  # units this town wants from the market this second
@@ -3325,8 +3331,13 @@ func _trade(_market: float) -> Array:
 	var w_wood := maxf(0.0, works * 0.3 + saws * 0.5 - float(stock["wood"]) - wood_in)
 	var w_tools := maxf(0.0, tool_need - float(stock["tools"]))
 	var w_crops := maxf(0.0, mills * 3.0 - (float(stock["crops"]) + crops))
-	var w_ore := maxf(0.0, foundries * 2.0 - (float(stock["ore"]) + mined))
-	for pair in [["crops", w_crops], ["ore", w_ore], ["wood", w_wood], ["tools", w_tools], ["planks", w_planks]]:
+	var refs := (bt.get(T.REFINERY, []) as Array).size()
+	var burn := 0.0
+	for id in bt:
+		burn += float(Catalog.DEFS[id].get("burn", 0.0)) * (bt[id] as Array).size()
+	var w_ore := maxf(0.0, foundries * 2.0 + refs * 1.0 - (float(stock["ore"]) + mined))
+	var w_fuel := maxf(0.0, burn - float(stock["fuel"]) - refs * 0.8)
+	for pair in [["crops", w_crops], ["ore", w_ore], ["wood", w_wood], ["tools", w_tools], ["planks", w_planks], ["fuel", w_fuel]]:
 		var k: String = pair[0]
 		var w: float = pair[1]
 		want[k] = w
@@ -3343,6 +3354,12 @@ func _trade(_market: float) -> Array:
 	var smelt := minf(float(stock["ore"]) + mined, foundries * 2.0)
 	stock["ore"] = float(stock["ore"]) + mined - smelt
 	stock["metal"] = float(stock["metal"]) + smelt * 0.5
+	var refd := minf(refs * 1.0 * emp, float(stock["ore"]))  # refineries take the ore the foundries left
+	stock["ore"] = float(stock["ore"]) - refd
+	stock["fuel"] = float(stock["fuel"]) + refd * 0.8
+	var burnt := minf(float(stock["fuel"]), burn)
+	stock["fuel"] = float(stock["fuel"]) - burnt
+	fuel_ok = 1.0 if burn <= 0.0 else 0.5 + 0.5 * burnt / burn
 	var armouries := (bt.get(T.ARMOURY, []) as Array).size()
 	var m_fac := fac_jobs * emp * 0.02
 	var m_arm := armouries * 0.25 * emp * minf(foc("military"), 1.0)  # low military focus: buy arms instead of making them
@@ -3400,8 +3417,8 @@ func _trade(_market: float) -> Array:
 			offered[k] = sell
 		stock[k] = minf(float(stock[k]), cap)
 	mk.report(offered, want)
-	need_rate = {"crops": mills * 3.0, "food": fneed, "goods": gneed, "ore": foundries * 2.0, "metal": m_fac + m_arm + m_tool, "arms": arms_use, "wood": works * 0.3 + saws * 0.5, "tools": tool_need, "planks": plank_need}
-	prod_rate = {"crops": crops, "food": milled + fish + ranch_jobs * emp * 0.1 + fish_jobs * emp * 0.12 * river_health, "goods": goods, "ore": mined, "metal": smelt * 0.5, "arms": marms * 2.0, "wood": wood_in, "tools": made, "planks": sawn * 0.5}
+	need_rate = {"crops": mills * 3.0, "food": fneed, "goods": gneed, "ore": foundries * 2.0, "metal": m_fac + m_arm + m_tool, "arms": arms_use, "wood": works * 0.3 + saws * 0.5, "tools": tool_need, "planks": plank_need, "fuel": burn}
+	prod_rate = {"crops": crops, "food": milled + fish + ranch_jobs * emp * 0.1 + fish_jobs * emp * 0.12 * river_health, "goods": goods, "ore": mined, "metal": smelt * 0.5, "arms": marms * 2.0, "wood": wood_in, "tools": made, "planks": sawn * 0.5, "fuel": refd * 0.8}
 	for k in Market.GOODS:  # local scarcity: days of cover (stock plus a minute of production) against use, between export and import parity
 		var nr: float = maxf(float(need_rate[k]), 0.0)
 		var lf := 0.8

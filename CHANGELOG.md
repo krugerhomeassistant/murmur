@@ -6,6 +6,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 ## [Unreleased]
 
 ### Added
+- Fuel: a new good made by the Refinery (1 ore a second into 0.8 fuel). Coal plants burn 0.4 and gas plants 0.3 a second, and run at half output without it. Towns buy it from the market, and planner towns with mines and a fuel-burning plant build a refinery. `tests/fuel.gd`.
 - Rail yard catchment: the freight discount and capacity boost scale with the share of farms, mines and factories within 14 tiles of a yard.
 - Power tiers: hydro dam (55 units, on the river, Industrial age), gas plant (80 units, half the pollution of coal, Modern) and nuclear plant (200 units, clean, very costly, Modern), with `tests/power.gd`.
 

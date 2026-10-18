@@ -2,7 +2,7 @@
 
 # Buildings and tiles
 
-73 placeable things in 12 categories. `unlock` is the population (peak) at which the Build menu offers it. Costs are coins; `upkeep` is coins per second before the town-size and policy multipliers (see [Economy](economy.md)).
+74 placeable things in 12 categories. `unlock` is the population (peak) at which the Build menu offers it. Costs are coins; `upkeep` is coins per second before the town-size and policy multipliers (see [Economy](economy.md)).
 
 How to read an entry: **Radius** is the service reach in tiles (Manhattan diamond); **Provides** lists the city-stat coverage it adds (see [City stats](stats.md)); **Output** is the network supply it adds (power, water, sewage units); **Jobs** is staff; **Pollution** is `[radius, strength]`; **Tourism** is visitor income strength; **Visited** means citizens walk there as a leisure destination; **Grant** is a free income (coins per second, scaled by `RATE`).
 
@@ -779,7 +779,7 @@ Silent clean power: 14 units into the grid with almost no upkeep.
 
 ### Coal power plant
 
-Generates 40 units of power and 12 jobs, but it pollutes homes within 10 tiles. Cheap to build, dirty to live next to.
+Generates 40 units of power and 12 jobs, but it pollutes homes within 10 tiles. Cheap to build, dirty to live next to. Burns 0.4 fuel a second; at half output without it.
 
 | | |
 |---|---|
@@ -813,7 +813,7 @@ A dam on the river: 55 units of clean power and 6 jobs, with low upkeep. Must to
 
 ### Gas power plant
 
-80 units of power and 10 jobs. Half as dirty as coal (6 tiles), but dearer to build and run.
+80 units of power and 10 jobs. Half as dirty as coal (6 tiles), but dearer to build and run. Burns 0.3 fuel a second; at half output without it.
 
 | | |
 |---|---|
@@ -1249,6 +1249,7 @@ Turns metal into arms (up to 0.25 metal a second becomes 0.5 arms). Every soldie
 | [Toolworks](#toolworks) | 200 | 0.8 | 150 | svc |
 | [Sawmill](#sawmill) | 140 | 0.6 | 80 | svc |
 | [Rail yard](#rail-yard) | 320 | 1.2 | 200 | svc |
+| [Refinery](#refinery) | 500 | 2 | 260 | svc |
 | [Warehouse](#warehouse) | 120 | 0.4 | 30 | svc |
 | [Trade depot](#trade-depot) | 300 | 1 | 60 | svc |
 
@@ -1385,6 +1386,23 @@ Loads goods onto trains. When both towns of a trade link have a rail yard, freig
 | Map colour / letter | `#5a5f6b` / `Ry` |
 
 *Tip:* Both ends need one. Build it beside your industry, not at the edge of town.
+
+### Refinery
+
+Refines ore into fuel: 1 ore a second becomes 0.8 fuel. Coal and gas plants burn fuel; without it they run at half output.
+
+| | |
+|---|---|
+| Id | `REFINERY` |
+| Cost / upkeep | 500 / 2 per s |
+| Unlocks at | 260 population |
+| Kind | svc |
+| Jobs | 8 |
+| Pollution | radius 4, strength 0.4 |
+| Production chain | fuel |
+| Map colour / letter | `#6b5a4a` / `Rf` |
+
+*Tip:* Needs mines. Build it near them, away from homes.
 
 ### Warehouse
 
