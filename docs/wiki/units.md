@@ -2,7 +2,7 @@
 
 # Military units
 
-19 unit types. Damage classes: **soft** (infantry), **armor** (vehicles), **air**, **ship**. The `vs` multipliers scale damage against each class. Ranks (Recruit, Veteran, Elite, Legend) are earned by damage dealt (or healed): 250, 800, 2000; each rank adds +15% damage and +10% hp. The army cap is 150 per town. Speed is pixels per second (32 px = 1 tile); range in pixels. `cap` is how many of the unit each building supports. See [War and military](war.md) for the rules.
+20 unit types. Damage classes: **soft** (infantry), **armor** (vehicles), **air**, **ship**. The `vs` multipliers scale damage against each class. Ranks (Recruit, Veteran, Elite, Legend) are earned by damage dealt (or healed): 250, 800, 2000; each rank adds +15% damage and +10% hp. The army cap is 150 per town. Speed is pixels per second (32 px = 1 tile); range in pixels. `cap` is how many of the unit each building supports. See [War and military](war.md) for the rules.
 
 | Unit | Class | HP | Damage | Range | Speed | Cost | Upkeep | Train s | Defence weight |
 |---|---|---|---|---|---|---|---|---|---|
@@ -22,6 +22,7 @@
 | [Fighter](#fighter) | air | 120 | 6 | 220 | 55 | 200 | 0.1 | 45 | 1 |
 | [Bomber](#bomber) | air | 220 | 10 | 140 | 38 | 300 | 0.16 | 65 | 1 |
 | [Helicopter](#helicopter) | air | 160 | 7 | 190 | 30 | 240 | 0.13 | 50 | 1 |
+| [Galley](#galley) | ship | 140 | 3 | 110 | 14 | 80 | 0.04 | 20 | 1 |
 | [Patrol boat](#patrol-boat) | ship | 160 | 4 | 200 | 28 | 120 | 0.06 | 25 | 1 |
 | [Destroyer](#destroyer) | ship | 520 | 8 | 320 | 16 | 320 | 0.15 | 60 | 1 |
 | [Transport](#transport) | ship | 400 | 0 | 100 | 12 | 200 | 0.08 | 40 | 1 |
@@ -140,6 +141,13 @@ Key `heli`, class air.
 
 - Housed by: Military base (up to 1)
 - Damage multipliers: soft x1.4, armor x1.6, air x0.3, ship x1
+
+## Galley
+
+Key `galley`, class ship.
+
+- Housed by: Port (up to 2)
+- Damage multipliers: soft x1, armor x0.4, air x0, ship x1
 
 ## Patrol boat
 

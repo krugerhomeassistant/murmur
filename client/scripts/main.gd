@@ -1190,6 +1190,15 @@ func draw_fx(node: CanvasItem) -> void:
 								node.draw_set_transform(pos, ang)
 								node.draw_colored_polygon(PackedVector2Array([Vector2(12, 0) * sz * f, Vector2(-8, -8 if k != "fighter" else -5) * sz * f, Vector2(-4, 0) * sz * f, Vector2(-8, 8 if k != "fighter" else 5) * sz * f]), col.lightened(0.2))
 								node.draw_set_transform(Vector2.ZERO)
+						"galley":  # an oared hull: pale wood, a row of oars and a square sail
+							node.draw_circle(pos, 13.0 * sz, Color(0.25, 0.5, 0.8, 0.35))
+							node.draw_set_transform(pos, ang)
+							for q in 4:
+								node.draw_line(Vector2(-7 + q * 4.5, -4) * sz, Vector2(-9 + q * 4.5, -9) * sz, Color("5a432a"), 0.9 * sz)
+								node.draw_line(Vector2(-7 + q * 4.5, 4) * sz, Vector2(-9 + q * 4.5, 9) * sz, Color("5a432a"), 0.9 * sz)
+							node.draw_colored_polygon(PackedVector2Array([Vector2(13, 0) * sz, Vector2(8, -4) * sz, Vector2(-11, -4) * sz, Vector2(-11, 4) * sz, Vector2(8, 4) * sz]), Color("a98856"))
+							node.draw_rect(Rect2(-3 * sz, -3 * sz, 3 * sz, 6 * sz), col)
+							node.draw_set_transform(Vector2.ZERO)
 						"patrol", "destroyer", "transport":
 							var k := String(un["k"])
 							var f := 0.8 if k == "patrol" else (1.4 if k == "destroyer" else 1.2)
