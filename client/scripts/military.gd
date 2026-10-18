@@ -26,11 +26,12 @@ const KIND := {
 	"fighter": {"n": "Fighter", "t": "air", "hp": 120.0, "dmg": 6.0, "rng": 220.0, "spd": 55.0, "cost": 200.0, "upk": 0.1, "train": 45.0, "cap": {T.BASE: 2}, "radar": true, "vs": {"soft": 0.5, "armor": 0.4, "air": 2.2, "ship": 0.5}},
 	"bomber": {"n": "Bomber", "t": "air", "hp": 220.0, "dmg": 10.0, "rng": 140.0, "spd": 38.0, "cost": 300.0, "upk": 0.16, "train": 65.0, "cap": {T.BASE: 1}, "radar": true, "vs": {"soft": 1.3, "armor": 1.8, "air": 0.0, "ship": 2.0}},
 	"heli": {"n": "Helicopter", "t": "air", "hp": 160.0, "dmg": 7.0, "rng": 190.0, "spd": 30.0, "cost": 240.0, "upk": 0.13, "train": 50.0, "cap": {T.BASE: 1}, "vs": {"soft": 1.4, "armor": 1.6, "air": 0.3, "ship": 1.0}},
+	"galley": {"n": "Galley", "t": "ship", "hp": 140.0, "dmg": 3.0, "rng": 110.0, "spd": 14.0, "cost": 80.0, "upk": 0.04, "train": 20.0, "cap": {T.PORT: 2}, "vs": {"soft": 1.0, "armor": 0.4, "air": 0.0, "ship": 1.0}},
 	"patrol": {"n": "Patrol boat", "t": "ship", "hp": 160.0, "dmg": 4.0, "rng": 200.0, "spd": 28.0, "cost": 120.0, "upk": 0.06, "train": 25.0, "cap": {T.NAVYARD: 3}, "vs": {"soft": 1.0, "armor": 0.5, "air": 0.3, "ship": 1.0}},
 	"destroyer": {"n": "Destroyer", "t": "ship", "hp": 520.0, "dmg": 8.0, "rng": 320.0, "spd": 16.0, "cost": 320.0, "upk": 0.15, "train": 60.0, "cap": {T.NAVYARD: 2}, "vs": {"soft": 1.3, "armor": 1.0, "air": 1.0, "ship": 1.4}},
 	"transport": {"n": "Transport", "t": "ship", "hp": 400.0, "dmg": 0.0, "rng": 100.0, "spd": 12.0, "cost": 200.0, "upk": 0.08, "train": 40.0, "cap": {T.NAVYARD: 1}, "vs": {}, "lands": 6},
 }
-const DEF_W := {"spear": 2, "archer": 1, "knight": 1, "inf": 2, "gren": 1, "snip": 1, "medic": 1, "ltank": 1, "tank": 2, "htank": 1, "art": 1, "aa": 1, "jet": 1, "fighter": 1, "bomber": 1, "heli": 1, "patrol": 1, "destroyer": 1, "transport": 1}
+const DEF_W := {"spear": 2, "archer": 1, "knight": 1, "galley": 1, "inf": 2, "gren": 1, "snip": 1, "medic": 1, "ltank": 1, "tank": 2, "htank": 1, "art": 1, "aa": 1, "jet": 1, "fighter": 1, "bomber": 1, "heli": 1, "patrol": 1, "destroyer": 1, "transport": 1}
 const RANKS := ["Recruit", "Veteran", "Elite", "Legend"]
 const RANK_XP := [250.0, 800.0, 2000.0]  # damage dealt (or healed) to reach rank 1, 2, 3
 const RANK_DMG := 0.15  # per rank
@@ -154,7 +155,7 @@ static func adapt(c: City) -> void:
 				n += 1
 	var w := DEF_W.duplicate()
 	if n >= 3:
-		var up := {"air": ["aa", "fighter"], "armor": ["gren", "art", "heli", "bomber", "htank"], "soft": ["tank", "snip", "art", "ltank", "bomber", "knight"], "ship": ["destroyer", "patrol", "bomber", "art"]}
+		var up := {"air": ["aa", "fighter"], "armor": ["gren", "art", "heli", "bomber", "htank"], "soft": ["tank", "snip", "art", "ltank", "bomber", "knight"], "ship": ["destroyer", "patrol", "galley", "bomber", "art"]}
 		for cl in up:
 			if float(tot[cl]) / n >= 0.25:
 				for k in up[cl]:
