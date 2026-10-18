@@ -6,6 +6,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 ## [Unreleased]
 
 ### Added
+- Roads by age (ages finish line AF3): beaten earth with ruts and pebbles in the Ancient age, cobbles in the Medieval age, asphalt with lane lines from the Industrial age. Drawn into the cached chunks, no per-frame cost.
 - Medieval units (ages finish line AF1): archers (long range) and knights (fast, armoured) trained at barracks from the Medieval age, drawn on the field with a bow and a lance; `tests/medieval.gd`. The plan gains an "ages finish line" (docs/PLAN.md): the next release waits for it.
 - Buildings by age (ages finish line AF4, first part): Ancient market stalls and open workshops, Medieval timber-framed shops and stone smithies; and art for the thirteen buildings that showed only two letters on a grey square (well, street lamp, lumber camp, sawmill, toolworks, rail yard, refinery, armoury, hydro dam, reservoir, gas plant, nuclear plant, desalination plant).
 - Soft painted look for moving things (art direction C): cars have rounded bodies, glass, wheels and lights, carts have spoked wheels and a straw load, and people have a body and shadow. `Painter` bakes each sprite once into a small texture, so every car or person is one textured draw instead of several rectangles (`tests/painter.gd`).

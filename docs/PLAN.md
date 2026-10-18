@@ -181,8 +181,8 @@ Everything else comes first. Visual detail (characters, units, buildings, sprite
 The next release waits for these. Each step is one PR, headless test where there is logic, perf checked before the release.
 - [x] AF1 Medieval units: archer (long range, soft) and knight (fast, armoured), trained at barracks from the Medieval age; army drawing for both; `tests/medieval.gd`.
 - [ ] AF2 Galleys (A2 leftover): Ancient/Medieval warship and transport on rivers, built at the port; drawn as an oared hull.
-- [ ] AF3 Roads by age: dirt track (Ancient), cobbles (Medieval), asphalt (Industrial), marked asphalt (Modern); drawn into the chunk, no per-frame cost.
-- [ ] AF4 Buildings by age: every shape (shops, factories, towers, services, farms) gets Ancient, Medieval and Industrial looks in `Art.building`, not only houses.
+- [x] AF3 Roads by age: dirt track (Ancient), cobbles (Medieval), lane-marked asphalt (Industrial and Modern)
+- [ ] AF4 Buildings by age: done so far: houses (all ages), shops and factories (Ancient, Medieval), art for the thirteen buildings that had none (`tests/art.gd` draws every building). Left: terraces and tenements (Medieval), farms and services by age.
 - [ ] AF5 Units and vehicles by age: citizens' clothes, carts to cars to modern cars, army unit drawings per age.
 - [ ] AF6 A3 research choices: at each age a town picks one of two techs (effects in `Research`, host command, AI picks by itself, HUD prompt); `tests/research.gd`.
 - [ ] AF7 Age transition feedback: message, short banner and a palette change so an advance is felt; wiki and AGES_DESIGN updated.
