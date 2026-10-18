@@ -5,6 +5,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+### Changed
+- `scripts/release-tag.bat`: one double-click pushes the tag for the current VERSION.
+
 ## [0.3.0] - 2026-10-18
 
 ### Added
