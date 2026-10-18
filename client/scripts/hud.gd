@@ -992,6 +992,7 @@ func _process(_d: float) -> void:
 var army_l: RichTextLabel
 var army_chk: CheckButton
 var stance_btn: Button
+var emp_grp: Button
 var army_rows := {}
 
 
@@ -1075,6 +1076,11 @@ func _empire() -> void:
     emp_tot.add_theme_font_size_override("font_size", 13)
     emp_dom = _lbl(body, 0)
     emp_dom.add_theme_font_size_override("font_size", 12)
+    emp_grp = Button.new()
+    emp_grp.focus_mode = Control.FOCUS_NONE
+    emp_grp.tooltip_text = "Towns in one group are allied, can send each other coins and cannot fight or embargo each other. Attack one and the whole group answers."
+    emp_grp.pressed.connect(func() -> void: m.cmd("group", [(m.city.group + 1) % 10]))
+    body.add_child(emp_grp)
     var sc := ScrollContainer.new()
     sc.size_flags_vertical = Control.SIZE_EXPAND_FILL
     sc.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
@@ -1408,6 +1414,7 @@ func _empire_refresh(c: City) -> void:
         return
     var mine := Empire.mine(m.towns, c)
     var tt := Empire.totals(mine)
+    emp_grp.text = "Group: %s (click to change)" % (str(c.group) if c.group > 0 else "none")
     emp_dom.text = _domination()
     emp_tot.text = "%d of your towns   pop %d   treasury $%d   net %+.1f/s" % [tt["towns"], tt["pop"], int(tt["coins"]), tt["income"]]
     var rows: Array = []
