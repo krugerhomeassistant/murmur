@@ -14,7 +14,7 @@ Each stat is the share of homes covered by the services that provide it (0-100%)
 | [Culture](#culture) | bonus | 0.05 | Library, University, Plaza, Cinema, Museum, Church, Stadium |
 | [Public transport](#public-transport) | need | 0.06 | Bus stop, Train station |
 | [Electricity](#electricity) | need | 0.15 | Wind turbine, Solar farm, Coal power plant, Hydro dam, Gas power plant, Nuclear plant |
-| [Water](#water) | need | 0.15 | Water tower |
+| [Water](#water) | need | 0.15 | Water tower, Reservoir, Desalination plant |
 | [Sewage](#sewage) | need | 0.1 | Sewage plant |
 | [Waste disposal](#waste-disposal) | need | 0.08 | Landfill, Recycling centre |
 | [Retail strength](#retail-strength) | bonus | 0 | Train station, Market, Shopping mall |
@@ -94,7 +94,7 @@ Key `water`. Uncovered homes lower mood (up to -15%) and productivity by up to 1
 
 > "We've got no running water!"
 
-Provided by: Water tower.
+Provided by: Water tower, Reservoir, Desalination plant.
 
 ## Sewage
 

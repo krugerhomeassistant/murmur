@@ -2,7 +2,7 @@
 
 # Buildings and tiles
 
-74 placeable things in 12 categories. `unlock` is the population (peak) at which the Build menu offers it. Costs are coins; `upkeep` is coins per second before the town-size and policy multipliers (see [Economy](economy.md)).
+76 placeable things in 12 categories. `unlock` is the population (peak) at which the Build menu offers it. Costs are coins; `upkeep` is coins per second before the town-size and policy multipliers (see [Economy](economy.md)).
 
 How to read an entry: **Radius** is the service reach in tiles (Manhattan diamond); **Provides** lists the city-stat coverage it adds (see [City stats](stats.md)); **Output** is the network supply it adds (power, water, sewage units); **Jobs** is staff; **Pollution** is `[radius, strength]`; **Tourism** is visitor income strength; **Visited** means citizens walk there as a leisure destination; **Grant** is a free income (coins per second, scaled by `RATE`).
 
@@ -738,6 +738,8 @@ Rail across 14 tiles. Full transit coverage, a boost to nearby shops, 8 jobs and
 | [Gas power plant](#gas-power-plant) | 900 | 4 | 250 | svc |
 | [Nuclear plant](#nuclear-plant) | 2400 | 9 | 600 | svc |
 | [Water tower](#water-tower) | 120 | 0.8 | 25 | svc |
+| [Reservoir](#reservoir) | 450 | 1 | 120 | svc |
+| [Desalination plant](#desalination-plant) | 1100 | 6 | 400 | svc |
 | [Power line](#power-line) | 2 | 0.015 | 15 | net |
 | [Water pipe](#water-pipe) | 2 | 0.015 | 15 | net |
 | [Sewage plant](#sewage-plant) | 160 | 1 | 40 | svc |
@@ -859,6 +861,40 @@ Pumps 14 units of water into the pipe network. Droughts and burst mains cut cove
 | Map colour / letter | `#6aa8c8` / `Wa` |
 
 *Tip:* Needed from about 25 residents.
+
+### Reservoir
+
+Draws 40 units of water from the river into the pipe network, nearly three water towers. Must touch the river.
+
+| | |
+|---|---|
+| Id | `RESERVOIR` |
+| Cost / upkeep | 450 / 1 per s |
+| Unlocks at | 120 population |
+| Kind | svc |
+| Output | water 40 |
+| Jobs | 3 |
+| Placement | must touch water |
+| Map colour / letter | `#4f86b0` / `Rs` |
+
+*Tip:* Cheaper per unit than towers once a district is big.
+
+### Desalination plant
+
+90 units of water anywhere, without a river, and 8 jobs. Costly to build and run, and the brine pollutes a little (3 tiles).
+
+| | |
+|---|---|
+| Id | `DESAL` |
+| Cost / upkeep | 1100 / 6 per s |
+| Unlocks at | 400 population |
+| Kind | svc |
+| Output | water 90 |
+| Jobs | 8 |
+| Pollution | radius 3, strength 0.3 |
+| Map colour / letter | `#5a90a0` / `De` |
+
+*Tip:* For big cities away from the water, or short of towers.
 
 ### Power line
 

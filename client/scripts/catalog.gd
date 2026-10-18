@@ -9,7 +9,7 @@ enum Id {
     PARK, PLAYGROUND, PLAZA, CINEMA, MUSEUM, STADIUM, THEME,
     BUS, TRAIN, WIND, SOLAR, COAL, WATER, LANDFILL, RECYCLE,
     MARKET, BANK, MALL, HOTEL, TOWNHALL, WIRE, PIPE, LIGHT, COURT, PRISON, COTTAGE, TOWNHOUSE, TENEMENT, CONDO, CHURCH, BAR, UNION_HALL, CHAMBER, BASE, BARRACKS, RADAR, MILL, WAREHOUSE, DEPOT, SEWAGE, SEWER, PORT, NAVYARD, FISHDOCK,
-    ORCHARD, RANCH, MINE, FOUNDRY, GREENHOUSE, FISHFARM, ARMOURY, LUMBER, TOOLWORKS, SAWMILL, RAILYARD, HYDRO, GAS, NUCLEAR, REFINERY,
+    ORCHARD, RANCH, MINE, FOUNDRY, GREENHOUSE, FISHFARM, ARMOURY, LUMBER, TOOLWORKS, SAWMILL, RAILYARD, HYDRO, GAS, NUCLEAR, REFINERY, RESERVOIR, DESAL,
 }
 
 const CATS := [
@@ -277,6 +277,14 @@ const DEFS := {
         "r": 0, "prov": {}, "out": {"water": 14}, "jobs": 2, "shape": "tower",
         "desc": "Pumps 14 units of water into the pipe network. Droughts and burst mains cut coverage, so overlap two towers in big districts.",
         "tip": "Needed from about 25 residents."},
+    Id.RESERVOIR: {"n": "Reservoir", "cat": "util", "kind": "svc", "cost": 450, "up": 1.0, "unlock": 120, "col": Color("4f86b0"), "g": "Rs",
+        "r": 0, "prov": {}, "out": {"water": 40}, "jobs": 3, "water": true, "shape": "tower",
+        "desc": "Draws 40 units of water from the river into the pipe network, nearly three water towers. Must touch the river.",
+        "tip": "Cheaper per unit than towers once a district is big."},
+    Id.DESAL: {"n": "Desalination plant", "cat": "util", "kind": "svc", "cost": 1100, "up": 6.0, "unlock": 400, "col": Color("5a90a0"), "g": "De",
+        "r": 0, "prov": {}, "out": {"water": 90}, "jobs": 8, "poll": [3, 0.3], "shape": "treatment",
+        "desc": "90 units of water anywhere, without a river, and 8 jobs. Costly to build and run, and the brine pollutes a little (3 tiles).",
+        "tip": "For big cities away from the water, or short of towers."},
     Id.WIRE: {"n": "Power line", "cat": "util", "kind": "net", "layer": "wire", "cost": 2, "up": 0.015, "unlock": 15, "col": Color("e0c050"), "g": "",
         "desc": "Carries electricity. Power plants feed any connected line; a building is powered when a live line touches one of its four sides or its own tile. Lines can run under roads and buildings. Each unit of demand beyond plant output causes brownouts for everyone on the grid.",
         "tip": "Run lines along roads. Auto-growth lays them for you, but you can draw your own and bulldoze twice to cut one."},
