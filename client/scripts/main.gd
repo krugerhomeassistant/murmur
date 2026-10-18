@@ -1051,8 +1051,10 @@ func _draw_globe() -> void:
 		var inside := false
 		if poly.size() >= 3:  # the outline of where the town has built, filled in its relation colour
 			var pw := PackedVector2Array()
+			var bb := Rect2(poly[0] * TILE, Vector2.ZERO)
 			for q in poly:
 				pw.append(q * TILE)
+				bb = bb.expand(q * TILE)
 			var lw := 2.0 / cam.zoom.x
 			var fill: Color = GLOBE_COL[m.side]
 			fill.a = 0.55
@@ -1063,6 +1065,8 @@ func _draw_globe() -> void:
 			if ov != "side":  # overlay value as a thicker coloured edge
 				draw_polyline(pw, Color("4fa3d9").lerp(Color("d9382a"), m.v), 6.0 / cam.zoom.x)
 			inside = Geometry2D.is_point_in_polygon(mp, pw)
+			if bb.size.length() * cam.zoom.x < 16.0:  # too small to find: keep a ring around it
+				draw_arc(p, 9.0 / cam.zoom.x, 0.0, TAU, 24, GLOBE_COL[m.side], 2.0 / cam.zoom.x)
 		else:  # nothing built yet: the old disc
 			draw_circle(p, r, GLOBE_COL[m.side])
 			draw_arc(p, r, 0.0, TAU, 24, Color(0, 0, 0, 0.7), 2.0 / cam.zoom.x)
