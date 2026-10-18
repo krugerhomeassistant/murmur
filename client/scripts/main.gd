@@ -1468,8 +1468,13 @@ func draw_chunk(c_item: CanvasItem, t_: City, x0: int, y0: int, x1: int, y1: int
 				continue
 			match String(d["kind"]):
 				"road":
-					ci.draw_rect(r, d["col"])
-					var kerb: Color = d["col"].lightened(0.25)  # pale kerb on every side that is not another road
+					var rc: Color = d["col"]
+					if city.age < 2:  # before the Industrial age roads are beaten earth (Ancient) or cobbles (Medieval)
+						rc = Color("a68e63") if city.age == 0 else Color("8f8776")
+					ci.draw_rect(r, rc)
+					if city.age < 2:
+						_old_road(r, x, y, rc, city.age)
+					var kerb: Color = rc.lightened(0.25)  # pale kerb on every side that is not another road
 					if x == 0 or not city.is_road(city.grid[i - 1]):
 						ci.draw_rect(Rect2(r.position, Vector2(2, TILE)), kerb)
 					if x + 1 >= City.W or not city.is_road(city.grid[i + 1]):
@@ -1479,6 +1484,10 @@ func draw_chunk(c_item: CanvasItem, t_: City, x0: int, y0: int, x1: int, y1: int
 					if y + 1 >= City.H or not city.is_road(city.grid[i + City.W]):
 						ci.draw_rect(Rect2(r.position + Vector2(0, TILE - 2), Vector2(TILE, 2)), kerb)
 					var c := r.get_center()
+					if city.age < 2:  # no painted lanes on earth and cobbles
+						if wet:
+							Art.bridge(ci, r, x > 0 and city.is_road(city.grid[i - 1]) or x + 1 < City.W and city.is_road(city.grid[i + 1]))
+						continue
 					ci.draw_circle(c, 1.5, lane)
 					if x + 1 < City.W and city.is_road(city.grid[i + 1]):
 						ci.draw_line(c, c + Vector2(TILE, 0), lane, 1.0 if t == T.ROAD else 2.5)
@@ -1538,6 +1547,21 @@ func _overlay(x0: int, y0: int, x1: int, y1: int) -> void:
 			else:
 				var c := clampf(city.raw_cov(Vector2i(x, y), overlay), 0.0, 1.0)
 				ci.draw_rect(r, Color(0.2, 0.8, 0.4, c * 0.45) if c > 0.0 else Color(0.8, 0.2, 0.2, 0.18))
+
+
+## Ancient dirt (ruts and pebbles) or Medieval cobbles (rounded stones), seeded by the tile so neighbours differ.
+func _old_road(r: Rect2, x: int, y: int, rc: Color, age: int) -> void:
+	var h := (x * 73856093) ^ (y * 19349663)
+	if age == 0:
+		for k in 5:
+			var q := (h >> (k * 3)) & 7
+			var p := r.position + Vector2(3.0 + q * 3.2, 3.0 + ((h >> (k * 5 + 1)) & 7) * 3.2)
+			ci.draw_rect(Rect2(p, Vector2(3, 2)), rc.darkened(0.12) if k % 2 == 0 else rc.lightened(0.1))
+	else:
+		for j in 2:
+			for i in 2:
+				var tone := float((h >> (i + 2 * j)) & 3) * 0.02
+				ci.draw_rect(Rect2(r.position + Vector2(2.0 + i * 15.0, 2.0 + j * 15.0), Vector2(13, 13)), rc.lightened(0.05 + tone))
 
 
 func _building(r: Rect2, d: Dictionary, lv: int, ok: bool, night: bool, id := -1) -> void:
