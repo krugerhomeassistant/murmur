@@ -12,12 +12,12 @@ A town gains knowledge every second: `pop / 50 * 0.5 * (1 + education coverage +
 Some needs only exist from an age on (`Ages.EXPECTS`: fire, police and education from Medieval; power, water, sewage, waste, transit and health from Industrial). Before that age the need counts as fully met. In the age that opens it, the forgiveness fades by 25% every 400 s (`GRACE_STEP`), so people notice the missing service gradually. The clock holds while mood is under 0.35, so a struggling town is not hit with more demands. The planner treats such a need as at least half unmet during the grace period and builds ahead.
 
 ## Starting age
-The setup screen has a "Starting age" option. The default, Modern, opens everything and changes nothing for existing games and saves. Console and sandbox: command `set_age`.
+The setup screen has a "Starting age" option. The default is Ancient (since A2); Modern opens everything, the classic start. Existing saves keep their age. Console and sandbox: command `set_age`.
 
 ## Measured (Ancient start, planner towns, 6 runs of 4200 s)
 All six towns survive and keep growing (pop 240 to 700). Before the planner and grace fixes, an Ancient start collapsed at the Industrial or Modern transition in most runs (pop 300 to 60), through three causes found in diagnosis: the grace floor hid the need from the planner, the floor vanished at once when the age changed, and the planner spent the treasury on upkeep it could not carry.
 
 ## Phases
 - A1 (this change): framework, gating, expectations, setup option, tests (`tests/ages.gd`).
-- A2: early-age content, then make Ancient the default start. Done: spearmen (Ancient unit trained at barracks, now an Ancient building; `tests/spear.gd`). Wells done (Ancient water source, 6 units, `tests/power.gd`). Left: huts, galleys, Ancient default start.
+- A2: early-age content, then make Ancient the default start. Done: spearmen (Ancient unit trained at barracks, now an Ancient building; `tests/spear.gd`). Wells done (Ancient water source, 6 units, `tests/power.gd`). Ancient default start done. Left: galleys (huts dropped: the cottage zone already covers early housing).
 - A3: research choices. Scenario setup, god powers, globe view and the real-world map are planned in `docs/SANDBOX_DESIGN.md` (G1 to G5).
