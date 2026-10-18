@@ -79,3 +79,6 @@ A **Lumber camp** (cost 90, unlock 40 people) fells the forest within 5 tiles, u
 
 ## Rail yard
 A town with a Rail yard (`Catalog.Id.RAILYARD`, Industrial age, cost 320, upkeep 1.2) can use rail on trade links. In `Market.link_trade`, when both the seller and the buyer have one, freight is multiplied by `RAIL_FREIGHT` (0.4) and the link's capacity (`LINK_CAP`) doubles. Planner towns of 80 people or more with a neighbour build one. Test: `client/tests/rail.gd`.
+
+## Sea trade
+Two neighbouring towns that both have a Port can trade without a road between them: `Market.link_trade` gives such a pair a link strength of `SEA_LINK` (0.8) unless there is an embargo or war. Between two ports with a road link as well, freight is multiplied by `SEA_FREIGHT` (0.7). Rail (0.4) beats both. Test: `client/tests/rail.gd`.

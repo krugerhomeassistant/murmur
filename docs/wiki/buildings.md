@@ -1201,7 +1201,7 @@ Turns metal into arms (up to 0.25 metal a second becomes 0.5 arms). Every soldie
 
 ### Port
 
-A harbour with cranes and cargo ships. Must touch the river. Counts as two trade depots for export prices, and gives 10 jobs.
+A harbour with cranes and cargo ships. Must touch the river. Counts as two trade depots for export prices, and gives 10 jobs. Two neighbouring towns that both have a port trade by sea even without a road, with freight 30% cheaper.
 
 | | |
 |---|---|

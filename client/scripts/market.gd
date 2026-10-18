@@ -279,6 +279,8 @@ func status(k: String) -> String:
 # ---------- trade between linked towns ----------
 
 const FREIGHT := 0.06  ## per unit and per plot of distance, as a share of the base price
+const SEA_FREIGHT := 0.7  ## freight share left when both towns have a port
+const SEA_LINK := 0.8  ## link strength of a sea route between neighbours without a road
 const RAIL_FREIGHT := 0.4  ## freight share left when both towns have a rail yard
 const LINK_CAP := 2.0  ## units per second one pair of linked towns can move, before the treaty multiplier
 const MIN_GAIN := 0.05  ## a trade must beat freight by this share of the base price
@@ -306,11 +308,14 @@ static func link_trade(towns: Array) -> void:
 		for s: City in sellers:
 			for b: City in buyers:
 				var link: float = Diplo.tmult(s, b)
+				var sea: bool = s.has_port() and b.has_port() and s != b and Diplo.side(s, b) >= 0
+				if link <= 0.0 and sea and Diplo.treaty(s, b) != "embargo" and Diplo.treaty(s, b) != "war":
+					link = SEA_LINK  # no road needed between neighbouring towns that both have a port
 				if link <= 0.0 or s == b:
 					continue
 				var dist := maxi(absi(s.gpos.x - b.gpos.x), absi(s.gpos.y - b.gpos.y))
 				var rail: bool = s.has_rail() and b.has_rail()  # both ends have a rail yard
-				var freight: float = float(BASE[k]) * FREIGHT * dist * (RAIL_FREIGHT if rail else 1.0)
+				var freight: float = float(BASE[k]) * FREIGHT * dist * (RAIL_FREIGHT if rail else (SEA_FREIGHT if sea else 1.0))
 				var gap: float = float(b.price_loc[k]) - float(s.price_loc[k]) - freight
 				if gap < float(BASE[k]) * MIN_GAIN:
 					continue

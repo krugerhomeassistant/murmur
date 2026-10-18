@@ -1883,6 +1883,11 @@ func _can_upgrade(i: int) -> bool:
 
 
 ## What this town could send to linked towns now (stock above a minute and a half of its own use) and what it would take.
+## True when this town has a port.
+func has_port() -> bool:
+	return not (bt.get(T.PORT, []) as Array).is_empty()
+
+
 ## True when this town has a rail yard.
 func has_rail() -> bool:
 	return not (bt.get(T.RAILYARD, []) as Array).is_empty()
