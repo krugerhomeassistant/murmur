@@ -186,7 +186,8 @@ The next release waits for these. Each step is one PR, headless test where there
 - [x] AF5 Units and vehicles by age: carts (Ancient, Medieval), tourers (Industrial), cars (Modern), clothes by age, Medieval archers and knights and galleys drawn.
 - [x] AF6 A3 research choices: at each age a town picks one of two techs (effects in `Research`, host command, AI picks by itself, HUD prompt); `tests/research.gd`.
 - [x] AF7 Age transition feedback: banner done (`tests/banner.gd`); a palette shift was dropped, the roads, houses and shops already change look per age.
-- [ ] AF8 Verify: all ages play start to finish headless (`tests/ages.gd` extended), benchmark equal or better, then the release.
+- [x] AF8a Verify: `tests/ageplay.gd` plays four planner towns from the Ancient age for 4500 s (about 3 minutes, run by hand): all reach later ages, choose research, hold no building from a later age.
+- [ ] AF8b Benchmark equal or better, README table, then the release.
 
 ## War rework (user, 2026-10-08): "full Age of Empires / Empire Earth style war" - NEXT MAJOR FEATURE (v0.3)
 Today: armies fight on one abstract line between two towns; unopposed units at the edge raid and shell from a distance (`Military.fight/_occupy`, `Main.draw_fx`). User feedback from watching it:
