@@ -273,7 +273,7 @@ const DEFS := {
         "tip": "Water towers must touch a connected pipe to pump anything."},
     Id.PORT: {"n": "Port", "cat": "trade", "kind": "svc", "cost": 450, "up": 1.5, "unlock": 60, "col": Color("5a7a9a"), "g": "Po",
         "r": 0, "prov": {}, "jobs": 10, "water": true, "chain": "trade", "shape": "port",
-        "desc": "A harbour with cranes and cargo ships. Must touch the river. Counts as two trade depots for export prices, and gives 10 jobs.",
+        "desc": "A harbour with cranes and cargo ships. Must touch the river. Counts as two trade depots for export prices, and gives 10 jobs. Two neighbouring towns that both have a port trade by sea even without a road, with freight 30% cheaper.",
         "tip": "Build it on the bank. Watch the cargo ships sail up and down the river."},
     Id.FISHDOCK: {"n": "Fishing dock", "cat": "trade", "kind": "svc", "cost": 200, "up": 0.6, "unlock": 40, "col": Color("6a9aaa"), "g": "Fi",
         "r": 0, "prov": {}, "jobs": 6, "water": true, "shape": "dock",
