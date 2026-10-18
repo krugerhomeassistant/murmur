@@ -1521,7 +1521,7 @@ func _overlay(x0: int, y0: int, x1: int, y1: int) -> void:
 func _building(r: Rect2, d: Dictionary, lv: int, ok: bool, night: bool, id := -1) -> void:
 	if id >= 0 and Sprites.draw(ci, r, id, lv, city.age, ok):
 		return
-	if Art.building(ci, r, String(d.get("shape", "")), d["col"], lv, ok, night, int(r.position.x / 32.0) * 7 + int(r.position.y / 32.0) * 13):
+	if Art.building(ci, r, String(d.get("shape", "")), d["col"], lv, ok, night, int(r.position.x / 32.0) * 7 + int(r.position.y / 32.0) * 13, city.age):
 		if not ok:
 			ci.draw_string(ThemeDB.fallback_font, r.position + Vector2(12, 20), "!", HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color(1, 0.3, 0.2))
 		return
