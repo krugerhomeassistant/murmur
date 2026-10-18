@@ -686,6 +686,16 @@ func say(n: String, a: Array) -> String:
 
 
 func _paint(click: bool) -> void:
+	if cam.zoom.x < GLOBE_ZOOM:  # globe view: a click on a town disc flies there
+		var mp := get_global_mouse_position()
+		for m in Globe.markers(towns, city, "side"):
+			if mp.distance_to(m.pos * TILE) <= maxf(m.r * TILE, 8.0 / cam.zoom.x):
+				if click:
+					switch_town(towns.find(m.t))
+					cam.zoom = Vector2.ONE * 0.5
+					chunk_kick = true
+				break
+		return
 	_dirty_cell(cell())
 	var c := cell()
 	if not city.inside(c.x, c.y):
