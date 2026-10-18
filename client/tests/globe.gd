@@ -1,5 +1,5 @@
 extends SceneTree
-## Globe markers: one per town, radius grows with population, overlays stay in 0..1, reading changes nothing, and 200 towns are fast.
+## Globe markers and the coarse land map: one per town, radius grows with population, overlays stay in 0..1, reading changes nothing, and 200 towns are fast.
 
 
 func _init() -> void:
@@ -27,6 +27,18 @@ func _init() -> void:
 	var sides: bool = m2[0]["side"] == "you" and m2[1]["side"] == "alliance" and m2[2]["side"] == "none"
 	var grows: bool = Globe.radius(400) > Globe.radius(10) and Globe.radius(100000) == Globe.MAX_R and Globe.radius(0) == Globe.MIN_R
 	var pure: bool = ts[5].coins == before
-	var ok: bool = all_ok and sides and grows and pure and ms < 5.0
-	print("GLOBE_OK ms=%.2f" % ms if ok else "GLOBE_FAIL all=%s sides=%s grows=%s pure=%s ms=%.2f" % [all_ok, sides, grows, pure, ms])
+	var w := World.new(777)
+	var a := w.coarse(256, -128, 16, 8)
+	var det: bool = a == w.coarse(256, -128, 16, 8) and a.size() == 256
+	var agree := 0
+	var seen := {}
+	for j in 16:
+		for i in 16:
+			seen[a[j * 16 + i]] = true
+			var real: int = w.kind(256 + i * 8, -128 + j * 8)
+			if (a[j * 16 + i] == World.K.SEA) == (real == World.K.SEA):
+				agree += 1
+	var coarse_ok: bool = det and agree >= 240 and seen.size() >= 2
+	var ok: bool = all_ok and sides and grows and pure and ms < 5.0 and coarse_ok
+	print("GLOBE_OK ms=%.2f" % ms if ok else "GLOBE_FAIL coarse=%s agree=%d all=%s sides=%s grows=%s pure=%s ms=%.2f" % [coarse_ok, agree, all_ok, sides, grows, pure, ms])
 	quit(0 if ok else 1)
