@@ -4,6 +4,7 @@ extends RefCounted
 ## in multiplayer the host calls it for a client's command after checking the sender owns the town. Every argument is
 ## validated here because over the network it is untrusted. Returns what the underlying City/Diplo method returns.
 
+static var sandbox := false  # sandbox games only (single player or a host that turns it on): free money and instant troops
 const TAX := ["r", "c", "i"]
 const DIPLO := ["gift", "pact", "alliance", "embargo", "lift", "peace", "tribute", "war", "leave"]  # the Diplo.act verbs
 
@@ -52,6 +53,15 @@ static func run(towns: Array[City], t: City, name: String, a: Array) -> Variant:
 		"set_age":  # sandbox: puts the town in an age (setup and tests)
 			if a.size() == 1 and a[0] is int:
 				Ages.set_age(t, a[0])
+				return true
+		"grant":
+			if sandbox and _ints(a, 1) and a[0] > 0 and a[0] <= 1000000:
+				t.coins += a[0]
+				return true
+		"spawn":
+			if sandbox and a.size() == 2 and a[0] is String and Military.KIND.has(a[0]) and a[1] is int and a[1] > 0 and a[1] <= 50 and t.army.size() + a[1] <= Military.ARMY_MAX:
+				for i in a[1]:
+					t.army.append(Military._unit(a[0]))
 				return true
 		"ask_build":
 			if a.size() == 1 and a[0] is bool:
