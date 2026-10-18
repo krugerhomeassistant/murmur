@@ -2,6 +2,9 @@
 
 Last updated 2026-10-18.
 
+## Next after v0.7.0 (2026-10-18)
+Cosmetics and performance pass done on main: ground shading, house shadows, road kerbs, smaller citizens, F3 performance panel, windows start minimised, cheaper planner site scoring. Benchmark refreshed (103 fps, p99 24.0 ms, README table). Next: remaining cosmetics/art ideas (per-age looks, sprites S2), then the next minor release under the release standard. Owner still to launch-test the Windows zip.
+
 ## Release v0.7.0 next (tags v0.3.0 to v0.6.0 pushed by the owner)
 Merged since v0.6.0: spearman, well, Ancient default, seed, sandbox basics, god powers, and the globe view first form (coarse land tier, town discs, hover, click-to-fly, neighbour lines; headless-checked only, never seen on screen). v0.7.0 release PR is the step now: windowed benchmark taken 2026-10-18 (90 fps, p99 25.1 ms, 273 pop, 325 draw calls; draw calls rose from about 130 and are not yet profiled). The owner double-clicks `release-tag.bat` to push v0.7.0. Open work: G4 overlay colours and sphere shader, G1/G2/G3 gaps, A2 galleys; see docs/PLAN.md.
 
