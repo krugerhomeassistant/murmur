@@ -491,6 +491,12 @@ static func building(ci: CanvasItem, r: Rect2, shape: String, body: Color, lv: i
 	var walls := [Color("e8d9b8"), Color("d9c7a0"), Color("c9d3b8"), Color("e3c8b0"), Color("d8d8cc")]
 	var roof: Color = roofs[h % roofs.size()] * k
 	var wall: Color = walls[(h / 5) % walls.size()] * k
+	if shape in ["house", "terrace"] and age == 1:  # Medieval: pale plaster walls under thatch
+		wall = Color("e6d9b4") * k
+		roof = Color("b8964a") * k
+	elif shape in ["house", "terrace"] and age == 2:  # Industrial: brick under slate
+		wall = Color("b4624a").lerp(walls[(h / 5) % walls.size()], 0.15) * k
+		roof = Color("4e5058") * k
 	match shape:
 		"house" when age == 0:  # Ancient age: a round mud hut under a straw cone, bigger with level
 			ci.draw_rect(Rect2(1, 1, 30, 30), Color("86ab6c") * k)
