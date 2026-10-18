@@ -1451,7 +1451,7 @@ func _empire_refresh(c: City) -> void:
         for sg in (cell["send"] as Button).pressed.get_connections():
             (cell["send"] as Button).pressed.disconnect(sg["callable"])
         (cell["send"] as Button).pressed.connect(func() -> void: m.cmd("send", [idx, 100]))
-        (cell["send"] as Button).disabled = t == c or not Empire.same_side(c, t)
+        (cell["send"] as Button).disabled = t == c or not Empire.can_aid(c, t)
     emp_auto.select(c.auto_mode)
     emp_pol.set_pressed_no_signal(c.auto_policy)
     emp_exp.set_pressed_no_signal(c.auto_expand)
