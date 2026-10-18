@@ -78,6 +78,8 @@ The newest column (2026-10-18, main after the ground, house, road and citizen co
 
 Painted vehicles and people (2026-10-18, back to back on the same rig, 1706x960 window, town sizes differ between runs): old rectangle art 78 FPS, p99 31.7 ms, 92 frames over 25 ms, 230 draw calls, population 307; painted sprites 86 FPS, p99 26.5 ms, 48 frames over 25 ms, 124 draw calls, population 385. Baking each car and person into one texture roughly halves the draw calls and does not cost performance.
 
+Ages finish line (v0.8.0, 2026-10-18, same rig, 1706x960 window, single run, town sizes differ between runs): 85.6 FPS, p99 27.6 ms, 41 frames over 25 ms, 118 draw calls, sim 3.2 ms and draw 3.4 ms per frame, population 531 (the 103 FPS column above had 447 people). Per person the cost is level with the earlier columns, and draw calls are lower than every earlier column except the first ones; the new age art is baked into cached chunks, research acts through modifiers, and the banner is one label. Effective speed 8.0x.
+
 Headless profilers (`tests/regionbench.gd`, `bench.gd`, `stageprof.gd`) are secondary: they miss rendering and frame pacing.
 
 ## Repo map
