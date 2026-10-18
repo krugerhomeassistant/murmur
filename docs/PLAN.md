@@ -145,14 +145,14 @@ Goal: Murmur, a cozy interactive city-builder (Godot) with an optional Live Data
 - [x] D6 Culture score: built from the existing culture and education coverage (theatres, museums, libraries, schools) plus the free-school policy as the civic; a second civic can follow with D8.
 - [ ] D7 Split `city.gd` (housing, services, utilities, budget, war), behaviour unchanged, each a pure move. Done: traffic and buses (`traffic.gd`), mayor and petitions (`mayor.gd`); city.gd 3836 to 3504 lines. Pattern: static module taking a City. Next candidates: sickness, fire, tribes, disasters, the economy block.
 - [ ] D8 Depth layers (E4 goods and households, E5 infrastructure, E6 military, E3 group multiplayer) in table order. E4 slices 1 and 2 done: wood, tools and planks (lumber camp, toolworks, sawmill, tools and planks bonuses). E4 slice 3 done: road maintenance and wear (buildings not yet charged). E4 done except fuel, which moves into E5 (vehicles burn it). E5b first slice done: rail yard (cheaper, bigger trade links); ports done (sea trade between neighbours); next power tiers, then trains and stations with catchment; then E5 infrastructure, E6 military.
-- [ ] D9 Perf pass, benchmark table, release.
+- [ ] D9 Releases: every finished milestone is released (standard in `docs/RELEASING.md`: minor per milestone or about 40 commits, patch per fix, perf pass last and scaled); a deeper perf pass once before 1.0. Next: v0.3.0 (E4 economy depth, ports, rail, ages).
 Found on 2026-10-09: the game has no victory condition at all, and war needs temper below -0.7 plus a 40% roll per event, which is why it feels rare.
 
 ## Order of work (2026-10-17)
 1. D8 depth layers: E4 economy (wood, tools, planks done; next upkeep and maintenance, household v2), E5 infrastructure (rail, ports, power tiers), E6 military (sieges, air, command UI), E3 group multiplayer.
 2. Ages A2: early-age content (huts, wells, spearmen, galleys) and an Ancient default start.
 3. Sandbox and gods-eye view (G1 to G5, below).
-4. D9 performance pass, benchmark table, release.
+4. D9 releases at every milestone (see `docs/RELEASING.md`), deep perf pass before 1.0.
 5. Art pass (last).
 D5 growth tuning and D7 `city.gd` splits continue alongside whenever a step touches them.
 
