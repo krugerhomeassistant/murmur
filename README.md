@@ -76,6 +76,8 @@ The last column (2026-10-18, v0.7.0, which is v0.6.0 plus the Ancient start, wel
 
 The newest column (2026-10-18, main after the ground, house, road and citizen cosmetics, the F3 panel and windows starting minimised) is another single run on the same rig, at a 1706x960 window, and is *not* like-for-like either: the towns are bigger (447 people against 273) and the floating windows start minimised, so draw calls halve (163 against 325) because far fewer interface controls are visible. Frame time and sim cost are slightly better; nothing regressed. Effective speed 8.0x.
 
+Painted vehicles and people (2026-10-18, back to back on the same rig, 1706x960 window, town sizes differ between runs): old rectangle art 78 FPS, p99 31.7 ms, 92 frames over 25 ms, 230 draw calls, population 307; painted sprites 86 FPS, p99 26.5 ms, 48 frames over 25 ms, 124 draw calls, population 385. Baking each car and person into one texture roughly halves the draw calls and does not cost performance.
+
 Headless profilers (`tests/regionbench.gd`, `bench.gd`, `stageprof.gd`) are secondary: they miss rendering and frame pacing.
 
 ## Repo map
