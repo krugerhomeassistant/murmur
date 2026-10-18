@@ -649,6 +649,31 @@ static func building(ci: CanvasItem, r: Rect2, shape: String, body: Color, lv: i
 				_r(ci, fx + 3, 22, 3, 6, Color("5a3a22") * k)
 				if lv >= 2:
 					_win(ci, fx + 2, 8.5, 4.5, 2.5, night)
+		"terrace" when age == 1:  # Medieval: a row of timber-framed houses under tiles
+			ci.draw_rect(Rect2(1, 1, 30, 30), Color("86ab6c") * k)
+			for s in 3:
+				var fx := 3.0 + s * 9.0
+				var th := 15.0 + (lv if s == 1 else 0)
+				_r(ci, fx, 28 - th, 9, th, Color("e6d9b4") * k)
+				_r(ci, fx, 28 - th, 1.5, th, Color("5a432a") * k)
+				_r(ci, fx + 7.5, 28 - th, 1.5, th, Color("5a432a") * k)
+				_r(ci, fx, 28 - th + th * 0.45, 9, 1.5, Color("5a432a") * k)
+				_tri(ci, Vector2(fx - 0.5, 28 - th), Vector2(fx + 9.5, 28 - th), Vector2(fx + 4.5, 28 - th - 6), Color("a5483a") * k)
+				_win(ci, fx + 2.5, 28 - th + 3, 4, 3, night)
+				_r(ci, fx + 3, 23, 3, 5, Color("4a3422") * k)
+		"tower" when age == 1:  # Medieval: a tall stone tenement with a jettied upper floor and a tiled roof
+			ci.draw_rect(Rect2(1, 1, 30, 30), Color("a39a88") * k)
+			var fl1 := 2 + lv
+			var ht1 := 8.0 + fl1 * 4.0
+			var by1 := 29.0 - ht1
+			_r(ci, 6, by1, 20, ht1, Color("a9a496") * k)
+			_r(ci, 6, by1 + ht1 * 0.5, 20, ht1 * 0.5, Color(0.1, 0.1, 0.1, 0.1))
+			_r(ci, 4, by1 + ht1 * 0.45, 24, 2, Color("5a432a") * k)  # jetty beam
+			_tri(ci, Vector2(4, by1), Vector2(28, by1), Vector2(16, by1 - 8), Color("8a4a3a") * k)
+			for row in fl1:
+				_win(ci, 9, by1 + 3 + row * 4.0, 3, 2.5, night)
+				_win(ci, 20, by1 + 3 + row * 4.0, 3, 2.5, night)
+			_r(ci, 14, 24, 4, 5, Color("3a2a1a") * k)
 		"tower":
 			ci.draw_rect(Rect2(1, 1, 30, 30), Color("9aa08a") * k)
 			var fl := 3 + lv * 2

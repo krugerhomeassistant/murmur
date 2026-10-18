@@ -6,6 +6,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 ## [Unreleased]
 
 ### Added
+- Medieval terraces (a row of timber-framed houses) and tenements (stone, jettied upper floor, tiled roof).
+- Units and vehicles by age (ages finish line AF5): Industrial-age cars are boxy open tourers in dark colours with brass lamps (Modern cars keep the sleek painted look), and people's clothes shift with the age (earth tones, dyed wool, grey cloth, bright) while the mood colour still shows.
 - Age banner (ages finish line AF7): entering a new age shows a large fading line near the top (and, for you, a pointer to the research choice); `tests/banner.gd`.
 - Research choices (ages finish line AF6): on reaching each age a town picks one of two techs (bronze tools or writing, masonry or guilds, steam power or public health, computing or efficiency). They act through the same modifiers as policies, so they cost nothing per frame; planner towns choose by themselves, humans choose in the Policies tab of the Mayor's office; saved with the town; `tests/research.gd`.
 - Galleys (ages finish line AF2): an oared Medieval warship housed at the port (two per port), fighting on shared rivers like the later boats; `tests/galley.gd`.

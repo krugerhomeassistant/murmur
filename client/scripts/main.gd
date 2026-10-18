@@ -55,6 +55,7 @@ var net_apply_ms := 0.0  # last snapshot apply cost
 var sfx: Sfx
 const SAVE := "user://murmur_save.bin"
 var last_day := -1
+const AGE_CLOTH := [Color(0.9, 0.8, 0.65), Color(0.85, 0.75, 0.85), Color(0.8, 0.82, 0.85), Color(1, 1, 1)]  # earth, dyed wool, grey cloth, bright
 const CAR_COLS := [Color("c0392b"), Color("2e86c1"), Color("f4f1e8"), Color("2c3e50"), Color("27ae60"), Color("d68910")]
 
 
@@ -1384,7 +1385,7 @@ func draw_overlay(node: CanvasItem, t: City) -> void:
 					ci.draw_texture_rect(Painter.cart(), Rect2(-5, -3, 10, 6), false)
 					ci.draw_set_transform(Vector2.ZERO, 0.0)
 					continue
-				ci.draw_texture_rect(Painter.car(CAR_COLS[c.id % CAR_COLS.size()]), Rect2(-6, -3.5, 12, 7), false)
+				ci.draw_texture_rect(Painter.car(CAR_COLS[c.id % CAR_COLS.size()].darkened(0.3) if city.age == 2 else CAR_COLS[c.id % CAR_COLS.size()], city.age == 2), Rect2(-6, -3.5, 12, 7), false)
 				if night:
 					ci.draw_circle(Vector2(6, -2), 1.2, Color("fff3b0"))
 					ci.draw_circle(Vector2(6, 2), 1.2, Color("fff3b0"))
@@ -1398,7 +1399,7 @@ func draw_overlay(node: CanvasItem, t: City) -> void:
 			var col := Color("f3e7cf") if c.mood > 0.6 else (Color("e0a458") if c.mood > 0.35 else Color("c0392b"))
 			if c.sick > 0.0:
 				col = Color("8fc46a")
-			ci.draw_texture_rect(Painter.person(), Rect2(p - Vector2(3, 2.5), Vector2(6, 8)), false, col)
+			ci.draw_texture_rect(Painter.person(), Rect2(p - Vector2(3, 2.5), Vector2(6, 8)), false, col * AGE_CLOTH[city.age])  # clothes drift with the age; the mood colour still shows through
 			if c.protesting and city.protest:
 				ci.draw_line(p, p + Vector2(0, -9), Color.WHITE, 1.0)
 				ci.draw_rect(Rect2(p + Vector2(-4, -14), Vector2(8, 5)), Color("f3e7cf"))

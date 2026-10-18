@@ -8,11 +8,22 @@ static var cache := {}
 
 
 ## Cars face +x; centred on the origin, 12 x 7 world pixels.
-static func car(col: Color) -> ImageTexture:
-	var key := "car" + col.to_html()
+static func car(col: Color, early := false) -> ImageTexture:
+	var key := ("ecar" if early else "car") + col.to_html()
 	if cache.has(key):
 		return cache[key]
 	var im := _blank(12, 7)
+	if early:  # Industrial age: a boxy open tourer, tall canvas roof, big brass lamps, thick wheels
+		_ell(im, 18, 20, 17, 7, Color(0, 0, 0, 0.22))
+		for y in [1.5, 15.5]:
+			_rr(im, 4, y, 13, y + 5, 2.0, Color("2a2a2e"), Color("3a3a3e"))
+			_rr(im, 22, y, 31, y + 5, 2.0, Color("2a2a2e"), Color("3a3a3e"))
+		_rr(im, 2, 4, 34, 17, 2.5, col.lightened(0.1), col.darkened(0.25))
+		_rr(im, 8, 5.5, 24, 15.5, 2.0, Color("c9b98a"), Color("a8996c"))  # canvas hood
+		_rr(im, 25, 6.5, 29, 14.5, 1.0, Color("8fb4c4"), Color("6b92aa"))  # upright windscreen
+		_ell(im, 34, 6.5, 2.0, 1.8, Color("e8c56a"))
+		_ell(im, 34, 14.5, 2.0, 1.8, Color("e8c56a"))
+		return _bake(key, im)
 	_ell(im, 18, 20, 17, 7, Color(0, 0, 0, 0.22))  # soft shadow
 	for y in [2.5, 15.0]:  # wheels peek out under the body
 		_rr(im, 5, y, 12, y + 4, 1.5, Color("2a2a2e"), Color("2a2a2e"))

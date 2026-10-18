@@ -182,8 +182,8 @@ The next release waits for these. Each step is one PR, headless test where there
 - [x] AF1 Medieval units: archer (long range, soft) and knight (fast, armoured), trained at barracks from the Medieval age; army drawing for both; `tests/medieval.gd`.
 - [x] AF2 Galleys (A2 leftover): Ancient/Medieval warship and transport on rivers, built at the port; drawn as an oared hull.
 - [x] AF3 Roads by age: dirt track (Ancient), cobbles (Medieval), lane-marked asphalt (Industrial and Modern)
-- [ ] AF4 Buildings by age: done so far: houses (all ages), shops and factories (Ancient, Medieval), art for the thirteen buildings that had none (`tests/art.gd` draws every building). Left: terraces and tenements (Medieval), farms and services by age.
-- [ ] AF5 Units and vehicles by age: citizens' clothes, carts to cars to modern cars, army unit drawings per age.
+- [x] AF4 Buildings by age: houses (all ages), terraces and tenements (Medieval), shops and factories (Ancient, Medieval), art for the thirteen buildings that had none; `tests/art.gd` draws every building in every age. Farms and services keep one look.
+- [x] AF5 Units and vehicles by age: carts (Ancient, Medieval), tourers (Industrial), cars (Modern), clothes by age, Medieval archers and knights and galleys drawn.
 - [x] AF6 A3 research choices: at each age a town picks one of two techs (effects in `Research`, host command, AI picks by itself, HUD prompt); `tests/research.gd`.
 - [x] AF7 Age transition feedback: banner done (`tests/banner.gd`); a palette shift was dropped, the roads, houses and shops already change look per age.
 - [ ] AF8 Verify: all ages play start to finish headless (`tests/ages.gd` extended), benchmark equal or better, then the release.
