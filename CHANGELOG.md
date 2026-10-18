@@ -6,6 +6,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 ## [Unreleased]
 
 ### Added
+- Medieval units (ages finish line AF1): archers (long range) and knights (fast, armoured) trained at barracks from the Medieval age, drawn on the field with a bow and a lance; `tests/medieval.gd`. The plan gains an "ages finish line" (docs/PLAN.md): the next release waits for it.
 - Soft painted look for moving things (art direction C): cars have rounded bodies, glass, wheels and lights, carts have spoked wheels and a straw load, and people have a body and shadow. `Painter` bakes each sprite once into a small texture, so every car or person is one textured draw instead of several rectangles (`tests/painter.gd`).
 - Globe view draws each town as the outline of where it has built (the convex hull of its built cells, filled in its relation colour, with the overlay value on the edge) instead of a plain disc; towns that have built nothing yet keep the disc.
 - Painted houses and windows: soft wall shading toward the foot and right side, an eave shadow under the roof, a light catch on the roof slope, and window sills. Baked into the cached chunks, so no per-frame cost.

@@ -26,6 +26,7 @@ const BUILDING := {
 
 ## Age at which a unit type can be trained.
 const UNIT := {
+	"archer": 1, "knight": 1,
 	"inf": 2, "gren": 2, "art": 2, "patrol": 2, "destroyer": 2, "transport": 2,
 	"snip": 3, "medic": 3, "ltank": 3, "tank": 3, "htank": 3, "aa": 3, "jet": 3, "fighter": 3, "bomber": 3, "heli": 3,
 }
