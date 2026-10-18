@@ -11,11 +11,13 @@ const DEFS := {
 	"bloom": {"n": "Bloom", "cost": 10.0, "cd": 60.0, "ev": "spring_bloom", "good": true},
 	"boom": {"n": "Boom", "cost": 25.0, "cd": 120.0, "ev": "boom", "good": true},
 	"cure": {"n": "Cure", "cost": 15.0, "cd": 60.0, "ev": "", "good": true},
+	"bless": {"n": "Bless", "cost": 15.0, "cd": 90.0, "ev": "", "good": true},
 	"lightning": {"n": "Lightning", "cost": 10.0, "cd": 30.0, "ev": "", "good": false},
 	"quake": {"n": "Earthquake", "cost": 30.0, "cd": 120.0, "ev": "earthquake", "good": false},
 	"tornado": {"n": "Tornado", "cost": 30.0, "cd": 120.0, "ev": "tornado", "good": false},
 	"plague": {"n": "Plague", "cost": 25.0, "cd": 120.0, "ev": "epidemic", "good": false},
 	"famine": {"n": "Famine", "cost": 25.0, "cd": 120.0, "ev": "supply_crisis", "good": false},
+	"incite": {"n": "Incite", "cost": 20.0, "cd": 120.0, "ev": "", "good": false},
 }
 
 
@@ -42,6 +44,13 @@ static func cast(c: City, id: String) -> bool:
 				if z.sick > 0.0:
 					z.sick = 0.0
 					done = true
+		"bless":
+			done = c.mood < 1.0
+			c.mood = minf(c.mood + 0.15, 1.0)
+		"incite":  # border tension towards every neighbour rises; a war starts at 1 (Diplo.pick_goal)
+			for o in c.partners:
+				c.tension[o.town_name] = minf(float(c.tension.get(o.town_name, 0.0)) + 0.3, 1.0)
+				done = true
 		"lightning":
 			done = c.ignite() != ""
 		_:
