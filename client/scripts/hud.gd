@@ -6,6 +6,9 @@ const T = Catalog.Id
 var m: Node2D
 var lbl_time: Label
 var perf_l: Label
+var perf_g: Control  # frame-time graph under the F3 text
+var frame_ms := PackedFloat32Array()  # last PERF_N frame times
+const PERF_N := 240
 var pintip: PanelContainer
 var pintip_lbl: RichTextLabel
 var lbl_coins: Label
@@ -126,7 +129,16 @@ func _ready() -> void:
     perf_l.position = Vector2(8, 62)
     perf_l.visible = false
     perf_l.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    perf_l.add_theme_stylebox_override("normal", _perf_bg())
     add_child(perf_l)
+    perf_g = Control.new()
+    perf_g.position = Vector2(8, 150)
+    perf_g.custom_minimum_size = Vector2(PERF_N, 40)
+    perf_g.size = Vector2(PERF_N, 40)
+    perf_g.visible = false
+    perf_g.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    perf_g.draw.connect(_draw_perf_graph)
+    add_child(perf_g)
     guide = Guide.new()
     guide.m = m
     guide.visible = false
@@ -896,13 +908,60 @@ func _tint(l: Label, col: Color) -> void:
         l.add_theme_color_override("font_color", col)
 
 
+func _perf_bg() -> StyleBoxFlat:
+    var sb := StyleBoxFlat.new()
+    sb.bg_color = Color(0, 0, 0, 0.6)
+    sb.set_content_margin_all(6)
+    return sb
+
+
+## F3 panel: fps, frame-time percentiles over the last PERF_N frames, sim/draw cost, renderer and memory figures.
+func _update_perf(delta: float) -> void:
+    frame_ms.append(delta * 1000.0)
+    if frame_ms.size() > PERF_N:
+        frame_ms.remove_at(0)
+    var s := frame_ms.duplicate()
+    s.sort()
+    var avg := 0.0
+    for v in frame_ms:
+        avg += v
+    avg /= frame_ms.size()
+    var p99: float = s[mini(s.size() - 1, int(s.size() * 0.99))]
+    var pop := 0
+    for t in m.towns:
+        pop += t.pop
+    perf_l.text = "%d fps   avg %.1f ms   p99 %.1f ms   worst %.1f ms\nsim %.1f ms   draw %.1f ms   (per frame, smoothed)\ndraw calls %d   objects %d   nodes %d\nmemory %.0f MB   video memory %.0f MB\ntowns %d   population %d   speed %sx" % [
+        Engine.get_frames_per_second(), avg, p99, s[-1], m.sim_ms, m.draw_ms,
+        Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME),
+        Performance.get_monitor(Performance.RENDER_TOTAL_OBJECTS_IN_FRAME),
+        Performance.get_monitor(Performance.OBJECT_NODE_COUNT),
+        Performance.get_monitor(Performance.MEMORY_STATIC) / 1048576.0,
+        Performance.get_monitor(Performance.RENDER_VIDEO_MEM_USED) / 1048576.0,
+        m.towns.size(), pop, String.num(m.speed)]
+    perf_l.position = Vector2(size.x - perf_l.size.x - 8.0, 120.0)  # right edge, clear of the window column
+    perf_g.position = Vector2(size.x - perf_g.size.x - 8.0, perf_l.position.y + perf_l.size.y + 4.0)
+    perf_g.queue_redraw()
+
+
+## Bars of recent frame times; the line marks 16.7 ms (60 fps), the bars are capped at 50 ms.
+func _draw_perf_graph() -> void:
+    perf_g.draw_rect(Rect2(Vector2.ZERO, perf_g.size), Color(0, 0, 0, 0.6))
+    for i in frame_ms.size():
+        var h := minf(frame_ms[i], 50.0) / 50.0 * perf_g.size.y
+        var col := Color("9fd3a0") if frame_ms[i] <= 16.7 else (Color("e8c66a") if frame_ms[i] <= 25.0 else Color("e07a5f"))
+        perf_g.draw_rect(Rect2(i, perf_g.size.y - h, 1, h), col)
+    var y := perf_g.size.y * (1.0 - 16.7 / 50.0)
+    perf_g.draw_line(Vector2(0, y), Vector2(perf_g.size.x, y), Color(1, 1, 1, 0.4))
+
+
 func _process(_d: float) -> void:
     var c: City = m.city
     tick_n += 1
     _update_maptip()
     perf_l.visible = m.perf_on
+    perf_g.visible = m.perf_on
     if m.perf_on:
-        perf_l.text = "%d fps   sim %.1f ms   draw %.1f ms   towns %d" % [Engine.get_frames_per_second(), m.sim_ms, m.draw_ms, m.towns.size()]
+        _update_perf(_d)
     lbl_time.text = "%s  %s  %s" % [c.town_name, c.clock_str(), Civics.SEASONS[c.season]["n"]]
     lbl_appr.text = "Approval %d%%" % int(c.approval * 100.0)
     _tint(lbl_appr, Color("e07a5f") if c.approval < 0.5 else Color("9fd3a0"))
@@ -1823,6 +1882,14 @@ func tk_front() -> void:
     ticker.get_parent().move_to_front()
 
 
+## Minimise every floating window (first launch and new games start with just the tutorial open).
+func collapse_all() -> void:
+    for k in wins:
+        var body: Control = (wins[k] as PanelContainer).get_child(0).get_child(1)
+        if k != "detail" and body.visible:
+            _minimize.call_deferred(k, body)
+
+
 func _minimize(key: String, body: Control) -> void:
     body.visible = not body.visible
     win_min[key] = not body.visible
@@ -1892,6 +1959,7 @@ func _save_ui() -> void:
 func _load_ui() -> void:
     var cf := ConfigFile.new()
     if cf.load(UI_FILE) != OK:
+        collapse_all()
         return
     for k in wins:
         if not cf.has_section(k):

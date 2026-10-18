@@ -403,6 +403,7 @@ func start_game(o: Dictionary) -> void:
 	_fresh(o)
 	_begin()
 	hud.guide.visible = false
+	hud.collapse_all()
 	if o.get("river", 0) == 2:
 		tool = WATER_ADD
 		speed = 0.0
