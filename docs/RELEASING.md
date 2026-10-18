@@ -15,7 +15,7 @@ Nothing sits on `main` unreleased for long. When a milestone is done, the agent 
 2. Perf, scaled: run `tests/stageprof.gd` headless on the last release tag and on `main`, and fix any stage that regressed more than 15%. Run the standard windowed benchmark on the owner's device when it is linked; if it is not, say so in the release notes and keep the previous table, labelled with its version.
 3. Verify with the CI list plus `python3 scripts/check_repo.py` and `gdlint scripts tests`.
 4. One release PR: `python3 scripts/bump.py X.Y.Z`, the README benchmark table if measured, `docs/ACTIVE_CONTEXT.md`. Squash-merge once checks pass.
-5. Tag the merge commit, push the tag (`build.yml` builds and attaches the zip), create the GitHub release from the changelog section.
+5. Tag the merge commit and push the tag. The agent proxy blocks tag pushes, so the owner runs one command (the agent gives it with the real sha): `git fetch origin && git tag vX.Y.Z <merge sha> && git push origin vX.Y.Z`. That is the only manual step: `build.yml` exports `Murmur.exe`, zips it and creates the GitHub release with the zip and generated notes.
 6. Update `docs/PLAN.md` (release done, next milestone).
 
 ## Full procedure
