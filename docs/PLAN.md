@@ -160,7 +160,7 @@ D5 growth tuning and D7 `city.gd` splits continue alongside whenever a step touc
 Vision: a gods-eye-view world (like github.com/bilawalsidhu/gods-eye-view) with Black & White style powers; set the world to any age, place any number of towns or units in any age; the default game starts you in control of your own area (continent, province or state), also as a selector.
 - [ ] G1 Scenario setup (world seed done, `tests/scenario.gd`): per-town age, number and size of towns, area to control (presets One town, Province, Continent), seed and world size. `tests/scenario.gd`. Needs ages A2.
 - [ ] G2 Sandbox editor: place towns and units, set ages, treasury, population, terrain brush; all host-only `Cmd`s with one undo. `tests/sandbox.gd`. (first piece done, `tests/sandbox.gd`)
-- [ ] G3 God powers: belief pool, benevolent and wrathful powers built on the event and disaster code. `tests/powers.gd`.
+- [ ] G3 God powers: belief pool, benevolent and wrathful powers built on the event and disaster code. `tests/powers.gd`. (first form done, `tests/powers.gd`)
 - [ ] G4 Globe and gods-eye view: whole-world view above the M view, overlays, click to enter a town; flat map first, sphere only if free. Rendering benchmark first.
 - [ ] G5 Real-world map mode: open data (Natural Earth), baked offline, real cities and coasts; licensing review first. `tests/realmap.gd`.
 

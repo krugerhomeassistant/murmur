@@ -63,6 +63,9 @@ static func run(towns: Array[City], t: City, name: String, a: Array) -> Variant:
 				for i in a[1]:
 					t.army.append(Military._unit(a[0]))
 				return true
+		"power":
+			if sandbox and a.size() == 1 and a[0] is String and Powers.DEFS.has(a[0]):
+				return Powers.cast(t, a[0])
 		"ask_build":
 			if a.size() == 1 and a[0] is bool:
 				t.ask_build = a[0]

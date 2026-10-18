@@ -994,6 +994,8 @@ var army_chk: CheckButton
 var stance_btn: Button
 var emp_grp: Button
 var emp_sand: HBoxContainer
+var emp_pow: HFlowContainer
+var emp_belief: Label
 var army_rows := {}
 
 
@@ -1127,6 +1129,14 @@ func _empire() -> void:
     _btn(emp_sand, "+$1000", func() -> void: m.cmd("grant", [1000]))
     _btn(emp_sand, "+12 troops", func() -> void: m.cmd("spawn", ["spear" if m.city.age < 2 else "inf", 12]))
     _btn(emp_sand, "Next age", func() -> void: m.cmd("set_age", [mini(m.city.age + 1, Ages.LAST)]))
+    emp_pow = HFlowContainer.new()
+    body.add_child(emp_pow)
+    emp_belief = _lbl(emp_pow, 90)
+    for k in Powers.DEFS:
+        var pk: String = k
+        var pd: Dictionary = Powers.DEFS[k]
+        var pb := _btn(emp_pow, "%s (%d)" % [pd["n"], int(pd["cost"])], func() -> void: m.cmd("power", [pk]))
+        pb.tooltip_text = "%s power: costs %d belief, %d s cooldown. Belief regenerates faster in a happy town." % ["Kind" if pd["good"] else "Wrathful", int(pd["cost"]), int(pd["cd"])]
     win_open["empire"] = false
     (wins["empire"] as PanelContainer).visible = false
 
@@ -1422,6 +1432,8 @@ func _empire_refresh(c: City) -> void:
     var mine := Empire.mine(m.towns, c)
     var tt := Empire.totals(mine)
     emp_sand.visible = Cmd.sandbox
+    emp_pow.visible = Cmd.sandbox
+    emp_belief.text = "Belief %d" % int(m.city.belief)
     emp_grp.text = "Group: %s (click to change)" % (str(c.group) if c.group > 0 else "none")
     emp_dom.text = _domination()
     emp_tot.text = "%d of your towns   pop %d   treasury $%d   net %+.1f/s" % [tt["towns"], tt["pop"], int(tt["coins"]), tt["income"]]
