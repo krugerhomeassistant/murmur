@@ -5,6 +5,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+### Added
+- Ages A2, first piece: the Spearman, a cheap Ancient soldier trained at barracks, which are now an Ancient building. Riflemen still wait for the Industrial age. `tests/spear.gd` (in CI).
+
 ## [0.6.0] - 2026-10-18
 
 ### Added

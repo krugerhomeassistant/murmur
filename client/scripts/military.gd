@@ -10,6 +10,7 @@ extends RefCounted
 const T = Catalog.Id
 const TILE := 32.0
 const KIND := {
+	"spear": {"n": "Spearman", "t": "soft", "hp": 60.0, "dmg": 1.8, "rng": 60.0, "spd": 8.0, "cost": 12.0, "upk": 0.01, "train": 6.0, "cap": {T.BARRACKS: 6}, "vs": {"soft": 1.0, "armor": 0.6, "air": 0.0, "ship": 0.1}},
 	"inf": {"n": "Rifleman", "t": "soft", "hp": 75.0, "dmg": 2.4, "rng": 110.0, "spd": 9.0, "cost": 25.0, "upk": 0.02, "train": 8.0, "cap": {T.BARRACKS: 6, T.BASE: 4}, "vs": {"soft": 1.0, "armor": 0.25, "air": 0.15, "ship": 0.1}},
 	"gren": {"n": "Grenadier", "t": "soft", "hp": 80.0, "dmg": 3.2, "rng": 90.0, "spd": 8.0, "cost": 40.0, "upk": 0.03, "train": 12.0, "cap": {T.BARRACKS: 2, T.BASE: 2}, "vs": {"soft": 0.8, "armor": 1.8, "air": 0.0, "ship": 0.3}},
 	"snip": {"n": "Sniper", "t": "soft", "hp": 45.0, "dmg": 5.5, "rng": 330.0, "spd": 8.0, "cost": 50.0, "upk": 0.03, "train": 16.0, "cap": {T.BARRACKS: 2}, "vs": {"soft": 1.6, "armor": 0.1, "air": 0.2, "ship": 0.1}},
@@ -27,7 +28,7 @@ const KIND := {
 	"destroyer": {"n": "Destroyer", "t": "ship", "hp": 520.0, "dmg": 8.0, "rng": 320.0, "spd": 16.0, "cost": 320.0, "upk": 0.15, "train": 60.0, "cap": {T.NAVYARD: 2}, "vs": {"soft": 1.3, "armor": 1.0, "air": 1.0, "ship": 1.4}},
 	"transport": {"n": "Transport", "t": "ship", "hp": 400.0, "dmg": 0.0, "rng": 100.0, "spd": 12.0, "cost": 200.0, "upk": 0.08, "train": 40.0, "cap": {T.NAVYARD: 1}, "vs": {}, "lands": 6},
 }
-const DEF_W := {"inf": 2, "gren": 1, "snip": 1, "medic": 1, "ltank": 1, "tank": 2, "htank": 1, "art": 1, "aa": 1, "jet": 1, "fighter": 1, "bomber": 1, "heli": 1, "patrol": 1, "destroyer": 1, "transport": 1}
+const DEF_W := {"spear": 2, "inf": 2, "gren": 1, "snip": 1, "medic": 1, "ltank": 1, "tank": 2, "htank": 1, "art": 1, "aa": 1, "jet": 1, "fighter": 1, "bomber": 1, "heli": 1, "patrol": 1, "destroyer": 1, "transport": 1}
 const RANKS := ["Recruit", "Veteran", "Elite", "Legend"]
 const RANK_XP := [250.0, 800.0, 2000.0]  # damage dealt (or healed) to reach rank 1, 2, 3
 const RANK_DMG := 0.15  # per rank

@@ -2,10 +2,11 @@
 
 # Military units
 
-16 unit types. Damage classes: **soft** (infantry), **armor** (vehicles), **air**, **ship**. The `vs` multipliers scale damage against each class. Ranks (Recruit, Veteran, Elite, Legend) are earned by damage dealt (or healed): 250, 800, 2000; each rank adds +15% damage and +10% hp. The army cap is 150 per town. Speed is pixels per second (32 px = 1 tile); range in pixels. `cap` is how many of the unit each building supports. See [War and military](war.md) for the rules.
+17 unit types. Damage classes: **soft** (infantry), **armor** (vehicles), **air**, **ship**. The `vs` multipliers scale damage against each class. Ranks (Recruit, Veteran, Elite, Legend) are earned by damage dealt (or healed): 250, 800, 2000; each rank adds +15% damage and +10% hp. The army cap is 150 per town. Speed is pixels per second (32 px = 1 tile); range in pixels. `cap` is how many of the unit each building supports. See [War and military](war.md) for the rules.
 
 | Unit | Class | HP | Damage | Range | Speed | Cost | Upkeep | Train s | Defence weight |
 |---|---|---|---|---|---|---|---|---|---|
+| [Spearman](#spearman) | soft | 60 | 1.8 | 60 | 8 | 12 | 0.01 | 6 | 2 |
 | [Rifleman](#rifleman) | soft | 75 | 2.4 | 110 | 9 | 25 | 0.02 | 8 | 2 |
 | [Grenadier](#grenadier) | soft | 80 | 3.2 | 90 | 8 | 40 | 0.03 | 12 | 1 |
 | [Sniper](#sniper) | soft | 45 | 5.5 | 330 | 8 | 50 | 0.03 | 16 | 1 |
@@ -22,6 +23,13 @@
 | [Patrol boat](#patrol-boat) | ship | 160 | 4 | 200 | 28 | 120 | 0.06 | 25 | 1 |
 | [Destroyer](#destroyer) | ship | 520 | 8 | 320 | 16 | 320 | 0.15 | 60 | 1 |
 | [Transport](#transport) | ship | 400 | 0 | 100 | 12 | 200 | 0.08 | 40 | 1 |
+
+## Spearman
+
+Key `spear`, class soft.
+
+- Housed by: Barracks (up to 6)
+- Damage multipliers: soft x1, armor x0.6, air x0, ship x0.1
 
 ## Rifleman
 
