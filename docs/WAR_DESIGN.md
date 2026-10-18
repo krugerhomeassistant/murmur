@@ -13,7 +13,7 @@ Before: every unit has `s`, the distance it has marched along one line between t
 
 ## Phases
 1. **Foundation (this PR line):** world positions, terrain-aware movement, 2D range fights, drawing from `p`, tests (`tests/war.gd`, new `tests/warmap.gd` for rivers and boats).
-2. **Sieges:** units damage and destroy buildings, capture points, retreat, building hit points.
+2. **Sieges** (first slice done: siege guns flatten buildings in an undefended town, `Military._shell`, `tests/siege.gd`; still to do: building hit points, capture points, retreat).
 3. **Air:** take-off and landing at bases, dogfights, bombing runs, AA.
 4. **Command UI and rally:** group select, move/attack orders, production queue.
 5. **Battle footage** for the README (second GIF) and a benchmark update.
