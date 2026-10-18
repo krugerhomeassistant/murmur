@@ -389,12 +389,18 @@ const DEFS := {
 }
 
 
+static var _need_pop := {}  # metric -> lowest unlock population; DEFS never change at run time
+
+
 static func need_pop(metric: String) -> int:
+    if _need_pop.has(metric):
+        return _need_pop[metric]
     var best := 1 << 30
     for id in DEFS:
         var d: Dictionary = DEFS[id]
         if d.get("prov", {}).has(metric) or d.get("out", {}).has(metric):
             best = mini(best, int(d["unlock"]))
+    _need_pop[metric] = best
     return best
 
 
