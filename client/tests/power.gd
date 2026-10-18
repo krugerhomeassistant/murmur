@@ -13,7 +13,7 @@ func _free(c: City, wet: bool) -> Vector2i:
 
 func _init() -> void:
 	var ok := true
-	var tiers := [T.WIND, T.SOLAR, T.COAL, T.HYDRO, T.GAS, T.NUCLEAR, T.WATER, T.RESERVOIR, T.DESAL]
+	var tiers := [T.WIND, T.SOLAR, T.COAL, T.HYDRO, T.GAS, T.NUCLEAR, T.WELL, T.WATER, T.RESERVOIR, T.DESAL]
 	var prev := 0.0
 	for t in [T.COAL, T.HYDRO, T.GAS, T.NUCLEAR]:
 		var o := float(Catalog.DEFS[t]["out"]["power"])
@@ -21,7 +21,7 @@ func _init() -> void:
 			ok = false
 			print("FAIL output not rising at %s" % Catalog.DEFS[t]["n"])
 		prev = o
-	if float(Catalog.DEFS[T.WATER]["out"]["water"]) >= float(Catalog.DEFS[T.RESERVOIR]["out"]["water"]) or float(Catalog.DEFS[T.RESERVOIR]["out"]["water"]) >= float(Catalog.DEFS[T.DESAL]["out"]["water"]):
+	if float(Catalog.DEFS[T.WELL]["out"]["water"]) >= float(Catalog.DEFS[T.WATER]["out"]["water"]) or Ages.building(T.WELL) != 0 or float(Catalog.DEFS[T.WATER]["out"]["water"]) >= float(Catalog.DEFS[T.RESERVOIR]["out"]["water"]) or float(Catalog.DEFS[T.RESERVOIR]["out"]["water"]) >= float(Catalog.DEFS[T.DESAL]["out"]["water"]):
 		ok = false
 		print("FAIL water output not rising")
 	if Ages.building(T.NUCLEAR) < Ages.building(T.COAL) or Ages.building(T.HYDRO) < 1:

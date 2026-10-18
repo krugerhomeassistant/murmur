@@ -7,6 +7,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ### Added
 - Ages A2, first piece: the Spearman, a cheap Ancient soldier trained at barracks, which are now an Ancient building. Riflemen still wait for the Industrial age. `tests/spear.gd` (in CI).
+- Well: a cheap Ancient water source (6 units into the pipe network, cost $40), the first-age step below the water tower.
 
 ## [0.6.0] - 2026-10-18
 
