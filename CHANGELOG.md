@@ -6,6 +6,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 ## [Unreleased]
 
 ### Added
+- Globe view draws each town as the outline of where it has built (the convex hull of its built cells, filled in its relation colour, with the overlay value on the edge) instead of a plain disc; towns that have built nothing yet keep the disc.
 - Before the Industrial age, citizens who would drive are drawn as wooden carts instead of cars.
 - Homes and terraces change look with the age: pale plaster under thatch in the Medieval age, brick under slate in the Industrial age (Ancient huts and the Modern look as before).
 - Ancient-age homes are drawn as round mud huts under a straw cone (bigger with level) instead of the generic house; other ages keep the house look (first step of per-age building looks).
