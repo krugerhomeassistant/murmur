@@ -2,6 +2,9 @@
 
 Last updated 2026-10-18.
 
+## Now: after v0.6.0 (tags v0.3.0 to v0.6.0 pushed by the owner)
+Merged since v0.6.0: spearman, well, Ancient default, seed, sandbox basics, god powers, and the globe view first form (coarse land tier, town discs, hover, click-to-fly, neighbour lines; headless-checked only, never seen on screen). Next minor release when the milestone or about 40 commits accumulate; the perf pass (stageprof vs v0.6.0, windowed benchmark when the PC editor is open) comes last. Open work: G4 overlay colours and sphere shader, G1/G2/G3 gaps, A2 galleys; see docs/PLAN.md.
+
 ## Release v0.6.0 next
 E3 group multiplayer (first form) is done and merged (PRs #123-#126): the next step under the release standard is the fast path for v0.6.0 (stageprof vs v0.5.0, verify, `scripts/bump.py 0.6.0`). Then ages A2.
 
