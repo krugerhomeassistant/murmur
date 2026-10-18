@@ -5,6 +5,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-10-18
+
+## [0.4.0] - 2026-10-18
+
+E5 infrastructure.
+
 ### Added
 - Water tiers: reservoir (40 units, on the river, Industrial) and desalination plant (90 units, no river needed, Modern) above the water tower (14). `tests/power.gd` now covers water too.
 - Fuel: a new good made by the Refinery (1 ore a second into 0.8 fuel). Coal plants burn 0.4 and gas plants 0.3 a second, and run at half output without it. Towns buy it from the market, and planner towns with mines and a fuel-burning plant build a refinery. `tests/fuel.gd`.
@@ -12,7 +18,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 - Power tiers: hydro dam (55 units, on the river, Industrial age), gas plant (80 units, half the pollution of coal, Modern) and nuclear plant (200 units, clean, very costly, Modern), with `tests/power.gd`.
 
 ### Changed
-- `scripts/release-tag.bat`: one double-click pushes the tag for the current VERSION.
+- `scripts/release-tag.bat`: one double-click tags and pushes every release made since the last tag.
+- Performance note: the headless 8-town stage profile per stage is within the growth in town size against v0.3.0 (about 1.2x total population, stages 1.05x to 1.25x); no stage regressed beyond that. The windowed benchmark was not re-run for this release; the README table is still the v0.2.0 measurement.
+- Moving trains on laid track are deferred (E5e); the rail yard stands in for rail until then.
 
 ## [0.3.0] - 2026-10-18
 
