@@ -1,15 +1,23 @@
 @echo off
-rem Tags and pushes the release for the VERSION on origin/main, if not yet tagged.
-rem The tag push starts .github/workflows/build.yml (Windows zip + GitHub release).
+setlocal enabledelayedexpansion
+rem Tags and pushes every release made since the last tag, oldest first (the version bump commits on origin/main).
+rem Each tag push starts .github/workflows/build.yml (Windows zip + GitHub release).
 cd /d "%~dp0.."
 git fetch origin --tags --quiet || goto :err
-for /f %%v in ('git show origin/main:VERSION') do set V=%%v
-for /f %%c in ('git log -1 --format^=%%H origin/main -- VERSION') do set C=%%c
-for /f %%t in ('git ls-remote --tags origin refs/tags/v%V%') do set EXISTS=%%t
-if defined EXISTS (echo v%V% is already on GitHub. Nothing to do.& goto :end)
-git tag -f v%V% %C% || goto :err
-git push origin v%V% || goto :err
-echo Pushed v%V% at %C%. The release build has started.
+for /f %%l in ('git describe --tags --abbrev^=0 origin/main') do set LAST=%%l
+set N=0
+for /f %%c in ('git log --reverse --format^=%%H %LAST%..origin/main -- VERSION') do (
+  for /f %%v in ('git show %%c:VERSION') do (
+    set EXISTS=
+    for /f %%t in ('git ls-remote --tags origin refs/tags/v%%v') do set EXISTS=%%t
+    if not defined EXISTS (
+      git tag -f v%%v %%c >nul && git push origin v%%v || goto :err
+      echo Pushed v%%v at %%c.
+      set /a N+=1
+    )
+  )
+)
+if %N%==0 echo Nothing to tag since %LAST%.
 goto :end
 :err
 echo Failed. Check your git login and network.

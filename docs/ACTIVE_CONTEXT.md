@@ -2,8 +2,8 @@
 
 Last updated 2026-10-18.
 
-## Release v0.3.0
-Release PR from `release/v0.3.0`. Once merged, the tag `v0.3.0` is pushed (the agent proxy blocks tag pushes from the cloud session; push it from a session with git credentials), then `build.yml` builds the zip and creates the GitHub release. Owed: the windowed benchmark and README table refresh (the Godot editor must be open on the PC with the godot-ai plugin; File Explorer could only be granted click-only, so it could not be launched). Order of work: see `docs/PLAN.md`; E4 is done, E5 has the rail yard and sea trade, power tiers are next.
+## Release v0.4.0
+E5 infrastructure is released as v0.4.0 once its release PR merges and the owner double-clicks `release-tag.bat` (one run tags both the waiting v0.3.0 and v0.4.0, oldest first). Owed: the windowed benchmark and README table refresh (the Godot editor must be open on the PC with the godot-ai plugin). Next: E6 military (sieges, air, command UI), then E3 group multiplayer.
 
 ## State
 `v0.2.0` is released (tag `c36d7b2`, portable zip + notes published by the user). `main` is green. Benchmark (8 towns, 8x, all overlays, 1280x720, i7-8700 + GTX 1070 Ti): 80 fps, p99 30 ms at 781 pop; the planner tax fix made towns about 28% bigger, so it is not like-for-like with the earlier 123 fps row (README explains).
