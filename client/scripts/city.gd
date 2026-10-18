@@ -2492,18 +2492,26 @@ func _plan_service(force := false) -> bool:
 	cand.shuffle()
 	var bi := -1
 	var bs := -1e9
+	var hcs: Array[Vector2i] = []  # per home: its cell and how many of this service's metrics it lacks (the same for every candidate site)
+	var hneed := PackedInt32Array()
+	for h in homes:
+		var hc := cell(h)
+		hcs.append(hc)
+		var n := 0
+		for mk in prov:
+			if raw_cov(hc, mk) < 0.5:
+				n += 1
+		hneed.append(n)
+	var poll_r: int = int(d["poll"][0]) if d.has("poll") else -1
 	for k in mini(24, cand.size()):
 		var c := cell(cand[k])
 		var sc := rng.randf() * 0.5
-		for h in homes:
-			var hc := cell(h)
-			var dist := absi(hc.x - c.x) + absi(hc.y - c.y)
-			if d.has("poll") and dist <= int(d["poll"][0]):
+		for j in hcs.size():
+			var dist := absi(hcs[j].x - c.x) + absi(hcs[j].y - c.y)
+			if dist <= poll_r:
 				sc -= 0.6
 			if dist <= r:
-				for mk in prov:
-					if raw_cov(hc, mk) < 0.5:
-						sc += 1.0
+				sc += float(hneed[j])
 		if sc > bs:
 			bs = sc
 			bi = cand[k]
