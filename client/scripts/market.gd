@@ -5,8 +5,8 @@ extends RefCounted
 ## An "outside world" (`WORLD` units/s per reporting town) both offers and wants every good, which keeps prices bounded.
 ## Pure data, no scene: tests and mirrors use it directly.
 
-const GOODS := ["crops", "food", "goods", "ore", "metal", "arms", "wood", "tools", "planks"]
-const BASE := {"crops": 0.6, "food": 1.5, "goods": 2.0, "ore": 0.8, "metal": 3.0, "arms": 4.0, "wood": 0.7, "tools": 3.5, "planks": 1.4}
+const GOODS := ["crops", "food", "goods", "ore", "metal", "arms", "wood", "tools", "planks", "fuel"]
+const BASE := {"crops": 0.6, "food": 1.5, "goods": 2.0, "ore": 0.8, "metal": 3.0, "arms": 4.0, "wood": 0.7, "tools": 3.5, "planks": 1.4, "fuel": 1.6}
 const LOW := 0.35  # price floor and ceiling as multiples of the base price
 const HIGH := 3.0
 const WORLD := 1.5  # outside-world offer and demand, units per second per reporting town
