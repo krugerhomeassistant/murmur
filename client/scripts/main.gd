@@ -1035,15 +1035,17 @@ func _draw_globe() -> void:
 	var hov := ""
 	var ov: String = Globe.OVERLAYS[globe_ov]
 	var ms := Globe.markers(towns, city, ov)
-	for m in ms:  # links first, so the discs sit on top: red = war, green = joined by road, grey = neighbours without a road
+	for m in ms:  # links first, so the discs sit on top: red = war, green = joined by road
 		for d in m.t.partners:
-			if towns.find(d) > towns.find(m.t):  # each pair once
+			if towns.find(d) > towns.find(m.t):  # each pair once; neighbours without a road or war are left out (they would be a hairball)
 				var war := Diplo.treaty(m.t, d) == "war"
+				if not war and not Diplo.linked(m.t, d):
+					continue
 				var q: Vector2 = (Vector2(d.gpos) + Vector2(0.5, 0.5)) * Vector2(City.W, City.H) * TILE
-				draw_line(m.pos * TILE, q, Color("d9382a") if war else (Color("9fd3a0") if Diplo.linked(m.t, d) else Color(0.55, 0.55, 0.5)), (6.0 if war else 3.0) / cam.zoom.x)
+				draw_line(m.pos * TILE, q, Color("d9382a") if war else Color("9fd3a0"), (6.0 if war else 3.0) / cam.zoom.x)
 	for m in ms:
 		var p: Vector2 = m.pos * TILE
-		var r: float = m.r * TILE
+		var r: float = maxf(m.r * TILE, 9.0 / cam.zoom.x)  # never smaller than a readable dot
 		draw_circle(p, r, GLOBE_COL[m.side])
 		draw_arc(p, r, 0.0, TAU, 24, Color(0, 0, 0, 0.7), 2.0 / cam.zoom.x)
 		if ov != "side":  # ring from cool (low) to hot (high)
@@ -1255,6 +1257,8 @@ func _town_col(c: City) -> Color:
 
 ## Everything live in one town that is not baked into its chunks: overlays, fire, lights, traffic, people, rim, cursor.
 func draw_overlay(node: CanvasItem, t: City) -> void:
+	if cam.zoom.x < GLOBE_ZOOM:  # the globe view draws the towns itself (_draw_globe)
+		return
 	var d0 := Time.get_ticks_usec()
 	var tcol := _town_col(t)  # relative to the viewed town, so before `city` is swapped
 	var keep := city
