@@ -1337,15 +1337,10 @@ func draw_overlay(node: CanvasItem, t: City) -> void:
 				var lane := Vector2(-dv.y, dv.x).normalized() * 0.19 if dv.length() > 0.01 else Vector2.ZERO  # keep to the right-hand lane so opposite traffic and followers do not stack
 				ci.draw_set_transform((c.pos + lane) * TILE, dv.angle() if dv.length() > 0.01 else 0.0)
 				if city.age < 2:  # before the Industrial age there are no cars: wooden carts
-					ci.draw_rect(Rect2(-5, -2.5, 9, 5), Color("8a6a40"))
-					ci.draw_rect(Rect2(-4, -3.5, 2, 1.5), Color("3a2a1a"))
-					ci.draw_rect(Rect2(-4, 2, 2, 1.5), Color("3a2a1a"))
-					ci.draw_rect(Rect2(2, -3.5, 2, 1.5), Color("3a2a1a"))
-					ci.draw_rect(Rect2(2, 2, 2, 1.5), Color("3a2a1a"))
+					ci.draw_texture_rect(Painter.cart(), Rect2(-5, -3, 10, 6), false)
 					ci.draw_set_transform(Vector2.ZERO, 0.0)
 					continue
-				ci.draw_rect(Rect2(-5, -3, 10, 6), CAR_COLS[c.id % CAR_COLS.size()])
-				ci.draw_rect(Rect2(0, -2, 3, 4), Color(0.6, 0.75, 0.85))
+				ci.draw_texture_rect(Painter.car(CAR_COLS[c.id % CAR_COLS.size()]), Rect2(-6, -3.5, 12, 7), false)
 				if night:
 					ci.draw_circle(Vector2(6, -2), 1.2, Color("fff3b0"))
 					ci.draw_circle(Vector2(6, 2), 1.2, Color("fff3b0"))
@@ -1356,12 +1351,10 @@ func draw_overlay(node: CanvasItem, t: City) -> void:
 			var wv := c.path[mini(c.pi, c.path.size() - 1)] - c.pos if c.path.size() > 0 else Vector2.ZERO
 			var side := Vector2(-wv.y, wv.x).normalized() * (0.34 if c.id % 2 == 0 else -0.34) if wv.length() > 0.01 else Vector2.ZERO  # walkers use the pavements, one per side
 			var p := (c.pos + side) * TILE
-			ci.draw_circle(p + Vector2(0, 3.0), 2.6, Color(0, 0, 0, 0.3))
 			var col := Color("f3e7cf") if c.mood > 0.6 else (Color("e0a458") if c.mood > 0.35 else Color("c0392b"))
 			if c.sick > 0.0:
 				col = Color("8fc46a")
-			ci.draw_rect(Rect2(p + Vector2(-1.5, 0.5), Vector2(3, 3.5)), col.darkened(0.4))  # body
-			ci.draw_circle(p, 2.0, col)
+			ci.draw_texture_rect(Painter.person(), Rect2(p - Vector2(3, 2.5), Vector2(6, 8)), false, col)
 			if c.protesting and city.protest:
 				ci.draw_line(p, p + Vector2(0, -9), Color.WHITE, 1.0)
 				ci.draw_rect(Rect2(p + Vector2(-4, -14), Vector2(8, 5)), Color("f3e7cf"))
