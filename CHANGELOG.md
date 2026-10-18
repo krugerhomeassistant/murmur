@@ -6,6 +6,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 ## [Unreleased]
 
 ### Added
+- Research choices (ages finish line AF6): on reaching each age a town picks one of two techs (bronze tools or writing, masonry or guilds, steam power or public health, computing or efficiency). They act through the same modifiers as policies, so they cost nothing per frame; planner towns choose by themselves, humans choose in the Policies tab of the Mayor's office; saved with the town; `tests/research.gd`.
 - Roads by age (ages finish line AF3): beaten earth with ruts and pebbles in the Ancient age, cobbles in the Medieval age, asphalt with lane lines from the Industrial age. Drawn into the cached chunks, no per-frame cost.
 - Medieval units (ages finish line AF1): archers (long range) and knights (fast, armoured) trained at barracks from the Medieval age, drawn on the field with a bow and a lance; `tests/medieval.gd`. The plan gains an "ages finish line" (docs/PLAN.md): the next release waits for it.
 - Buildings by age (ages finish line AF4, first part): Ancient market stalls and open workshops, Medieval timber-framed shops and stone smithies; and art for the thirteen buildings that showed only two letters on a grey square (well, street lamp, lumber camp, sawmill, toolworks, rail yard, refinery, armoury, hydro dam, reservoir, gas plant, nuclear plant, desalination plant).

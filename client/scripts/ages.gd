@@ -60,7 +60,7 @@ static func unit(kind: String) -> int:
 
 ## Knowledge gained per second: grows with the population and with how well it is schooled and cultured.
 static func rate(c: City) -> float:
-	return float(c.pop) / 50.0 * BASE_RATE * (1.0 + float(c.cov.get("edu", 0.0)) + 0.6 * float(c.cov.get("culture", 0.0)))
+	return float(c.pop) / 50.0 * BASE_RATE * (1.0 + float(c.cov.get("edu", 0.0)) + 0.6 * float(c.cov.get("culture", 0.0))) * c.mod("know_mult")
 
 
 ## True when the town may enter the next age now.
