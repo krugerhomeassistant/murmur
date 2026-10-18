@@ -5,6 +5,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-10-18
+
 ### Added
 - Groups (E3, first slice): a town can join a group (`group` command, saved). Towns in one group are allied automatically and cannot declare war on, embargo or cancel the treaty with each other. `Diplo.set_group`, `tests/group.gd` (in CI). Group members can send each other coins (aid). Declaring war on a group member brings the rest of its group into the war (`Diplo.defend`). The Empire window has a Group button to join or change group.
 
