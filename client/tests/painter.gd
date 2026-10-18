@@ -15,7 +15,8 @@ func _init() -> void:
 		if seen < 30:
 			ok = false
 			print("blank sprite ", im.get_size())
-	if Painter.car(Color("c0392b")) != Painter.car(Color("c0392b")) or Painter.car(Color("c0392b")).get_width() != 36:
+	var a := Painter.car(Color("c0392b"))
+	if a != Painter.car(Color("c0392b")) or Painter.car(Color("c0392b")).get_width() != 36:
 		ok = false
 		print("car cache or size wrong")
 	print("painter bake ms: ", Time.get_ticks_msec() - t0)
