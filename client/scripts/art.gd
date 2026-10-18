@@ -494,10 +494,12 @@ static func building(ci: CanvasItem, r: Rect2, shape: String, body: Color, lv: i
 	match shape:
 		"house":
 			ci.draw_rect(Rect2(1, 1, 30, 30), Color("86ab6c") * k)
+			_r(ci, 8, 26, 22, 4, Color(0, 0, 0, 0.16))
 			_r(ci, 2, 27, 28, 2, Color("c9bfa0") * k)
 			var top := 10.0 - 4.0 * (lv - 1)
 			_r(ci, 6, top + 6, 20, 21 - top - 6 + 6, wall)
 			_tri(ci, Vector2(4, top + 6), Vector2(28, top + 6), Vector2(16, top - 3), roof)
+			_tri(ci, Vector2(16, top - 3), Vector2(28, top + 6), Vector2(18, top + 6), Color(0, 0, 0, 0.14))
 			_r(ci, 14, 20, 5, 8, Color("5a3a22") * k)
 			_win(ci, 8, top + 9, 4, 4, night)
 			_win(ci, 21, top + 9, 4, 4, night)
