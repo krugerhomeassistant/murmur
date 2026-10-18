@@ -32,7 +32,13 @@ func _init() -> void:
 	var regen: bool = gain_hi > t.belief - b1 and t.belief > b1
 	t.belief = 100.0
 	var quake: bool = Cmd.run(ts, t, "power", ["quake"]) == true and t.belief < 100.0
+	t.belief = 100.0
+	t.mood = 0.5
+	var bless: bool = Cmd.run(ts, t, "power", ["bless"]) == true and is_equal_approx(t.mood, 0.65)
+	var other := City.new(Signals.new())
+	t.partners.append(other)
+	var incite: bool = Cmd.run(ts, t, "power", ["incite"]) == true and is_equal_approx(float(t.tension.get(other.town_name, 0.0)), 0.3)
 	Cmd.sandbox = false
-	var ok := off and cast and cooling and broke and unknown and cured and cd_ends and regen and quake
-	print("POWERS_OK" if ok else "POWERS_FAIL off=%s cast=%s cooling=%s broke=%s unknown=%s cured=%s cd_ends=%s regen=%s quake=%s" % [off, cast, cooling, broke, unknown, cured, cd_ends, regen, quake])
+	var ok := off and cast and cooling and broke and unknown and cured and cd_ends and regen and quake and bless and incite
+	print("POWERS_OK" if ok else "POWERS_FAIL off=%s cast=%s cooling=%s broke=%s unknown=%s cured=%s cd_ends=%s regen=%s quake=%s bless=%s incite=%s" % [off, cast, cooling, broke, unknown, cured, cd_ends, regen, quake, bless, incite])
 	quit(0 if ok else 1)
