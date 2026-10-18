@@ -9,7 +9,7 @@ enum Id {
     PARK, PLAYGROUND, PLAZA, CINEMA, MUSEUM, STADIUM, THEME,
     BUS, TRAIN, WIND, SOLAR, COAL, WATER, LANDFILL, RECYCLE,
     MARKET, BANK, MALL, HOTEL, TOWNHALL, WIRE, PIPE, LIGHT, COURT, PRISON, COTTAGE, TOWNHOUSE, TENEMENT, CONDO, CHURCH, BAR, UNION_HALL, CHAMBER, BASE, BARRACKS, RADAR, MILL, WAREHOUSE, DEPOT, SEWAGE, SEWER, PORT, NAVYARD, FISHDOCK,
-    ORCHARD, RANCH, MINE, FOUNDRY, GREENHOUSE, FISHFARM, ARMOURY, LUMBER, TOOLWORKS, SAWMILL, RAILYARD,
+    ORCHARD, RANCH, MINE, FOUNDRY, GREENHOUSE, FISHFARM, ARMOURY, LUMBER, TOOLWORKS, SAWMILL, RAILYARD, HYDRO, GAS, NUCLEAR,
 }
 
 const CATS := [
@@ -261,6 +261,18 @@ const DEFS := {
         "r": 0, "prov": {}, "out": {"power": 40}, "jobs": 12, "poll": [10, 1.0], "shape": "chimney",
         "desc": "Generates 40 units of power and 12 jobs, but it pollutes homes within 10 tiles. Cheap to build, dirty to live next to.",
         "tip": "Site it far from housing, near the map edge."},
+    Id.HYDRO: {"n": "Hydro dam", "cat": "util", "kind": "svc", "cost": 700, "up": 1.2, "unlock": 150, "col": Color("4a7aa8"), "g": "Hy",
+        "r": 0, "prov": {}, "out": {"power": 55}, "jobs": 6, "water": true, "shape": "tower",
+        "desc": "A dam on the river: 55 units of clean power and 6 jobs, with low upkeep. Must touch the river.",
+        "tip": "The best mid-game source for towns on a river. Droughts and floods are not modelled for it yet."},
+    Id.GAS: {"n": "Gas power plant", "cat": "util", "kind": "svc", "cost": 900, "up": 4.0, "unlock": 250, "col": Color("7a7a8a"), "g": "Ga",
+        "r": 0, "prov": {}, "out": {"power": 80}, "jobs": 10, "poll": [6, 0.5], "shape": "chimney",
+        "desc": "80 units of power and 10 jobs. Half as dirty as coal (6 tiles), but dearer to build and run.",
+        "tip": "The step up from coal once the town has outgrown it."},
+    Id.NUCLEAR: {"n": "Nuclear plant", "cat": "util", "kind": "svc", "cost": 2400, "up": 9.0, "unlock": 600, "col": Color("8aa09a"), "g": "Nu",
+        "r": 0, "prov": {}, "out": {"power": 200}, "jobs": 24, "shape": "chimney",
+        "desc": "200 units of clean power and 24 jobs for a large city. Very expensive to build and run.",
+        "tip": "Only worth it for big cities. One plant can power a whole region."},
     Id.WATER: {"n": "Water tower", "cat": "util", "kind": "svc", "cost": 120, "up": 0.8, "unlock": 25, "col": Color("6aa8c8"), "g": "Wa",
         "r": 0, "prov": {}, "out": {"water": 14}, "jobs": 2, "shape": "tower",
         "desc": "Pumps 14 units of water into the pipe network. Droughts and burst mains cut coverage, so overlap two towers in big districts.",

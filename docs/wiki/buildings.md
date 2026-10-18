@@ -2,7 +2,7 @@
 
 # Buildings and tiles
 
-70 placeable things in 12 categories. `unlock` is the population (peak) at which the Build menu offers it. Costs are coins; `upkeep` is coins per second before the town-size and policy multipliers (see [Economy](economy.md)).
+73 placeable things in 12 categories. `unlock` is the population (peak) at which the Build menu offers it. Costs are coins; `upkeep` is coins per second before the town-size and policy multipliers (see [Economy](economy.md)).
 
 How to read an entry: **Radius** is the service reach in tiles (Manhattan diamond); **Provides** lists the city-stat coverage it adds (see [City stats](stats.md)); **Output** is the network supply it adds (power, water, sewage units); **Jobs** is staff; **Pollution** is `[radius, strength]`; **Tourism** is visitor income strength; **Visited** means citizens walk there as a leisure destination; **Grant** is a free income (coins per second, scaled by `RATE`).
 
@@ -734,6 +734,9 @@ Rail across 14 tiles. Full transit coverage, a boost to nearby shops, 8 jobs and
 | [Wind turbine](#wind-turbine) | 150 | 0.5 | 40 | svc |
 | [Solar farm](#solar-farm) | 300 | 0.6 | 60 | svc |
 | [Coal power plant](#coal-power-plant) | 400 | 3 | 40 | svc |
+| [Hydro dam](#hydro-dam) | 700 | 1.2 | 150 | svc |
+| [Gas power plant](#gas-power-plant) | 900 | 4 | 250 | svc |
+| [Nuclear plant](#nuclear-plant) | 2400 | 9 | 600 | svc |
 | [Water tower](#water-tower) | 120 | 0.8 | 25 | svc |
 | [Power line](#power-line) | 2 | 0.015 | 15 | net |
 | [Water pipe](#water-pipe) | 2 | 0.015 | 15 | net |
@@ -790,6 +793,56 @@ Generates 40 units of power and 12 jobs, but it pollutes homes within 10 tiles. 
 | Map colour / letter | `#4a4a4a` / `Co` |
 
 *Tip:* Site it far from housing, near the map edge.
+
+### Hydro dam
+
+A dam on the river: 55 units of clean power and 6 jobs, with low upkeep. Must touch the river.
+
+| | |
+|---|---|
+| Id | `HYDRO` |
+| Cost / upkeep | 700 / 1.2 per s |
+| Unlocks at | 150 population |
+| Kind | svc |
+| Output | power 55 |
+| Jobs | 6 |
+| Placement | must touch water |
+| Map colour / letter | `#4a7aa8` / `Hy` |
+
+*Tip:* The best mid-game source for towns on a river. Droughts and floods are not modelled for it yet.
+
+### Gas power plant
+
+80 units of power and 10 jobs. Half as dirty as coal (6 tiles), but dearer to build and run.
+
+| | |
+|---|---|
+| Id | `GAS` |
+| Cost / upkeep | 900 / 4 per s |
+| Unlocks at | 250 population |
+| Kind | svc |
+| Output | power 80 |
+| Jobs | 10 |
+| Pollution | radius 6, strength 0.5 |
+| Map colour / letter | `#7a7a8a` / `Ga` |
+
+*Tip:* The step up from coal once the town has outgrown it.
+
+### Nuclear plant
+
+200 units of clean power and 24 jobs for a large city. Very expensive to build and run.
+
+| | |
+|---|---|
+| Id | `NUCLEAR` |
+| Cost / upkeep | 2400 / 9 per s |
+| Unlocks at | 600 population |
+| Kind | svc |
+| Output | power 200 |
+| Jobs | 24 |
+| Map colour / letter | `#8aa09a` / `Nu` |
+
+*Tip:* Only worth it for big cities. One plant can power a whole region.
 
 ### Water tower
 
