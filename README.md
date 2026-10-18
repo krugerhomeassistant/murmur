@@ -46,7 +46,7 @@ Everything is drawn with code (no art assets), the whole game is data-driven.
 
 **Which build am I running?** The start menu and window title show `vX.Y.Z (commit abc1234)`; `godot --path client -- --build-info` prints it. Compare with the newest commit on `main`. If it is older, you are on an old checkout or an old portable zip. Troubleshooting: if scripts error out after a pull, run `godot --headless --path client --import --quit` once, or delete the `.godot` folder inside `client`.
 
-Controls: WASD or arrows pan, wheel zooms, right/middle-drag pans, Space pauses, **M** zooms out to the whole region and back, **T** toggles auto-training troops, **F3** shows the performance overlay, **B** bulldozes, **F** follows the active town, **Tab** switches town, **Enter** chats in multiplayer, **F9** runs the benchmark. Towns menu > *Found a new town* lets you click a free plot anywhere on the map (the price grows with distance). All towns sit in one continuous map: pan or scroll to the next town, or click it.
+Controls: WASD or arrows pan, wheel zooms, right/middle-drag pans, Space pauses, **M** zooms out to the whole region and back, **T** toggles auto-training troops, **F3** shows the performance overlay, **B** bulldozes, **F** follows the active town, **Tab** switches town, **Enter** chats in multiplayer, **O** cycles the globe-view colour ring (side, age, population, wealth, military), **F9** runs the benchmark. Towns menu > *Found a new town* lets you click a free plot anywhere on the map (the price grows with distance). All towns sit in one continuous map: pan or scroll to the next town, or click it.
 
 ## Built to stay fast
 
