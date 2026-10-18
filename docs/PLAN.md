@@ -177,6 +177,17 @@ Everything else comes first. Visual detail (characters, units, buildings, sprite
 - [x] E5 Infrastructure (v0.4.0): rail yard with catchment, ports, power, fuel and water tiers. Deferred to E5e: moving trains on laid track, highways, airports. Design and OpenTTD-inspired mechanics (ideas only, no code): [INFRASTRUCTURE_DESIGN.md](INFRASTRUCTURE_DESIGN.md).
 - [x] E6 Military variety (v0.5.0, first form): sieges, air defence and army stance orders. Left for E6b: building hit points, capture points, group select, production queue, research, logistics. Sieges first slice done (siege guns, `tests/siege.gd`); air defence slows bombing runs (`tests/air.gd`); army stance orders (`tests/stance.gd`); next group select and a production queue.
 
+## Ages finish line (owner, 2026-10-18: "finish all of the ages before we make a release")
+The next release waits for these. Each step is one PR, headless test where there is logic, perf checked before the release.
+- [x] AF1 Medieval units: archer (long range, soft) and knight (fast, armoured), trained at barracks from the Medieval age; army drawing for both; `tests/medieval.gd`.
+- [ ] AF2 Galleys (A2 leftover): Ancient/Medieval warship and transport on rivers, built at the port; drawn as an oared hull.
+- [x] AF3 Roads by age: dirt track (Ancient), cobbles (Medieval), lane-marked asphalt (Industrial and Modern)
+- [ ] AF4 Buildings by age: done so far: houses (all ages), shops and factories (Ancient, Medieval), art for the thirteen buildings that had none (`tests/art.gd` draws every building). Left: terraces and tenements (Medieval), farms and services by age.
+- [ ] AF5 Units and vehicles by age: citizens' clothes, carts to cars to modern cars, army unit drawings per age.
+- [ ] AF6 A3 research choices: at each age a town picks one of two techs (effects in `Research`, host command, AI picks by itself, HUD prompt); `tests/research.gd`.
+- [ ] AF7 Age transition feedback: message, short banner and a palette change so an advance is felt; wiki and AGES_DESIGN updated.
+- [ ] AF8 Verify: all ages play start to finish headless (`tests/ages.gd` extended), benchmark equal or better, then the release.
+
 ## War rework (user, 2026-10-08): "full Age of Empires / Empire Earth style war" - NEXT MAJOR FEATURE (v0.3)
 Today: armies fight on one abstract line between two towns; unopposed units at the edge raid and shell from a distance (`Military.fight/_occupy`, `Main.draw_fx`). User feedback from watching it:
 - [x] Armies march INTO the enemy town (world positions, phase 1). [ ] Fight among the buildings: buildings take damage (phase 2).

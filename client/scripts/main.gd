@@ -1143,14 +1143,23 @@ func draw_fx(node: CanvasItem) -> void:
 					var ang := float(un.get("h", 0.0))
 					var fresh: bool = now - int(un.get("ft", -9999)) < 700
 					match String(un["k"]):
-						"spear", "inf", "gren", "snip", "medic":
+						"knight":  # a rider: horse body, rider and a lance
+							node.draw_set_transform(pos, ang)
+							node.draw_rect(Rect2(-7 * sz, -3 * sz, 14 * sz, 6 * sz), col.darkened(0.45))
+							node.draw_circle(Vector2(1, 0) * sz, 3.0 * sz, col)
+							node.draw_line(Vector2(3, 0) * sz, Vector2(18, 0) * sz, Color.WHITE, 1.2 * sz)
+							node.draw_set_transform(Vector2.ZERO)
+						"spear", "archer", "inf", "gren", "snip", "medic":
 							var k := String(un["k"])
 							node.draw_circle(pos, (3.8 if k == "gren" else 3.2) * sz, Color.WHITE if k == "medic" else col)
 							if k == "medic":
 								node.draw_rect(Rect2(pos + Vector2(-1, -2.4) * sz, Vector2(2, 4.8) * sz), Color("d9382a"))
 								node.draw_rect(Rect2(pos + Vector2(-2.4, -1) * sz, Vector2(4.8, 2) * sz), Color("d9382a"))
 							else:
-								node.draw_line(pos, pos + Vector2.from_angle(ang) * (14.0 if k == "snip" else 8.0) * sz, Color.WHITE, (0.8 if k == "snip" else 1.2) * sz)
+								if k == "archer":  # a drawn bow in front of the archer
+									node.draw_arc(pos + Vector2.from_angle(ang) * 4.0 * sz, 5.0 * sz, ang - 1.2, ang + 1.2, 8, Color("c9a96a"), 1.2 * sz)
+								else:
+									node.draw_line(pos, pos + Vector2.from_angle(ang) * (14.0 if k == "snip" else 8.0) * sz, Color.WHITE, (0.8 if k == "snip" else 1.2) * sz)
 								if k == "gren":
 									node.draw_rect(Rect2(pos + Vector2(-1.5, -6) * sz, Vector2(3, 3) * sz), Color("e0a030"))
 						"ltank", "tank", "htank", "art", "aa":
@@ -1201,7 +1210,7 @@ func draw_fx(node: CanvasItem) -> void:
 					if float(un["hp"]) < mx * 0.99:
 						node.draw_rect(Rect2(pos + Vector2(-8, -10) * sz, Vector2(16 * sz, 2.0 * sz)), Color(0, 0, 0, 0.6))
 						node.draw_rect(Rect2(pos + Vector2(-8, -10) * sz, Vector2(16 * sz * float(un["hp"]) / mx, 2.0 * sz)), Color("6fd06f") if float(un["hp"]) / mx > 0.4 else Color("e0a030"))
-					if not fresh and zone.has_point(pos) and String(un["k"]) in ["spear", "inf", "gren", "snip", "ltank", "tank", "htank", "art"]:  # unopposed at the enemy's edge: shell the town
+					if not fresh and zone.has_point(pos) and String(un["k"]) in ["spear", "archer", "knight", "inf", "gren", "snip", "ltank", "tank", "htank", "art"]:  # unopposed at the enemy's edge: shell the town
 						var cyc := int((now + int(float(un["l"]) * 700.0 + 1000.0)) / 900)
 						if (now + int(float(un["l"]) * 700.0 + 1000.0)) % 900 < 160:
 							var rr := float(hash([un["l"], cyc]) % 1000) / 1000.0
