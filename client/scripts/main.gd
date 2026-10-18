@@ -977,6 +977,11 @@ func _process(delta: float) -> void:
 			if city.msg != "":
 				headline = city.msg
 				city.msg = ""
+			if city.age_up >= 0:
+				hud.banner("The %s age begins" % Ages.name_of(city.age_up), "New buildings and expectations arrive. Pick this age's research in the Policy tab." if city.human else "")
+				city.age_up = -1
+			for t in towns:
+				t.age_up = -1  # only the town you watch gets a banner
 		for t in towns:
 			if t == city:
 				for snd in t.sounds:

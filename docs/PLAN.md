@@ -185,7 +185,7 @@ The next release waits for these. Each step is one PR, headless test where there
 - [ ] AF4 Buildings by age: done so far: houses (all ages), shops and factories (Ancient, Medieval), art for the thirteen buildings that had none (`tests/art.gd` draws every building). Left: terraces and tenements (Medieval), farms and services by age.
 - [ ] AF5 Units and vehicles by age: citizens' clothes, carts to cars to modern cars, army unit drawings per age.
 - [x] AF6 A3 research choices: at each age a town picks one of two techs (effects in `Research`, host command, AI picks by itself, HUD prompt); `tests/research.gd`.
-- [ ] AF7 Age transition feedback: message, short banner and a palette change so an advance is felt; wiki and AGES_DESIGN updated.
+- [x] AF7 Age transition feedback: banner done (`tests/banner.gd`); a palette shift was dropped, the roads, houses and shops already change look per age.
 - [ ] AF8 Verify: all ages play start to finish headless (`tests/ages.gd` extended), benchmark equal or better, then the release.
 
 ## War rework (user, 2026-10-08): "full Age of Empires / Empire Earth style war" - NEXT MAJOR FEATURE (v0.3)
