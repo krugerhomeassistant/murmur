@@ -5,6 +5,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+### Added
+- World seed option in the setup screen (G1 first piece): a number gives the same world and town sites every time; empty is random. `tests/scenario.gd` (in CI).
+
 ### Changed
 - New games start in the Ancient age by default (ages A2). Pick Modern in the setup screen for the classic start; saves keep their age.
 

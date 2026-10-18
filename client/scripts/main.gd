@@ -201,8 +201,8 @@ func _site_ok(w: World, g: Vector2i, lw: int, lh: int, min_wet := 0) -> bool:
 
 
 ## A world whose first `n` plots all make good town sites (best of 40 tries if none is perfect).
-func _pick_world(n: int, lw: int, lh: int) -> World:
-	var base := bench_seed if bench_seed != 0 else randi()
+func _pick_world(n: int, lw: int, lh: int, pick := 0) -> World:
+	var base := pick if pick != 0 else (bench_seed if bench_seed != 0 else randi())
 	var best: World = null
 	var best_ok := -1
 	for a in 40:
@@ -257,7 +257,7 @@ func _fresh(o: Dictionary) -> void:
 	var mood: int = o.get("mood", 1)
 	var rmode: int = o.get("river", 0)
 	world_rivers = not (rmode == 1 or rmode == 2)  # "none" and "I paint it" start on flat land
-	world = _pick_world(o.get("towns", 2), lw, lh)
+	world = _pick_world(o.get("towns", 2), lw, lh, int(o.get("seed", 0)))
 	city = _new_town(o.get("name", "Murmur"))
 	city.temper = 0.0
 	var n: int = o.get("towns", 2)
