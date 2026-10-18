@@ -109,7 +109,10 @@ static func run(towns: Array[City], t: City, name: String, a: Array) -> Variant:
 				return n
 		"diplo":
 			if a.size() == 2 and a[0] is int and a[1] is String and a[1] in DIPLO and a[0] >= 0 and a[0] < towns.size() and towns[a[0]] != t:
-				return Diplo.act(t, towns[a[0]], a[1])
+				var msg: String = Diplo.act(t, towns[a[0]], a[1])
+				if a[1] == "war" and Diplo.treaty(t, towns[a[0]]) == "war":
+					Diplo.defend(t, towns[a[0]], towns)
+				return msg
 	return null  # unknown command or rejected arguments
 
 
