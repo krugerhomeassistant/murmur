@@ -1029,7 +1029,14 @@ const GLOBE_COL := {"you": Color("f2cf4a"), "ally": Color("5fbf6a"), "war": Colo
 func _draw_globe() -> void:
 	var mp := get_global_mouse_position()
 	var hov := ""
-	for m in Globe.markers(towns, city, "side"):
+	var ms := Globe.markers(towns, city, "side")
+	for m in ms:  # links first, so the discs sit on top: red = war, green = joined by road, grey = neighbours without a road
+		for d in m.t.partners:
+			if towns.find(d) > towns.find(m.t):  # each pair once
+				var war := Diplo.treaty(m.t, d) == "war"
+				var q: Vector2 = (Vector2(d.gpos) + Vector2(0.5, 0.5)) * Vector2(City.W, City.H) * TILE
+				draw_line(m.pos * TILE, q, Color("d9382a") if war else (Color("9fd3a0") if Diplo.linked(m.t, d) else Color(0.55, 0.55, 0.5)), (6.0 if war else 3.0) / cam.zoom.x)
+	for m in ms:
 		var p: Vector2 = m.pos * TILE
 		var r: float = m.r * TILE
 		draw_circle(p, r, GLOBE_COL[m.side])
