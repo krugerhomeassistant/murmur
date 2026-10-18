@@ -236,6 +236,16 @@ static func declare(a: City, b: City, goal: String, why: String) -> void:
 	b.sounds.append("alarm")
 
 
+## When `b` is attacked, every other member of its group declares war on `a` too (never on a groupmate of `a`).
+static func defend(a: City, b: City, towns: Array) -> void:
+	if b.group <= 0 or b.group == a.group:
+		return
+	for o in towns:
+		var d: City = o
+		if d != a and d != b and d.group == b.group and d.over == "" and d.liege == "" and treaty(d, a) != "war":
+			declare(d, a, "land", "defending " + b.town_name)
+
+
 ## Wars in progress, one row per war from the declaring side: {a, b, goal, occ, need, secs}.
 static func wars(towns: Array) -> Array:
 	var out := []

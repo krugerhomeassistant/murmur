@@ -29,6 +29,10 @@ func _init() -> void:
 	ts[0].coins = 500.0
 	var aid: bool = Cmd.run(ts, ts[0], "send", [1, 100]) == 100
 	var denied: bool = Cmd.run(ts, ts[0], "send", [2, 100]) == 0
-	var ok := bad == 0 and allied and outside and held and aid and denied
-	print("GROUP_OK allied=%s war_msg=%s" % [allied, war] if ok else "GROUP_FAIL bad=%d allied=%s outside=%s held=%s aid=%s denied=%s" % [bad, allied, outside, held, aid, denied])
+	Cmd.run(ts, ts[2], "group", [2])
+	ts[2].coins = 500.0
+	Cmd.run(ts, ts[2], "diplo", [1, "war"])
+	var defended := Diplo.treaty(ts[0], ts[2]) == "war"
+	var ok := bad == 0 and allied and outside and held and aid and denied and defended
+	print("GROUP_OK allied=%s war_msg=%s" % [allied, war] if ok else "GROUP_FAIL bad=%d allied=%s outside=%s held=%s aid=%s denied=%s defended=%s" % [bad, allied, outside, held, aid, denied, defended])
 	quit(0 if ok else 1)
