@@ -225,7 +225,7 @@ Consequences of the formulas:
 - Training happens in peacetime too. The standing army costs upkeep for as long as it exists, and units are only counted against caps when alive.
 - The coin test is `3 * cost`, not `cost`, so a Battle tank needs 420 coins in the treasury to start, and then costs 140.
 
-Default priorities `Military.DEF_W`: Spearman 2, Rifleman 2, Battle tank 2, every other kind 1. `Military.weights(c)` overlays the town's `train_w` (0 to 3 set from the Army window via `Cmd.run("train_w", [kind, value])`) on the defaults.
+Default priorities `Military.DEF_W`: Spearman 2, Rifleman 2, Battle tank 2, every other kind (archer and knight included) 1. `Military.weights(c)` overlays the town's `train_w` (0 to 3 set from the Army window via `Cmd.run("train_w", [kind, value])`) on the defaults.
 
 ### Ranks
 

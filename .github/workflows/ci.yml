@@ -66,6 +66,7 @@ jobs:
           timeout 120 godot --headless --path client -s tests/stance.gd | tee st.txt && grep -q STANCE_OK st.txt
           timeout 120 godot --headless --path client -s tests/group.gd | tee gr.txt && grep -q GROUP_OK gr.txt
           timeout 120 godot --headless --path client -s tests/spear.gd | tee spe.txt && grep -q SPEAR_OK spe.txt
+          timeout 120 godot --headless --path client -s tests/medieval.gd | tee me.txt && grep -q MEDIEVAL_OK me.txt
           timeout 120 godot --headless --path client -s tests/scenario.gd | tee scn.txt && grep -q SCENARIO_OK scn.txt
           timeout 120 godot --headless --path client -s tests/sandbox.gd | tee sbx.txt && grep -q SANDBOX_OK sbx.txt
           timeout 120 godot --headless --path client -s tests/powers.gd | tee pow.txt && grep -q POWERS_OK pow.txt
