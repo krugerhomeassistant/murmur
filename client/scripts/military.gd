@@ -694,7 +694,7 @@ static func _shell(att: City, vic: City) -> void:
 		vic.strike(1, att)
 
 
-## Bombers over an enemy town with no fighters, jets or anti-air left to stop them flatten its buildings, one strike per bomber every few seconds.
+## Bombers over an enemy town flatten its buildings, one strike per bomber every few seconds; each anti-air gun, fighter or jet of the victim cuts the rate to 1/(1 + 2 x guards).
 static func _bomb(att: City, vic: City) -> void:
 	var zone := terr_px(vic)
 	var nb := 0
@@ -703,10 +703,11 @@ static func _bomb(att: City, vic: City) -> void:
 			nb += 1
 	if nb == 0:
 		return
+	var guards := 0  # each anti-air gun, fighter or jet slows the bombing run (they also shoot at the bombers in `fight`)
 	for u in _of(vic, att.town_name):
 		if u["k"] in ["aa", "fighter", "jet"]:
-			return
-	att.raid["b" + vic.town_name] = float(att.raid.get("b" + vic.town_name, 0.0)) + 0.15 * nb
+			guards += 1
+	att.raid["b" + vic.town_name] = float(att.raid.get("b" + vic.town_name, 0.0)) + 0.15 * nb / (1.0 + 2.0 * guards)
 	if float(att.raid["b" + vic.town_name]) >= 1.0:
 		att.raid["b" + vic.town_name] = 0.0
 		vic.strike(1, att)
