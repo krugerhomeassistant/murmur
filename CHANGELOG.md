@@ -6,6 +6,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 ## [Unreleased]
 
 ### Added
+- Rail yard catchment: the freight discount and capacity boost scale with the share of farms, mines and factories within 14 tiles of a yard.
 - Power tiers: hydro dam (55 units, on the river, Industrial age), gas plant (80 units, half the pollution of coal, Modern) and nuclear plant (200 units, clean, very costly, Modern), with `tests/power.gd`.
 
 ### Changed

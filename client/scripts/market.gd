@@ -314,12 +314,12 @@ static func link_trade(towns: Array) -> void:
 				if link <= 0.0 or s == b:
 					continue
 				var dist := maxi(absi(s.gpos.x - b.gpos.x), absi(s.gpos.y - b.gpos.y))
-				var rail: bool = s.has_rail() and b.has_rail()  # both ends have a rail yard
-				var freight: float = float(BASE[k]) * FREIGHT * dist * (RAIL_FREIGHT if rail else (SEA_FREIGHT if sea else 1.0))
+				var rr: float = minf(s.rail_reach(), b.rail_reach())  # both ends need a yard; the weaker catchment limits the link
+				var freight: float = float(BASE[k]) * FREIGHT * dist * (1.0 - (1.0 - RAIL_FREIGHT) * rr if rr > 0.0 else (SEA_FREIGHT if sea else 1.0))
 				var gap: float = float(b.price_loc[k]) - float(s.price_loc[k]) - freight
 				if gap < float(BASE[k]) * MIN_GAIN:
 					continue
-				var q: float = minf(minf(s.trade_offer(k), b.trade_want(k)), LINK_CAP * link * (2.0 if rail else 1.0))
+				var q: float = minf(minf(s.trade_offer(k), b.trade_want(k)), LINK_CAP * link * (1.0 + rr))
 				if q <= 0.0:
 					continue
 				var tp: float = float(s.price_loc[k]) + gap * 0.5  # the gain from trade is split

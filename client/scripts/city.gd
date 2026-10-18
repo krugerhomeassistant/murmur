@@ -87,6 +87,7 @@ var policies := {}  # key -> bool
 var mods := {}
 var auto_mode := 2  # 0 off, 1 plots, 2 plots + roads
 var peak := 0.0
+var rail_r := -1.0  # see rail_reach(); -1 until the first scan
 var announced := {}
 var next_id := 1
 var acc := 0.0
@@ -942,6 +943,7 @@ func _scan() -> void:
 			ps += minf(1.0, poll_at(cell(h)))
 		pollution = ps / maxi(homes.size(), 1) * mod("poll_mult") if not homes.is_empty() else 0.0
 	_pf("scan_cov", qt)
+	rail_r = _rail_share()
 
 
 ## Power and water networks: plants feed connected lines; buildings touching a live line share the supply.
@@ -1899,6 +1901,33 @@ func has_port() -> bool:
 ## True when this town has a rail yard.
 func has_rail() -> bool:
 	return not (bt.get(T.RAILYARD, []) as Array).is_empty()
+
+
+const RAIL_R := 14  # tiles a rail yard collects freight from
+
+
+## Strength of the rail link, 0 without a yard, 0.4 to 1 by the share of farms, mines and industry within RAIL_R of a yard.
+func rail_reach() -> float:
+	if not has_rail():
+		return 0.0
+	return 1.0 if rail_r < 0.0 else rail_r
+
+
+func _rail_share() -> float:
+	var yards: Array = bt.get(T.RAILYARD, [])
+	var n := 0
+	var near := 0
+	for i in works:
+		if String(Catalog.DEFS[grid[i]].get("sector", "com")) in ["com", "office"]:
+			continue
+		n += 1
+		var p := cell(i)
+		for y in yards:
+			var q := cell(y)
+			if maxi(absi(p.x - q.x), absi(p.y - q.y)) <= RAIL_R:
+				near += 1
+				break
+	return 1.0 if n == 0 else 0.4 + 0.6 * near / n
 
 
 func trade_offer(k: String) -> float:
