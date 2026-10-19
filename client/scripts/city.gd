@@ -195,6 +195,15 @@ var liege := ""  # town_name of the overlord when this town is a vassal
 var dipl_t := 70.0
 var gpos := Vector2i.ZERO  # position in the region (towns are laid out on a grid)
 
+var derelict := false  # abandoned: nobody owns it, any side may claim it (Capture)
+var empty_t := 0  # seconds without a single citizen
+var raze_left := 0.0  # unit-seconds of work left to tear down its town hall
+var claim_by := ""  # side building a new town hall here
+var claim_t := 0.0
+var garrison := {}  # side -> units standing in this derelict town
+var inbound: Array = []  # troops on the road to this derelict town: {side, from, eta, u}
+var side_key := ""  # set when a town was captured: the side it plays for
+var cap_cd := 0.0  # seconds until this town may send troops to an empty town again
 var gate := [0, 0, 0, 0]  # road tiles at the border facing N, E, S, W (a link needs one)
 var war_n := {}  # town_name -> battles fought in the current war
 var war_sc := {}  # town_name -> battles I won in the current war
@@ -3304,8 +3313,21 @@ func tick(dt: float) -> void:
 		coins = maxf(coins, 30.0)  # neighbours are kept alive by the state
 	elif coins < DEBT_LIMIT:
 		over = "Bankrupt. The city could not pay its bills."
-	elif peak >= 10.0 and pop < 1:
-		over = "Everyone left. The city is empty."
+	empty_t = empty_t + 1 if (pop < 1 and peak >= 10.0) else 0
+	if empty_t >= 15 and over == "":
+		_abandon()
+
+
+## Everyone has left: the town stops, ends its treaties and wars, and is up for grabs (docs/PLAN.md, dead-town capture).
+func _abandon() -> void:
+	over = "Everyone left. The city is empty."
+	derelict = true
+	raze_left = Capture.RAZE_NEED if not (bt.get(T.TOWNHALL, []) as Array).is_empty() else 0.0
+	for o in partners:
+		var p: City = o
+		Diplo.sign_treaty(self, p, "")
+		p._log("%s was abandoned. It is up for grabs." % town_name)
+	army.clear()
 
 
 # ---------- mayor: petitions, promises, approval, elections ----------
@@ -3669,7 +3691,7 @@ func work_status(t: int) -> String:
 # ---------- save / load ----------
 
 ## What a save or snapshot carries (also the only keys from_dict accepts, since snapshots come from a possibly hostile host).
-const SAVE_KEYS := ["age", "tech", "etier", "fit", "know", "age_t", "town_name", "grid", "lvl", "build", "wire", "pipe", "sewer", "lamp", "water", "ore", "ground", "coins", "mood", "tax_r", "tax_c", "tax_i", "clock", "day",
+const SAVE_KEYS := ["age", "tech", "etier", "fit", "derelict", "empty_t", "raze_left", "claim_by", "claim_t", "garrison", "inbound", "side_key", "know", "age_t", "town_name", "grid", "lvl", "build", "wire", "pipe", "sewer", "lamp", "water", "ore", "ground", "coins", "mood", "tax_r", "tax_c", "tax_i", "clock", "day",
 	"policies", "auto_mode", "auto_policy", "peak", "announced", "next_id", "recent", "active", "approval", "rep", "favor",
 	"petitions", "promises", "pet_recent", "kept", "broken", "next_election", "elections_won", "rally_used", "last_vote",
 	"season", "wage_ix", "price_loc", "stock", "exported", "loans", "done_ms", "disasters_survived", "burned", "hist_coins", "hist_pop", "ruins", "offline", "lamp", "terr", "expansions", "auto_expand", "human", "owner", "temper", "rel", "treaty", "liege", "ev_scale", "gpos", "war_n", "war_sc", "war_goal", "tension", "occ", "train_on", "train_t", "train_w", "stance", "group", "belief", "power_cd", "focus", "auto_focus", "ask_build", "vetoed"]
