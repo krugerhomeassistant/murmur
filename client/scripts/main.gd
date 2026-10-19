@@ -1103,22 +1103,43 @@ func _draw() -> void:  # world level: weather and the links between towns; every
 	var vp := get_viewport_rect().size / cam.zoom
 	var view := Rect2(cam.position - vp * 0.5, vp)
 	if _lod() < 3:
-		match sig.weather():
-			"rain":
-				ci.draw_rect(view, Color(0.2, 0.25, 0.35, 0.22))
-				_rain(view, 120)
-			"storm":
-				ci.draw_rect(view, Color(0.1, 0.12, 0.2, 0.4))
-				_rain(view, 220)
-			"heatwave":
-				ci.draw_rect(view, Color(0.9, 0.55, 0.15, 0.14))
-			"snow":
-				ci.draw_rect(view, Color(0.85, 0.9, 1.0, 0.16))
-				_snow(view)
-			"fog":
-				ci.draw_rect(view, Color(0.8, 0.82, 0.85, 0.3))
-			"cold_snap":
-				ci.draw_rect(view, Color(0.6, 0.75, 1.0, 0.12))
+		for f: Dictionary in sig.fronts:
+			_front(f, view)
+
+
+const WX_TINT := {"rain": Color(0.2, 0.25, 0.35, 0.22), "storm": Color(0.1, 0.12, 0.2, 0.4), "heatwave": Color(0.9, 0.55, 0.15, 0.14), "snow": Color(0.85, 0.9, 1.0, 0.16), "fog": Color(0.8, 0.82, 0.85, 0.3), "cold_snap": Color(0.6, 0.75, 1.0, 0.12)}
+
+
+## One weather front: a soft, irregular cloud over its place with rain or snow falling inside it, or a plain tint when it covers the whole world.
+func _front(f: Dictionary, view: Rect2) -> void:
+	var kind: String = f["t"]
+	var tint: Color = WX_TINT.get(kind, Color(0, 0, 0, 0))
+	var st := sig.strength(f)
+	if float(f["r"]) < 0.0:
+		ci.draw_rect(view, Color(tint, tint.a * st))
+		_fall(kind, view, Vector2.INF, 0.0)
+		return
+	var c: Vector2 = f["p"]
+	var rad: float = float(f["r"]) * st
+	if not view.grow(rad).has_point(c):
+		return
+	var seed_a := fmod(absf(float(f["p"].x) - float(f["v"].x) * float(f["age"])) * 0.01, TAU)  # a cloud keeps its shape as it drifts
+	for j in 5:
+		var o := Vector2.from_angle(seed_a + j * 1.26) * rad * 0.32
+		for k in 5:
+			ci.draw_circle(c + o, rad * 0.68 * (1.0 - k * 0.16), Color(tint, tint.a * 0.45 * st))
+	_fall(kind, view.intersection(Rect2(c - Vector2(rad, rad), Vector2(rad, rad) * 2.0)), c, rad * 0.9)
+
+
+func _fall(kind: String, area: Rect2, c: Vector2, rad: float) -> void:
+	if area.size.x <= 0.0 or area.size.y <= 0.0:
+		return
+	if kind == "rain":
+		_rain(area, 120, c, rad)
+	elif kind == "storm":
+		_rain(area, 220, c, rad)
+	elif kind == "snow" or kind == "cold_snap":
+		_snow(area, c, rad)
 
 
 ## The plot under the mouse while choosing where to found a town: green if it can be afforded, red if not, with the price.
@@ -1646,19 +1667,23 @@ func _building(r: Rect2, d: Dictionary, lv: int, ok: bool, night: bool, id := -1
 		ci.draw_string(ThemeDB.fallback_font, r.position + Vector2(12, 24), "!", HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color("b03a2e"))
 
 
-func _rain(area: Rect2, n: int) -> void:
+func _rain(area: Rect2, n: int, c := Vector2.INF, rad := 0.0) -> void:
 	var t := Time.get_ticks_msec() * 0.001
 	for i in n:
 		var x := area.position.x + fmod(i * 97.0 + 13.0, area.size.x)
 		var y := area.position.y + fmod(i * 53.0 + t * 380.0, area.size.y)
+		if c != Vector2.INF and Vector2(x, y).distance_to(c) > rad:
+			continue
 		ci.draw_line(Vector2(x, y), Vector2(x - 3, y + 10), Color(0.8, 0.85, 1.0, 0.5), 1.0)
 
 
-func _snow(area: Rect2) -> void:
+func _snow(area: Rect2, c := Vector2.INF, rad := 0.0) -> void:
 	var t := Time.get_ticks_msec() * 0.001
 	for i in 100:
 		var x := area.position.x + fmod(i * 97.0 + 13.0 + sin(t + i) * 12.0, area.size.x)
 		var y := area.position.y + fmod(i * 53.0 + t * 60.0, area.size.y)
+		if c != Vector2.INF and Vector2(x, y).distance_to(c) > rad:
+			continue
 		ci.draw_circle(Vector2(x, y), 1.6, Color(1, 1, 1, 0.8))
 
 

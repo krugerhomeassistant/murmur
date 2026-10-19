@@ -186,6 +186,7 @@ var treaty := {}  # town_name -> "", "pact", "alliance", "embargo", "vassal"
 var liege := ""  # town_name of the overlord when this town is a vassal
 var dipl_t := 70.0
 var gpos := Vector2i.ZERO  # position in the region (towns are laid out on a grid)
+
 var gate := [0, 0, 0, 0]  # road tiles at the border facing N, E, S, W (a link needs one)
 var war_n := {}  # town_name -> battles fought in the current war
 var war_sc := {}  # town_name -> battles I won in the current war
@@ -1385,7 +1386,7 @@ func trigger(id: String) -> bool:
 			active.append({"id": id, "left": dur, "mods": scaled})
 		_collect_mods()
 	if e.has("weather"):
-		sig.set_weather(String(e["weather"]), dur)
+		sig.set_weather(String(e["weather"]), dur, world_pos())
 	var inst: Dictionary = e.get("inst", {})
 	if inst.has("shock"):
 		sig.mk.shock_by(inst["shock"])
@@ -1511,6 +1512,11 @@ func _hit(i: int) -> void:
 
 # ---------- per second ----------
 
+## The middle of this town's plot in world pixels (32 px tiles): where its weather is read.
+func world_pos() -> Vector2:
+	return (Vector2(gpos) + Vector2(0.5, 0.5)) * Vector2(W, H) * 32.0
+
+
 ## Microseconds spent per stage of _second(), summed over all towns (read by the benchmark).
 static var prof := {}
 
@@ -1523,7 +1529,8 @@ func _pf(stage: String, t0: int) -> int:
 
 func _second() -> void:
 	var pt := Time.get_ticks_usec()
-	var sn := int((day - 1) / 7) % 4
+	sig.day_hi = maxi(sig.day_hi, day)
+	var sn := int((sig.day_hi - 1) / 7) % 4  # one world calendar
 	if sn != season:
 		season = sn
 		msg = "%s has arrived. %s" % [Civics.SEASONS[season]["n"], Civics.SEASONS[season]["txt"]]
@@ -1661,7 +1668,7 @@ func _second() -> void:
 	unemp = 0.0 if pop == 0 else 1.0 - float(employed) / pop
 	shop_gap = clampf(1.0 - shop_jobs / maxf(pop * 0.5, 3.0), 0.0, 1.0)
 	var target := 0.72 - shop_gap * 0.15 - minf(burning * 0.03, 0.2) - (tax_r - 0.10) * 2.0 - unemp * 0.3
-	target += sig.get_f("news") * 0.3 - float(WEATHER_PENALTY.get(sig.weather(), 0.0))
+	target += sig.get_f("news") * 0.3 - float(WEATHER_PENALTY.get(sig.weather_at(world_pos()), 0.0))
 	for m in Catalog.METRICS:
 		var M: Dictionary = Catalog.METRICS[m]
 		if String(M["kind"]) == "need":
@@ -2838,7 +2845,8 @@ func _fires(dt: float) -> void:
 		next_fire = rng.randf_range(60.0, 110.0) / (1.0 + blds / 80.0) / maxf(mod("fire_mult"), 0.2) / clampf(blds / 14.0, 0.2, 1.0)  # tiny towns rarely burn
 		msg = ignite()
 	burning = 0
-	var wet := sig.weather() == "rain" or sig.weather() == "storm"
+	var wx_now := sig.weather_at(world_pos())
+	var wet := wx_now == "rain" or wx_now == "storm"
 	for i in flames.duplicate():
 		if not burnable(i):
 			_clear_burn(i)
@@ -3024,7 +3032,7 @@ func thought(c: Citizen) -> String:
 		return "Nowhere to shop around here."
 	if c.commute > 25:
 		return "My commute takes forever."
-	var w := sig.weather()
+	var w := sig.weather_at(world_pos())
 	if w == "storm" or w == "rain":
 		return "Miserable weather today."
 	if w == "heatwave":
@@ -3551,7 +3559,7 @@ func to_dict() -> Dictionary:
 	var cs: Array = []
 	for c in citizens:
 		cs.append([c.id, c.home, c.work, c.tribe, c.nm, c.bias, c.shift, c.spd, c.commute, c.sick, snappedf(c.wealth, 0.1)])
-	var d := {"v": 1, "av": 2, "cit": cs, "mk": sig.mk.brief(), "vic": sig.vic.brief(), "wx": [sig.weather(), sig._weather_left]}
+	var d := {"v": 1, "av": 2, "cit": cs, "mk": sig.mk.brief(), "vic": sig.vic.brief(), "wx": sig.fronts_brief()}
 	for k in SAVE_KEYS:
 		d[k] = get(k)
 	d["army"] = army.map(func(u: Dictionary) -> Dictionary:
@@ -3571,8 +3579,14 @@ func from_dict(d: Dictionary) -> void:
 		sig.mk.apply_brief(d["mk"])
 	if d.get("vic") is Dictionary:
 		sig.vic.apply(d["vic"])
-	if d.get("wx") is Array and (d["wx"] as Array).size() == 2 and d["wx"][0] is String:
-		sig.set_weather(d["wx"][0], clampf(float(d["wx"][1]), 0.0, 1000.0))  # clients see the host's weather
+	if d.get("wx") is Array:  # clients see the host's weather; saves from before regional weather hold [kind, seconds left]
+		var wx: Array = d["wx"]
+		if wx.size() == 2 and wx[0] is String and (wx[1] is float or wx[1] is int):
+			sig.fronts = []
+			if String(wx[0]) in Signals.KINDS:
+				sig.set_weather(String(wx[0]), clampf(float(wx[1]), 0.0, 1000.0))
+		else:
+			sig.apply_fronts(wx)
 	for k in d:
 		if k == "cit" or k == "v" or not (k in SAVE_KEYS or k == "army"):
 			continue
@@ -3758,7 +3772,7 @@ static func selfcheck() -> String:
 	f.auto_mode = 0
 	f.coins = 1000.0
 	f.tax_r = 0.3
-	s3.set_weather("storm", 999.0)
+	s3.set_weather("storm", 999.0)  # global, over every town
 	s3.bump("news", -1.0)
 	for i in 600:
 		f.tick(0.1)

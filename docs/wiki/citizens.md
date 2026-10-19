@@ -362,7 +362,7 @@ healthy citizens living or working at a building where someone is sick:
 
 ## Weather and seasons
 
-Weather is stored in the shared `Signals` object (`Signals.weather()`, set by events through `set_weather(name, seconds)`); it returns to "clear" when the timer ends, and a new weather event replaces the current one. Its effects on citizens:
+Weather is regional: drifting fronts in the shared `Signals` object (`Signals.weather_at(position)`, started by events through `set_weather(name, seconds, position)`); a town has the weather of the front over its plot, and a front dies away when its timer ends. Its effects on citizens:
 
 - Mood: `WEATHER_PENALTY` (table above). Several events map to a weather: Drought and Heatwave to "heatwave", Cold snap and Blizzard to "snow", Flood to "rain".
 - Walking speed: through `speed_mult` of the active weather events: Rain 0.9, Snow 0.7, Fog 0.85, Storm 0.75, Flood 0.7, Blizzard 0.6, plus Road works 0.8. Speeds multiply.

@@ -46,7 +46,7 @@ func _process(dt: float) -> void:
 		return
 	var c: City = m.city
 	var day := c.clock >= 6.0 and c.clock < 20.0
-	var w: String = m.sig.weather()
+	var w: String = m.sig.weather_at(c.world_pos())
 	var hum := clampf(c.congestion - 0.3, 0.0, 1.0) * 0.04 * (1.0 if m.speed > 0.0 else 0.3)
 	var rain := 0.025 if w == "rain" else (0.05 if w == "storm" else 0.0)
 	var crick := 0.0 if (not day and c.season != 3) else 0.0

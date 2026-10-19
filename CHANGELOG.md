@@ -4,6 +4,7 @@ All notable changes to Murmur are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
+- Weather is regional: rain, storms, snow, fog and heat are soft drifting fronts that cross the map and fade in and out; a town has the weather of the front over it (it used to be one global state drawn as a flat tint). Seasons now follow one world calendar, so neighbouring towns are no longer in different seasons (`tests/weather.gd`).
 - Research buttons: the tech you picked stays lit (it used to turn grey like a disabled button) and only its rival dims.
 - Design for a per-town skill tree and for physical road and rail links without a territory limit (docs/TREE_DESIGN.md); nothing built yet.
 - Ages are hard to enter: about six times more knowledge per age, and each age costs planks, tools and (later) metal that the town must have in stock; it buys and makes them ahead of time and does not sell them off. Per-building upgrades are planned next (docs/PLAN.md, "Hard ages and building upgrades").
