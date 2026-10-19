@@ -193,7 +193,7 @@ The next release waits for these. Each step is one PR, headless test where there
 - [x] AF5 Units and vehicles by age: carts (Ancient, Medieval), tourers (Industrial), cars (Modern), clothes by age, Medieval archers and knights and galleys drawn.
 - [x] AF6 A3 research choices: at each age a town picks one of two techs (effects in `Research`, host command, AI picks by itself, HUD prompt); `tests/research.gd`.
 - [x] AF7 Age transition feedback: banner done (`tests/banner.gd`); a palette shift was dropped, the roads, houses and shops already change look per age.
-- [ ] FOUND 2026-10-19 (ageplay): in every planner run the towns peak at 300 to 450 people around 2000 s, then the treasury drops from tens of thousands to near zero and they shrink to 50 to 200 (mood 0.1 to 0.3) in the Modern era, on the old four-age code as well as the twelve ages. Candidate for the next D5 growth gate: find what drains the treasury (upkeep of Modern services, planner overspending) before the age change finishes.
+- [x] FOUND 2026-10-19 (ageplay) and fixed: upkeep grew with pop squared, so towns above ~400 people went broke; the size multiplier now caps at 6x and the planner's affordability window is 30 minutes. Remaining: with wars on, planner towns still fight constantly (armies of 150, raids) and shrink.
 - [x] AF8a Verify: `tests/ageplay.gd` plays four planner towns from the Ancient age for 4500 s (about 3 minutes, run by hand): all reach later ages, choose research, hold no building from a later age.
 - [x] AF8b Benchmark checked (README), released as v0.8.0.
 
