@@ -4,6 +4,7 @@ All notable changes to Murmur are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
+- The sound volume and mute choice are remembered between runs (`user://settings.cfg`); F1 shows a help panel with the keys.
 - Army upkeep is now a line of the budget ("Army upkeep"). It used to be taken from the treasury without showing in income, so planners and policies spent money the army was already costing and towns with big armies shrank. Fixed.
 - Every unit on the map is one of the town's people: a bus needs eight people to run it and a port boat twelve, so a town of four has none (`tests/units.gd`). Soldiers and real drivers are still separate from the population (see PLAN, E4b-2).
 - Skill tree: the one-pick-per-age research list is replaced by a tree of six branches (Economy, Industry, Knowledge, Society, Military, Infrastructure) with six nodes each. Nodes are bought with research points earned from knowledge, need a connected node and their age, and cost more each tier, so a town cannot take everything and has to choose a direction. Planner towns choose by a temper of their own. Old saves keep their age but start with an empty tree (`tests/research.gd`).
