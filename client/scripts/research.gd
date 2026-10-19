@@ -4,10 +4,18 @@ extends RefCounted
 ## A tech is a bundle of the same modifiers policies and events use, so it costs nothing in the hot paths.
 
 const TECHS := [
-	[{"n": "Bronze tools", "d": "goods +6%", "mods": {"goods_mult": 1.06}}, {"n": "Writing", "d": "knowledge +15%", "mods": {"know_mult": 1.15}}],
-	[{"n": "Masonry", "d": "buildings cost 10% less", "mods": {"build_cost_mult": 0.9}}, {"n": "Guilds", "d": "taxes +6%", "mods": {"tax_mult": 1.06}}],
-	[{"n": "Steam power", "d": "production +8%", "mods": {"prod_mult": 1.08}}, {"n": "Public health", "d": "mood +0.03", "mods": {"mood": 0.03}}],
-	[{"n": "Computing", "d": "sales +10%", "mods": {"sales_mult": 1.1}}, {"n": "Efficiency", "d": "upkeep 8% less", "mods": {"upkeep_mult": 0.92}}],
+	[{"n": "Fire", "d": "mood +0.02", "mods": {"mood": 0.02}}, {"n": "Flint tools", "d": "goods +3%", "mods": {"goods_mult": 1.03}}],
+	[{"n": "Bronze tools", "d": "production +3%", "mods": {"prod_mult": 1.03}}, {"n": "Writing", "d": "knowledge +8%", "mods": {"know_mult": 1.08}}],
+	[{"n": "Coinage", "d": "taxes +3%", "mods": {"tax_mult": 1.03}}, {"n": "Aqueducts", "d": "mood +0.02", "mods": {"mood": 0.02}}],
+	[{"n": "Masonry", "d": "buildings cost 5% less", "mods": {"build_cost_mult": 0.95}}, {"n": "Monasteries", "d": "knowledge +8%", "mods": {"know_mult": 1.08}}],
+	[{"n": "Guilds", "d": "taxes +3%", "mods": {"tax_mult": 1.03}}, {"n": "Heavy plough", "d": "goods +4%", "mods": {"goods_mult": 1.04}}],
+	[{"n": "Printing press", "d": "knowledge +10%", "mods": {"know_mult": 1.1}}, {"n": "Banking", "d": "sales +4%", "mods": {"sales_mult": 1.04}}],
+	[{"n": "Steam power", "d": "production +4%", "mods": {"prod_mult": 1.04}}, {"n": "Public health", "d": "mood +0.02", "mods": {"mood": 0.02}}],
+	[{"n": "Electric grid", "d": "upkeep 4% less", "mods": {"upkeep_mult": 0.96}}, {"n": "Assembly lines", "d": "production +4%", "mods": {"prod_mult": 1.04}}],
+	[{"n": "Nuclear science", "d": "knowledge +8%", "mods": {"know_mult": 1.08}}, {"n": "Mass media", "d": "sales +4%", "mods": {"sales_mult": 1.04}}],
+	[{"n": "Computing", "d": "sales +5%", "mods": {"sales_mult": 1.05}}, {"n": "Efficiency", "d": "upkeep 4% less", "mods": {"upkeep_mult": 0.96}}],
+	[{"n": "Networks", "d": "knowledge +8%", "mods": {"know_mult": 1.08}}, {"n": "Automation", "d": "production +4%", "mods": {"prod_mult": 1.04}}],
+	[{"n": "Fusion", "d": "goods +5%", "mods": {"goods_mult": 1.05}}, {"n": "Abundance", "d": "mood +0.03", "mods": {"mood": 0.03}}],
 ]
 
 

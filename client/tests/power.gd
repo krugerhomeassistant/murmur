@@ -31,7 +31,7 @@ func _init() -> void:
 		var c := City.new(Signals.new())
 		c.seed_start()
 		c.peak = 100000
-		c.age = 3
+		c.age = Ages.LAST
 		c.coins = 100000.0
 		var m: String = Catalog.DEFS[t]["out"].keys()[0]
 		var p := _free(c, bool(Catalog.DEFS[t].get("water", false)))

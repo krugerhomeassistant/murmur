@@ -4,6 +4,7 @@ All notable changes to Murmur are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
+- Twelve ages instead of four: Stone, Bronze, Classical, Dark, Medieval, Renaissance, Industrial, Electric, Atomic, Information, Digital, Future, in four eras of three that keep the look of the old Ancient, Medieval, Industrial and Modern ages. Buildings and units unlock gradually across the ages, each age has its own research pair (twelve picks), and the setup screen lists all twelve. Old saves convert (each old age becomes the first age of its era); `tests/ages.gd` checks it.
 - Fixed: a town founded from the map now starts in the age of the town that founded it (it used to start in the Modern age even in an Ancient game).
 - Fixed: the `set_age` command is sandbox-only (any player in multiplayer could skip ages).
 - Sandbox: founding a town from the map is free (sandbox editor, G2 first part).
