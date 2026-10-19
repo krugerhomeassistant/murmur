@@ -828,6 +828,8 @@ func _scan() -> void:
 		fish_jobs = 0
 		mine_jobs = 0
 		mine_yield = 0.0
+		farm_src = []
+		mine_src = []
 		svc_jobs = 0
 		up_zone = 0.0
 		tier_sum = 0.0
@@ -887,6 +889,7 @@ func _scan() -> void:
 								off_jobs += jp * L
 							"farm":
 								farm_jobs += jp * L
+								farm_src.append([i, float(jp * L)])
 							"orchard":
 								orch_jobs += jp * L
 							"ranch":
@@ -898,6 +901,7 @@ func _scan() -> void:
 							"mine":
 								mine_jobs += jp * L
 								mine_yield += L * maxi(int(ore[i]), 1)
+								mine_src.append([i, float(L * maxi(int(ore[i]), 1))])
 					if d.has("poll"):
 						polluters.append([c.x, c.y, float(d["poll"][1]) * L, int(d["poll"][0])])
 					if t == T.COM:
@@ -3290,25 +3294,39 @@ func _sickness() -> void:
 # ---------- economy: crops -> food, goods, storage, trade ----------
 
 ## Wood per second from the lumber camps: the forest within 5 tiles of each (cached until the town changes).
+var farm_src: Array = []  # [cell, weight] of farm and mine workplaces, for hauling distance
+var mine_src: Array = []
+var crop_haul := 1.0
+var ore_haul := 1.0
 var wood_haul := 1.0  # share of the felled wood the camps' carts bring to the mills (distance limited)
+
+
+## Share of a source's output its carts bring to the nearest of `dests`: full within 12 tiles, down to 30% far away; no destination means it goes to the depot (1.0).
+func _haul_share(src: Array, dests: Array) -> float:
+	var tot := 0.0
+	var got := 0.0
+	for e in src:
+		var i: int = e[0]
+		var d := 1e9
+		for j in dests:
+			d = minf(d, absf(float(i % W - j % W)) + absf(float(i / W - j / W)))
+		tot += float(e[1])
+		got += float(e[1]) * (1.0 if dests.is_empty() else clampf(12.0 / maxf(d, 1.0), 0.3, 1.0))
+	return got / tot if tot > 0.0 else 1.0
 
 
 func _wood_rate(emp: float) -> float:
 	if wood_sig != scan_sig:
 		wood_sig = scan_sig
 		wood_yield = 0.0
-		wood_haul = 1.0
-		var dests: Array = (bt.get(T.SAWMILL, []) as Array) + (bt.get(T.TOOLWORKS, []) as Array)
-		var cap_haul := 0.0
+		var src: Array = []
 		for i in bt.get(T.LUMBER, []):
 			var y := minf(float(_forest_near(i)), 12.0)
 			wood_yield += y
-			var d := 1e9  # one cart per camp: it shuttles to the nearest mill, so a far mill carries less
-			for j in dests:
-				d = minf(d, absf(float(i % W - j % W)) + absf(float(i / W - j / W)))
-			cap_haul += y * (1.0 if dests.is_empty() else clampf(12.0 / maxf(d, 1.0), 0.3, 1.0))
-		if wood_yield > 0.0:
-			wood_haul = cap_haul / wood_yield
+			src.append([i, y])
+		wood_haul = _haul_share(src, (bt.get(T.SAWMILL, []) as Array) + (bt.get(T.TOOLWORKS, []) as Array))
+		crop_haul = _haul_share(farm_src, bt.get(T.MILL, []))
+		ore_haul = _haul_share(mine_src, (bt.get(T.FOUNDRY, []) as Array) + (bt.get(T.REFINERY, []) as Array))
 	return wood_yield * 0.02 * emp * wood_haul
 
 
@@ -3349,14 +3367,14 @@ func _trade(_market: float) -> Array:
 	var want := {}  # units this town wants from the market this second
 	var bought := {}  # units it actually bought (production inputs are limited by what the market has on offer)
 	var spent := 0.0
-	var crops := (farm_jobs + 1.5 * orch_jobs) * emp * 0.12 * float(Civics.SEASONS[season]["harvest"]) + green_jobs * emp * 0.12 * 0.85  # greenhouses ignore the season
-	var mined := mine_yield * emp * 0.05
+	var wood_in := _wood_rate(emp)  # also refreshes the haul shares
+	var crops := (farm_jobs * crop_haul + 1.5 * orch_jobs) * emp * 0.12 * float(Civics.SEASONS[season]["harvest"]) + green_jobs * emp * 0.12 * 0.85  # greenhouses ignore the season
+	var mined := mine_yield * ore_haul * emp * 0.05
 	var foundries := (bt.get(T.FOUNDRY, []) as Array).size()
 	# Inputs: a mill with idle capacity buys crops, a foundry ore, factories metal, when the treasury can afford it and the market has any.
 	var rich := coins > 120.0
 	var works := (bt.get(T.TOOLWORKS, []) as Array).size()
 	var tool_need := (farm_jobs + orch_jobs + mine_jobs + fac_jobs) * emp * 0.004
-	var wood_in := _wood_rate(emp)
 	var saws := (bt.get(T.SAWMILL, []) as Array).size()
 	var sites := 0
 	for i in zones:
