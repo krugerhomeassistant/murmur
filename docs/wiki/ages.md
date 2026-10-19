@@ -33,3 +33,8 @@ Setup option "Starting age" (default Modern: everything open). Command `set_age 
 
 ## Open questions
 - Ancient has few buildings of its own; the default start stays Modern until A2 adds early content.
+
+
+## Refitting buildings
+
+Each cell remembers the era tier it was built in (`City.etier`, saved); a new age does not repaint existing buildings. A building behind the town's era holds and employs 6% less per era behind (`City.OBSOLETE`, up to 3 eras). Refit one with `U` on the inspected building or the `refit` command: it costs `City.refit_cost` (coins `cost * 0.8 * level * (era + 1)`, planks `4 * level`, tools `2 * level`, metal `2 * level` from the second era), needs a free crew (`City.crews`: 1 plus one per 60 people) and takes `REFIT_SECS` (90 s at full efficiency). While it is refitted the building is a construction site: it houses, employs and produces nothing. It steps up one era per refit. Planner towns refit their most outdated building when coins exceed its cost by 200 and the stock allows (`City._auto_refit`, every 10 s).

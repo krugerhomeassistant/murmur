@@ -20,6 +20,9 @@ static func run(towns: Array[City], t: City, name: String, a: Array) -> Variant:
 		"bulldoze":
 			if _ints(a, 2) and t.inside(a[0], a[1]):
 				return t.bulldoze(a[0], a[1])
+		"refit":
+			if _ints(a, 2) and t.inside(a[0], a[1]) and t.owns(a[0], a[1]):
+				return t.refit(a[0], a[1])
 		"water":
 			if _ints(a, 3) and t.inside(a[0], a[1]) and t.owns(a[0], a[1]) and (a[2] == 0 or a[2] == 1):
 				return t.set_water(a[0], a[1], a[2])

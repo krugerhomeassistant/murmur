@@ -20,6 +20,8 @@ const DAY_SECS := 60.0  # sim seconds per day
 const BRIDGE_X := 4.0  # a road tile over water costs this much more
 ## Index offsets of the 13-cell diamond (radius 2) around a tile.
 const DIAMOND: Array[int] = [-2 * W, -W - 1, -W, -W + 1, -2, -1, 0, 1, 2, W - 1, W, W + 1, 2 * W]
+const OBSOLETE := 0.06  # capacity lost per era a building is behind the town
+const REFIT_SECS := 90.0  # a refit takes this long with a free crew at full efficiency
 const WALK := 2.4  # cells per sim second
 const GROW_COST := 25.0
 const BUILD_SECS := 8.0
@@ -61,6 +63,11 @@ var sig: Signals
 var rng := RandomNumberGenerator.new()
 var grid := PackedInt32Array()
 var lvl := PackedByteArray()  # zone building level, 0 = empty zone
+var fit := PackedFloat32Array()  # era refit progress 0..1 (0 = not being refitted)
+var age_refit_t := 0
+var refit_ver := 0  # bumped whenever a refit starts or finishes, so the scan sees it
+var fit_n := 0  # buildings being refitted right now
+var etier := PackedByteArray()  # era tier + 1 each building was built in (0 = nothing there yet): old buildings keep their era until upgraded
 var build := PackedFloat32Array()  # construction progress 0..1
 var connected := PackedByteArray()
 var burn := PackedFloat32Array()  # 0 = no fire, else fire age in s
@@ -324,6 +331,8 @@ func _init(s: Signals) -> void:
 	_rebuild_cells()
 	grid.resize(W * H)
 	lvl.resize(W * H)
+	etier.resize(W * H)
+	fit.resize(W * H)
 	build.resize(W * H)
 	connected.resize(W * H)
 	burn.resize(W * H)
@@ -813,7 +822,7 @@ func _add_prov(m: String, c: Vector2i, s: float, r: int) -> void:
 ## Recount everything that depends on the map.
 func _scan() -> void:
 	var scan_t0 := Time.get_ticks_usec()
-	var sg := hash([grid, lvl, lamp, terr])  # the cell pass only reads these; skip it while the layout is unchanged
+	var sg := hash([grid, lvl, lamp, terr, refit_ver, Ages.tier(age)])  # the cell pass only reads these; skip it while the layout is unchanged
 	if sg != scan_sig:
 		roads = 0
 		avenues = 0
@@ -849,6 +858,11 @@ func _scan() -> void:
 		var best := 1e9
 		for i in cells:
 			var t := grid[i]
+			if t == T.EMPTY or (lvl[i] == 0 and is_zone(t)):
+				etier[i] = 0
+				fit[i] = 0.0
+			elif etier[i] == 0:
+				etier[i] = Ages.tier(age) + 1
 			if t == T.EMPTY:
 				connected[i] = 0
 				continue
@@ -869,7 +883,8 @@ func _scan() -> void:
 					plaza = i
 			elif kind == "zone":
 				zones.append(i)
-				var L: int = lvl[i]
+				var L: int = 0 if fit[i] > 0.0 else lvl[i]  # a building being refitted is a construction site: nothing works in it
+				var obs := 1.0 - OBSOLETE * float(clampi(Ages.tier(age) - tier_at(i), 0, 3))  # buildings left behind by the age hold and employ less
 				if L > 0:
 					blds += L
 					up_zone += float(d["up"]) * L
@@ -877,30 +892,31 @@ func _scan() -> void:
 					var jp: int = d["jobs"]
 					if hp > 0:
 						homes.append(i)
-						housing += hp * L
+						housing += roundi(float(hp * L) * obs)
 						tier_sum += hp * L * float(d.get("tier", 1.0))
 					if jp > 0:
 						works.append(i)
+						var jl := roundi(float(jp * L) * obs)
 						match String(d["sector"]):
 							"com":
-								shop_jobs += jp * L
+								shop_jobs += jl
 							"ind":
-								fac_jobs += jp * L
+								fac_jobs += jl
 							"office":
-								off_jobs += jp * L
+								off_jobs += jl
 							"farm":
-								farm_jobs += jp * L
-								farm_src.append([i, float(jp * L)])
+								farm_jobs += jl
+								farm_src.append([i, float(jl)])
 							"orchard":
-								orch_jobs += jp * L
+								orch_jobs += jl
 							"ranch":
-								ranch_jobs += jp * L
+								ranch_jobs += jl
 							"green":
-								green_jobs += jp * L
+								green_jobs += jl
 							"fishfarm":
-								fish_jobs += jp * L
+								fish_jobs += jl
 							"mine":
-								mine_jobs += jp * L
+								mine_jobs += jl
 								mine_yield += L * maxi(int(ore[i]), 1)
 								mine_src.append([i, float(L * maxi(int(ore[i]), 1))])
 					if d.has("poll"):
@@ -909,6 +925,8 @@ func _scan() -> void:
 						spots.append(i)
 			else:
 				up_svc += float(d["up"])
+				if fit[i] > 0.0:
+					continue  # being refitted
 				if not bt.has(t):
 					bt[t] = []
 				bt[t].append(i)
@@ -1512,6 +1530,95 @@ func _hit(i: int) -> void:
 
 # ---------- per second ----------
 
+## What refitting one building to the town's next era costs: coins, and materials in stock.
+func refit_cost(i: int) -> Dictionary:
+	var d: Dictionary = Catalog.DEFS[grid[i]]
+	var L := float(maxi(lvl[i], 1))
+	var tr := tier_at(i)
+	return {"coins": float(d["cost"]) * 0.8 * L * float(tr + 1), "planks": 4.0 * L, "tools": 2.0 * L, "metal": 2.0 * L if tr >= 1 else 0.0}
+
+
+## Building crews: how many buildings can be refitted at once (one per 60 people, at least one).
+func crews() -> int:
+	return 1 + pop / 60
+
+
+## "" when the building at i can be refitted now, otherwise why not.
+func refit_block(i: int) -> String:
+	if i < 0 or i >= W * H or grid[i] == T.EMPTY or is_road(grid[i]) or not terr.has_point(cell(i)):
+		return "Nothing to refit here."
+	if is_zone(grid[i]) and lvl[i] == 0:
+		return "Only finished buildings can be refitted."
+	if fit[i] > 0.0:
+		return "Already being refitted."
+	if tier_at(i) >= Ages.tier(age):
+		return "Already up to date with the age."
+	if fit_n >= crews():
+		return "All building crews are busy (%d)." % crews()
+	var c := refit_cost(i)
+	var rsv := Ages.reserve(self)
+	for k in ["planks", "tools", "metal"]:
+		if float(stock.get(k, 0.0)) - float(rsv.get(k, 0.0)) < float(c[k]):
+			return "Needs %d %s in stock." % [ceili(float(c[k])), k]
+	if coins < float(c["coins"]):
+		return "Needs $%d." % ceili(float(c["coins"]))
+	return ""
+
+
+func refit(x: int, y: int) -> bool:
+	var i := y * W + x
+	if refit_block(i) != "":
+		return false
+	var c := refit_cost(i)
+	coins -= float(c["coins"])
+	for k in ["planks", "tools", "metal"]:
+		stock[k] = float(stock.get(k, 0.0)) - float(c[k])
+	fit[i] = 0.001
+	fit_n += 1
+	refit_ver += 1
+	scan_dirty = true
+	return true
+
+
+func _refits() -> void:
+	var step := maxf(mod("build_mult"), 1.0) / REFIT_SECS * efficiency()
+	var n := 0
+	for i in cells:
+		if fit[i] <= 0.0:
+			continue
+		fit[i] += step
+		if fit[i] >= 1.0:
+			fit[i] = 0.0
+			etier[i] = mini(tier_at(i) + 2, Ages.tier(age) + 1)
+			refit_ver += 1
+			scan_dirty = true
+			msg = "A %s was refitted for the age." % String(Catalog.DEFS[grid[i]]["n"]).to_lower().replace(" zone", "")
+		else:
+			n += 1
+	fit_n = n
+
+
+## The planner modernises the most outdated building it can afford, one at a time and only with spare money.
+func _auto_refit() -> void:
+	if fit_n >= crews() or coins < 300.0:
+		return
+	var best := -1
+	var gap := 0
+	for i in cells:
+		var g := Ages.tier(age) - tier_at(i)
+		if g > gap and fit[i] <= 0.0 and grid[i] != T.EMPTY and not is_road(grid[i]) and not (is_zone(grid[i]) and lvl[i] == 0) and refit_block(i) == "":
+			if coins > float(refit_cost(i)["coins"]) + 200.0:
+				best = i
+				gap = g
+	if best >= 0:
+		refit(best % W, best / W)
+
+
+## The era tier (0 to 3) a building stands in: the one it was built in, or the town's own when unknown.
+func tier_at(i: int) -> int:
+	return int(etier[i]) - 1 if etier[i] > 0 else Ages.tier(age)
+
+
 ## The middle of this town's plot in world pixels (32 px tiles): where its weather is read.
 func world_pos() -> Vector2:
 	return (Vector2(gpos) + Vector2(0.5, 0.5)) * Vector2(W, H) * 32.0
@@ -1550,6 +1657,11 @@ func _second() -> void:
 			Research.auto(self)
 		else:
 			msg += " Choose its research in the Mayor's office."
+	if fit_n > 0:
+		_refits()
+	if auto_mode > 0 and age_refit_t % 10 == 0:
+		_auto_refit()
+	age_refit_t += 1
 	_scan()
 	pt = _pf("scan", pt)
 	lod_n += 1
@@ -3550,7 +3662,7 @@ func work_status(t: int) -> String:
 # ---------- save / load ----------
 
 ## What a save or snapshot carries (also the only keys from_dict accepts, since snapshots come from a possibly hostile host).
-const SAVE_KEYS := ["age", "tech", "know", "age_t", "town_name", "grid", "lvl", "build", "wire", "pipe", "sewer", "lamp", "water", "ore", "ground", "coins", "mood", "tax_r", "tax_c", "tax_i", "clock", "day",
+const SAVE_KEYS := ["age", "tech", "etier", "fit", "know", "age_t", "town_name", "grid", "lvl", "build", "wire", "pipe", "sewer", "lamp", "water", "ore", "ground", "coins", "mood", "tax_r", "tax_c", "tax_i", "clock", "day",
 	"policies", "auto_mode", "auto_policy", "peak", "announced", "next_id", "recent", "active", "approval", "rep", "favor",
 	"petitions", "promises", "pet_recent", "kept", "broken", "next_election", "elections_won", "rally_used", "last_vote",
 	"season", "wage_ix", "price_loc", "stock", "exported", "loans", "done_ms", "disasters_survived", "burned", "hist_coins", "hist_pop", "ruins", "offline", "lamp", "terr", "expansions", "auto_expand", "human", "owner", "temper", "rel", "treaty", "liege", "ev_scale", "gpos", "war_n", "war_sc", "war_goal", "tension", "occ", "train_on", "train_t", "train_w", "stance", "group", "belief", "power_cd", "focus", "auto_focus", "ask_build", "vetoed"]
@@ -3624,6 +3736,10 @@ func from_dict(d: Dictionary) -> void:
 		citizens.append(c)
 	pop = citizens.size()
 	_rebuild_cells()
+	fit_n = 0
+	for i in cells:
+		if fit[i] > 0.0:
+			fit_n += 1
 	roads_dirty = true
 	_rebuild_astar()
 	_collect_mods()

@@ -666,6 +666,14 @@ func _unhandled_input(e: InputEvent) -> void:
 				toggle_map()
 			KEY_B:
 				tool = BULLDOZE
+			KEY_U:  # refit the inspected building for the town's age
+				if sel_cell >= 0:
+					var why := city.refit_block(sel_cell)
+					if why == "":
+						cmd("refit", [sel_cell % City.W, sel_cell / City.W])
+						headline = "Refit started."
+					else:
+						headline = why
 			KEY_1:
 				tool = T.ROAD
 			KEY_2:
@@ -1551,12 +1559,16 @@ func draw_chunk(c_item: CanvasItem, t_: City, x0: int, y0: int, x1: int, y1: int
 					if wet:
 						Art.bridge(ci, r, x > 0 and city.is_road(city.grid[i - 1]) or x + 1 < City.W and city.is_road(city.grid[i + 1]))
 				"zone":
+					cell_tier = city.tier_at(i)
 					if city.lvl[i] == 0:
 						_zone(r, t, i)
 					else:
 						_building(r, d, city.lvl[i], city.connected[i] == 1, night, t)
+						_refit_mark(r, i)
 				_:
+					cell_tier = city.tier_at(i)
 					_service(r, d, city.connected[i] == 1, night, t)
+					_refit_mark(r, i)
 	if lod == 0:
 		_nets(x0, y0, x1, y1)
 	ci = self
@@ -1619,8 +1631,18 @@ func _old_road(r: Rect2, x: int, y: int, rc: Color, age: int) -> void:
 				ci.draw_rect(Rect2(r.position + Vector2(2.0 + i * 15.0, 2.0 + j * 15.0), Vector2(13, 13)), rc.lightened(0.05 + tone))
 
 
+var cell_tier := 0  # era tier of the building being drawn
+
+
+## A building being refitted is a construction site: washed out with a progress bar.
+func _refit_mark(r: Rect2, i: int) -> void:
+	if city.fit[i] > 0.0:
+		ci.draw_rect(r, Color(1, 1, 1, 0.35))
+		ci.draw_rect(Rect2(r.position + Vector2(3, TILE - 8), Vector2((TILE - 6) * city.fit[i], 4)), Color("ffd166"))
+
+
 func _building(r: Rect2, d: Dictionary, lv: int, ok: bool, night: bool, id := -1) -> void:
-	if id >= 0 and Sprites.draw(ci, r, id, lv, Ages.tier(city.age), ok):
+	if id >= 0 and Sprites.draw(ci, r, id, lv, cell_tier, ok):
 		return
 	if Art.building(ci, r, String(d.get("shape", "")), d["col"], lv, ok, night, int(r.position.x / 32.0) * 7 + int(r.position.y / 32.0) * 13, Ages.tier(city.age)):
 		if not ok:
@@ -1703,7 +1725,7 @@ func _zone(r: Rect2, t: int, i: int) -> void:
 
 
 func _service(r: Rect2, d: Dictionary, ok: bool, night: bool, id := -1) -> void:
-	if id >= 0 and (Sprites.draw(ci, r, id, 1, Ages.tier(city.age), ok) or Art.service(ci, r, id, ok, night)):
+	if id >= 0 and (Sprites.draw(ci, r, id, 1, cell_tier, ok) or Art.service(ci, r, id, ok, night)):
 		if not ok:
 			ci.draw_line(r.position + Vector2(4, 4), r.end - Vector2(4, 4), Color("b03a2e"), 2.0)
 		return
