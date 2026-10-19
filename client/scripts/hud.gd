@@ -9,7 +9,9 @@ var perf_l: Label
 var perf_g: Control  # frame-time graph under the F3 text
 var frame_ms := PackedFloat32Array()  # last PERF_N frame times
 const PERF_N := 240
+const HELP := "KEYS  (F1 closes this)\n\nMouse: left paint or select, right or middle drag to pan, wheel to zoom\nSpace pause   Tab next town (spectating)   F follow   M map   O globe overlay\n1 road  2 houses  3 shops  4 industry  5 park  6 fire station   B bulldoze   Q or Esc inspect\nU refit the selected building for the town's age   T auto-train troops\nC send troops to the abandoned town under the mouse   Enter chat   F3 performance   F9 benchmark   R new game after game over"
 var pintip: PanelContainer
+var help_panel: PanelContainer
 var pintip_lbl: RichTextLabel
 var lbl_coins: Label
 var lbl_pop: Label
@@ -159,6 +161,13 @@ func _ready() -> void:
     _load_ui()
     get_viewport().size_changed.connect(_clamp_all)
     _clamp_all.call_deferred()
+    help_panel = PanelContainer.new()
+    help_panel.position = Vector2(300, 80)
+    help_panel.visible = false
+    add_child(help_panel)
+    var hl := Label.new()
+    hl.text = HELP
+    help_panel.add_child(hl)
     over_panel = PanelContainer.new()
     over_panel.position = Vector2(400, 250)
     over_panel.custom_minimum_size = Vector2(480, 150)
@@ -392,9 +401,11 @@ func _top() -> void:
         elif id == 6:
             m.sfx.muted = not m.sfx.muted
             m.headline = "Sound off." if m.sfx.muted else "Sound on."
+            m.sfx.save_prefs()
         elif id == 7 or id == 8:
             m.sfx.vol = clampf(m.sfx.vol + (0.1 if id == 7 else -0.1), 0.0, 1.0)
             m.headline = "Volume %d%%" % int(m.sfx.vol * 100.0)
+            m.sfx.save_prefs()
         else:
             m.cmd("auto_mode", [id])
             auto_opt.select(id))

@@ -25,7 +25,23 @@ var t := 0.0
 var tones: Array = []  # [freq, start, dur, amp, phase]
 
 
+const PREFS := "user://settings.cfg"
+
+
+## The volume and mute choice survive a restart (it still starts quiet the first time).
+func save_prefs() -> void:
+	var f := ConfigFile.new()
+	f.load(PREFS)
+	f.set_value("sound", "vol", vol)
+	f.set_value("sound", "muted", muted)
+	f.save(PREFS)
+
+
 func _ready() -> void:
+	var f := ConfigFile.new()
+	if f.load(PREFS) == OK:
+		vol = clampf(float(f.get_value("sound", "vol", vol)), 0.0, 1.0)
+		muted = bool(f.get_value("sound", "muted", muted))
 	var p := AudioStreamPlayer.new()
 	var g := AudioStreamGenerator.new()
 	g.mix_rate = MIX
