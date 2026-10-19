@@ -4,6 +4,7 @@ All notable changes to Murmur are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
+- Full-screen skill tree (key K): six arms from a hub with six nodes each, taken nodes lit, available ones outlined, hover for cost and effect, click to take (`treeview.gd`).
 - The sound volume and mute choice are remembered between runs (`user://settings.cfg`); F1 shows a help panel with the keys.
 - Army upkeep is now a line of the budget ("Army upkeep"). It used to be taken from the treasury without showing in income, so planners and policies spent money the army was already costing and towns with big armies shrank. Fixed.
 - Every unit on the map is one of the town's people: a bus needs eight people to run it and a port boat twelve, so a town of four has none (`tests/units.gd`). Soldiers also come from the people: training and the war-time levy stop at one soldier for every three people. Real freight drivers are still open (see PLAN, E4b-2).
