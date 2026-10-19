@@ -303,6 +303,7 @@ var shop_gap := 0.0
 
 # money, per sim second (already scaled)
 var income := 0.0
+var chain_util := PackedFloat32Array()  # per building id: share of full capacity the chain buildings of that kind actually ran at (1 = fully staffed and supplied); workers are paid by it
 var budget_lines: Array = []  # [label, value]
 var inc_tax := 0.0  # kept for tests: all revenue lines summed
 var hist_coins: Array[float] = []
@@ -1973,6 +1974,7 @@ static func _build_tiers() -> void:
 func _households() -> void:
 	if _wage_tier.is_empty():
 		_build_tiers()
+	_ensure_util()
 	var mk: Market = sig.mk
 	var pf: float = price_loc["food"]  # what households pay is this town's price, not the world's
 	var pg: float = price_loc["goods"]
@@ -1992,7 +1994,7 @@ func _households() -> void:
 	for c in citizens:
 		var wage := 0.0
 		if c.work >= 0:
-			wage = net * float(_wage_tier[grid[c.work]]) if grid[c.work] != T.EMPTY else net
+			wage = net * float(_wage_tier[grid[c.work]]) * float(chain_util[grid[c.work]]) if grid[c.work] != T.EMPTY else net  # paid only for the shifts the workplace actually ran
 		var rent := RENT * float(_rent_tier[grid[c.home]]) if grid[c.home] != T.EMPTY else 0.0
 		var bills := 0.05 * pf + 0.03 * pg + rent
 		rent_pool += rent
@@ -3438,6 +3440,12 @@ func _trade(_market: float) -> Array:
 			offered[k] = sell
 		stock[k] = minf(float(stock[k]), cap)
 	mk.report(offered, want)
+	_util(T.TOOLWORKS, made, works * 0.3 * emp)
+	_util(T.SAWMILL, sawn, saws * 0.5 * emp)
+	_util(T.FOUNDRY, smelt, foundries * 2.0)
+	_util(T.MILL, milled, mills * 3.0)
+	_util(T.REFINERY, refd, refs * 1.0 * emp)
+	_util(T.ARMOURY, marms, armouries * 0.25 * emp * minf(foc("military"), 1.0))
 	need_rate = {"crops": mills * 3.0, "food": fneed, "goods": gneed, "ore": foundries * 2.0, "metal": m_fac + m_arm + m_tool, "arms": arms_use, "wood": works * 0.3 + saws * 0.5, "tools": tool_need, "planks": plank_need, "fuel": burn}
 	prod_rate = {"crops": crops, "food": milled + fish + ranch_jobs * emp * 0.1 + fish_jobs * emp * 0.12 * river_health, "goods": goods, "ore": mined, "metal": smelt * 0.5, "arms": marms * 2.0, "wood": wood_in, "tools": made, "planks": sawn * 0.5, "fuel": refd * 0.8}
 	for k in Market.GOODS:  # local scarcity: days of cover (stock plus a minute of production) against use, between export and import parity
@@ -3454,6 +3462,46 @@ func _trade(_market: float) -> Array:
 		"export": sold, "price": 1.0 + 0.3 * sig.get_f("market"), "imp": imp, "ex": ex, "sold": offered, "bought": bought, "want": want, "traded": traded.duplicate()}
 	traded.clear()
 	return [ex, imp]
+
+
+## Smooth the share of full capacity a kind of chain building ran at this second; no buildings of the kind leaves it at 1.
+func _ensure_util() -> void:
+	if _wage_tier.is_empty():
+		_build_tiers()
+	if chain_util.size() != _wage_tier.size():
+		chain_util.resize(_wage_tier.size())
+		chain_util.fill(1.0)
+
+
+func _util(id: int, made: float, capacity: float) -> void:
+	_ensure_util()
+	if capacity <= 0.0:
+		chain_util[id] = 1.0
+		return
+	chain_util[id] = lerpf(chain_util[id], clampf(made / capacity, 0.0, 1.0), 0.1)
+
+
+## Why a chain building is not running at full tilt ("" when it is, or when it is not part of a chain).
+func work_status(t: int) -> String:
+	_ensure_util()
+	if not t in [T.TOOLWORKS, T.SAWMILL, T.FOUNDRY, T.MILL, T.REFINERY, T.ARMOURY]:
+		return ""
+	var u: float = chain_util[t]
+	if u >= 0.9:
+		return "Working"
+	var short := ""
+	match t:
+		T.SAWMILL:
+			short = "no wood" if float(stock.get("wood", 0.0)) < 0.5 else ""
+		T.TOOLWORKS:
+			short = "no wood" if float(stock.get("wood", 0.0)) < 0.5 else ("no metal" if float(stock.get("metal", 0.0)) < 0.2 else "")
+		T.FOUNDRY, T.REFINERY:
+			short = "no ore" if float(stock.get("ore", 0.0)) < 0.5 else ""
+		T.MILL:
+			short = "no crops" if float(stock.get("crops", 0.0)) < 0.5 else ""
+		T.ARMOURY:
+			short = "no metal" if float(stock.get("metal", 0.0)) < 0.2 else ""
+	return "Idle: %s, workers unpaid" % short if (short != "" and u < 0.3) else ("Running at %d%% (%s)" % [int(u * 100.0), short if short != "" else "short of workers"])
 
 
 # ---------- save / load ----------
