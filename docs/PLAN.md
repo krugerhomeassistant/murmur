@@ -230,8 +230,8 @@ Rules: keep `Military` deterministic enough for `tests/war.gd`; the host simulat
 
 ## Hard ages and building upgrades (owner, 2026-10-19: "we advance through ages way too quickly, it needs to be HARD")
 - [x] H1 Slower, costlier age entry: knowledge thresholds about six times higher; each age costs stocked materials (planks always, tools from the second age, metal from the fifth) that the town buys and makes ahead of time once it is 70% of the way on knowledge, and keeps out of its exports (`Ages.cost`, `Ages.missing`).
-- [ ] H2 Per-building era: every building cell has its own era tier (saved); a town entering a new era does not repaint its buildings, new ones are built at the town's tier, old ones stay as they were until upgraded.
-- [ ] H3 Upgrading one building: costs materials (planks, tools, metal by level), coins and builder time. The building is a construction site meanwhile (it produces nothing, its workers are idle and unpaid). Benefit: more capacity per tier; buildings two eras behind lose mood and income (obsolete).
+- [x] H2 Per-building era: every building cell has its own era tier (saved); a town entering a new era does not repaint its buildings, new ones are built at the town's tier, old ones stay as they were until upgraded.
+- [x] H3 Upgrading one building (done: refit with U, crews, planner auto-refit; open: planners do not yet buy the planks and tools for refits): costs materials (planks, tools, metal by level), coins and builder time. The building is a construction site meanwhile (it produces nothing, its workers are idle and unpaid). Benefit: more capacity per tier; buildings two eras behind lose mood and income (obsolete).
 - [ ] H4 Planner and human use: the planner upgrades the best benefit per cost building first, limited by builders and stock; the player upgrades from the inspector (cost shown) or an area tool. Tests: `tests/upgrade.gd`; `ageplay` keeps every planner town alive; benchmark equal or better.
 
 ## Skill tree and physical links (owner, 2026-10-19; design in docs/TREE_DESIGN.md)

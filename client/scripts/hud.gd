@@ -847,6 +847,13 @@ func _insp_text() -> String:
             s += "\nWorkers %d / %d" % [c.work_load[i], int(d.get("jobs", 0)) * maxi(c.lvl[i], 1)]
         if c.work_status(t) != "":
             s += "\n" + c.work_status(t)
+        if t != T.EMPTY and not c.is_road(t) and not (c.is_zone(t) and c.lvl[i] == 0):
+            s += "\nBuilt in the %s era" % Ages.ERA[c.tier_at(i)]
+            if c.fit[i] > 0.0:
+                s += "\n[color=#ffd166]Being refitted: %d%%[/color]" % int(c.fit[i] * 100.0)
+            elif c.tier_at(i) < Ages.tier(c.age):
+                var rc := c.refit_cost(i)
+                s += "  [color=#e07a5f](behind the age: holds and employs less)[/color]\nRefit (U): $%d, %d planks, %d tools%s" % [int(rc["coins"]), int(rc["planks"]), int(rc["tools"]), (", %d metal" % int(rc["metal"])) if float(rc["metal"]) > 0.0 else ""]
         if c.burn[i] > 0.0:
             s += "\n[color=#e07a5f]ON FIRE[/color]"
         return s
