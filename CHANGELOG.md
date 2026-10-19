@@ -4,6 +4,7 @@ All notable changes to Murmur are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
+- Separate ambience and cue volumes (Menu: Ambience up/down, Cues up/down), saved with the master volume.
 - Full-screen skill tree (key K): six arms from a hub with six nodes each, taken nodes lit, available ones outlined, hover for cost and effect, click to take (`treeview.gd`).
 - The sound volume and mute choice are remembered between runs (`user://settings.cfg`); F1 shows a help panel with the keys.
 - Army upkeep is now a line of the budget ("Army upkeep"). It used to be taken from the treasury without showing in income, so planners and policies spent money the army was already costing and towns with big armies shrank. Fixed.
