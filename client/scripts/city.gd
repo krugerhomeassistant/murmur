@@ -298,6 +298,7 @@ var ore := PackedByteArray()  # ore deposit richness per cell, 0 = none
 var ground := PackedByteArray()  # World.K kind per cell (look only: sand, forest, hills, rock); water/ore above are the rules
 var world_fed := false  # terrain came from the shared World, so set_start must not roll its own river
 var svc_jobs := 0
+var haul_jobs := 0  # drivers of the carts that bring wood, crops and ore to the processors
 var jobs := 0
 var up_zone := 0.0
 var up_svc := 0.0
@@ -966,7 +967,10 @@ func _scan() -> void:
 				_add_prov("light", cell(i), 0.7, 4)
 				up_svc += 0.1
 		_road_net()
-		jobs = shop_jobs + fac_jobs + off_jobs + farm_jobs + orch_jobs + ranch_jobs + green_jobs + fish_jobs + mine_jobs + svc_jobs
+		haul_jobs = _haulers(farm_src, bt.get(T.MILL, [])) + _haulers(mine_src, (bt.get(T.FOUNDRY, []) as Array) + (bt.get(T.REFINERY, []) as Array))
+		var camps: Array = bt.get(T.LUMBER, [])
+		haul_jobs += ceili(float(camps.size()) * HAUL_LOAD / HAUL_PER_DRIVER) if not (bt.get(T.SAWMILL, []) as Array).is_empty() or not (bt.get(T.TOOLWORKS, []) as Array).is_empty() else 0
+		jobs = shop_jobs + fac_jobs + off_jobs + farm_jobs + orch_jobs + ranch_jobs + green_jobs + fish_jobs + mine_jobs + svc_jobs + haul_jobs
 		res_mult = tier_sum / maxf(housing, 1)
 		scan_sig = sg
 		up_svc_base = up_svc
@@ -3449,6 +3453,20 @@ var mine_src: Array = []
 var crop_haul := 1.0
 var ore_haul := 1.0
 var wood_haul := 1.0  # share of the felled wood the camps' carts bring to the mills (distance limited)
+
+
+const HAUL_PER_DRIVER := 8.0  # output weight one cart driver keeps moving
+const HAUL_LOAD := 6.0  # a lumber camp's output weight
+
+
+## Drivers needed for a source's carts: none while there is no processor to deliver to (the output goes to the depot).
+func _haulers(src: Array, dests: Array) -> int:
+	if dests.is_empty():
+		return 0
+	var tot := 0.0
+	for e in src:
+		tot += float(e[1])
+	return ceili(tot / HAUL_PER_DRIVER)
 
 
 ## Share of a source's output its carts bring to the nearest of `dests`: full within 12 tiles, down to 30% far away; no destination means it goes to the depot (1.0).

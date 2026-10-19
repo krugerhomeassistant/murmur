@@ -25,6 +25,7 @@ func _init() -> void:
 	small.pop = 4
 	Military.conscript(small)
 	var levy: bool = small.army.size() == 1
-	var ok: bool = stop >= 0 and none and one and gone and levy
-	print("UNITS_OK" if ok else "UNITS_FAIL stop=%d none=%s one=%s gone=%s levy=%s" % [stop, none, one, gone, levy])
+	var hs: bool = c._haulers([[1, 20.0]], []) == 0 and c._haulers([[1, 20.0]], [5]) == 3 and c._haulers([[1, 8.0]], [5]) == 1
+	var ok: bool = stop >= 0 and none and one and gone and levy and hs
+	print("UNITS_OK" if ok else "UNITS_FAIL stop=%d none=%s one=%s gone=%s levy=%s haulers=%s" % [stop, none, one, gone, levy, hs])
 	quit(0 if ok else 1)
