@@ -1,6 +1,7 @@
 extends SceneTree
-## All ages, start to finish: planner towns begin in the Ancient age and play 4500 sim-seconds. They must advance, keep
-## growing (no collapse at an age change), choose their research by themselves and never hold a building from a later age.
+## All ages, start to finish, at peace (no diplomacy: wars are a separate test): planner towns begin in the Ancient age and play
+## 4500 sim-seconds (about 4 minutes). They must advance, keep
+## growing (no collapse at an age change or from upkeep), choose their research by themselves and never hold a building from a later age.
 
 
 func _init() -> void:
@@ -22,8 +23,6 @@ func _init() -> void:
 	var t0 := Time.get_ticks_msec()
 	for step in 45000:
 		sig.tick(0.1)
-		if step % 10 == 0:
-			Diplo.second(towns, towns[0].rng)
 		for t in towns:
 			t.tick(0.1)
 	var ok := true
@@ -37,7 +36,7 @@ func _init() -> void:
 				early += 1
 		var done: bool = Research.pending(t).is_empty()
 		rep.append("%s age=%d pop=%d tech=%s early=%d" % [t.town_name, t.age, t.pop, t.tech, early])
-		ok = ok and early == 0 and done and t.pop >= 30
+		ok = ok and early == 0 and done and t.pop >= 60
 	ok = ok and best_age >= 2
 	print("AGEPLAY_OK %s (%d s)" % [rep, (Time.get_ticks_msec() - t0) / 1000] if ok else "AGEPLAY_FAIL %s" % [rep])
 	quit(0 if ok else 1)

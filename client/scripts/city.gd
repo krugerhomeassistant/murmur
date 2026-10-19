@@ -1781,7 +1781,7 @@ func _money(market: float) -> void:
 	var r_ind := goods * 1.2 * econ * prodm * wise * laf_i * fin * f
 	var r_off := off_jobs * emp * 1.6 * econ * prodm * (0.5 + 0.5 * float(cov["edu"])) * mod("office_mult") * laf_c * fin * f
 	var r_tour := tour_sum * 3.0 * econ * mood * mod("tour_mult") * f
-	var mult := 1.0 + pop / 60.0  # size has a cost
+	var mult := 1.0 + minf(pop / 60.0, 5.0)  # size has a cost, up to a limit: without one upkeep grows with the square of the population and every big town went broke
 	var um := mod("upkeep_mult")
 	var e_roads := (roads * 0.05 + avenues * 0.08) * mult * um * RATE
 	var e_maint := (roads * 0.03 + avenues * 0.04) * mult * um * RATE  # crews keep roads up; the split keeps the total close to before
@@ -2472,7 +2472,7 @@ func _plan_service(force := false) -> bool:
 			sc += 0.15
 		if d.has("poll"):
 			sc -= 0.1
-		if income - newup < (0.15 if sc < 0.6 else -0.25) and coins + (income - newup) * 600.0 < 600.0:  # skip what the treasury cannot carry for ten minutes
+		if income - newup < (0.15 if sc < 0.6 else -0.25) and coins + (income - newup) * 1800.0 < 600.0:  # skip what the treasury cannot carry for thirty minutes
 			continue
 		sc *= foc("military") if id in [T.BARRACKS, T.BASE, T.RADAR, T.NAVYARD, T.ARMOURY] else foc("services") if ch == "" and d.has("prov") else 1.0
 		sc = sc / (float(d["cost"]) / 100.0 + 0.5) + rng.randf() * 0.05
