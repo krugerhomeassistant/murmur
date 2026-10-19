@@ -1084,7 +1084,7 @@ func _process(_d: float) -> void:
         for o in 2:
             var tb: Button = tech_btns[a][o]
             tb.set_pressed_no_signal(int(c.tech[a]) == o)
-            tb.disabled = a > c.age or int(c.tech[a]) >= 0
+            tb.disabled = a > c.age or (int(c.tech[a]) >= 0 and int(c.tech[a]) != o)  # the chosen tech stays lit; its rival dims
     for k in pol_btns:
         var pb: CheckButton = pol_btns[k]
         if pb.button_pressed != bool(c.policies.get(k, false)):
