@@ -1373,14 +1373,15 @@ func draw_overlay(node: CanvasItem, t: City) -> void:
 	var y1 := mini(City.H - 1, floori((tl.y + vp.y) / TILE))
 	var night := city.clock >= 19.0 or city.clock < 6.0
 	var tr := city.terr
-	var dim := Color(0.05, 0.08, 0.04, 0.42)
-	ci.draw_rect(Rect2(0, 0, City.W * TILE, tr.position.y * TILE), dim)
-	ci.draw_rect(Rect2(0, tr.end.y * TILE, City.W * TILE, (City.H - tr.end.y) * TILE), dim)
-	ci.draw_rect(Rect2(0, tr.position.y * TILE, tr.position.x * TILE, tr.size.y * TILE), dim)
-	ci.draw_rect(Rect2(tr.end.x * TILE, tr.position.y * TILE, (City.W - tr.end.x) * TILE, tr.size.y * TILE), dim)
 	var rim := Rect2(Vector2(tr.position) * TILE, Vector2(tr.size) * TILE)
-	ci.draw_rect(rim, tcol if lod == 3 else Color(1.0, 0.82, 0.4, 0.5), false, 3.0 / cam.zoom.x if lod == 3 else 3.0)
-	if lod == 3:  # world view: just the name and the rim
+	if t == city_view and lod < 3:  # the buildable edge shows only in the town you are in, as a faint fade and line; the world view has no squares
+		var dim := Color(0.05, 0.08, 0.04, 0.22)
+		ci.draw_rect(Rect2(0, 0, City.W * TILE, tr.position.y * TILE), dim)
+		ci.draw_rect(Rect2(0, tr.end.y * TILE, City.W * TILE, (City.H - tr.end.y) * TILE), dim)
+		ci.draw_rect(Rect2(0, tr.position.y * TILE, tr.position.x * TILE, tr.size.y * TILE), dim)
+		ci.draw_rect(Rect2(tr.end.x * TILE, tr.position.y * TILE, (City.W - tr.end.x) * TILE, tr.size.y * TILE), dim)
+		ci.draw_rect(rim, Color(1.0, 0.82, 0.4, 0.3), false, 2.0)
+	if lod == 3:  # world view: just the name
 		var fs := int(22.0 / cam.zoom.x)
 		var lab := "%s  pop %d" % [t.town_name, t.pop] if not t.derelict else "%s  ABANDONED (C to send troops)" % t.town_name
 		var font0 := ThemeDB.fallback_font
