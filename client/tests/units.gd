@@ -20,6 +20,11 @@ func _init() -> void:
 	c.pop = 4
 	Traffic.sync_buses(c)
 	var gone: bool = c.buses.is_empty()
-	var ok: bool = stop >= 0 and none and one and gone
-	print("UNITS_OK" if ok else "UNITS_FAIL stop=%d none=%s one=%s gone=%s" % [stop, none, one, gone])
+	var small := City.new(Signals.new())
+	small.seed_start()
+	small.pop = 4
+	Military.conscript(small)
+	var levy: bool = small.army.size() == 1
+	var ok: bool = stop >= 0 and none and one and gone and levy
+	print("UNITS_OK" if ok else "UNITS_FAIL stop=%d none=%s one=%s gone=%s levy=%s" % [stop, none, one, gone, levy])
 	quit(0 if ok else 1)
