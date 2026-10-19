@@ -191,12 +191,16 @@ static func conscript(c: City) -> void:
 		c.army.append(_unit("inf", 0.7))
 
 
-## Once per sim second per town: pay upkeep, train, send units to the front (or home when peace comes).
-static func econ(c: City) -> void:
+## Coins per second the army costs.
+static func upkeep(c: City) -> float:
 	var up := 0.0
 	for u in c.army:
 		up += float(KIND[u["k"]]["upk"])
-	c.coins -= up
+	return up
+
+
+## Once per sim second per town: train, send units to the front (or home when peace comes). Upkeep is a line of the budget (`City.budget_lines`), so every decision that looks at income sees it.
+static func econ(c: City) -> void:
 	if c.coins < -50.0 and not c.army.is_empty():
 		c.army.pop_back()  # unpaid troops desert
 	if not c.human:
