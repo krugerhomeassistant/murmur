@@ -4,6 +4,7 @@ All notable changes to Murmur are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
+- Hauling, first slice: lumber camps deliver wood to sawmills and toolworks only as fast as their carts can shuttle, so a camp far from a mill delivers less (12 tiles or closer is full speed).
 - Staffed and supplied (supply chains step 1): sawmills, toolworks, foundries, mills, refineries and armouries run only as far as they have workers and materials, and the people who work there are paid only for what actually runs (an idle sawmill pays nothing). Hover a building to see "Working", "Running at 40% (no wood)" or "Idle: no wood, workers unpaid". `tests/staffed.gd`.
 - Fixed the late-game money crash: upkeep grew with the square of the population (cost per building rose without limit with town size), so every town above about 400 people slowly went broke, lost mood and shrank. The size cost now stops growing at 6x (about 300 people), and the planner no longer adds recurring costs unless the treasury can carry them for thirty minutes (it was ten). At peace the four-town playthrough now ends at 630 to 790 people instead of 50 to 750 with some towns at zero.
 - Twelve ages instead of four: Stone, Bronze, Classical, Dark, Medieval, Renaissance, Industrial, Electric, Atomic, Information, Digital, Future, in four eras of three that keep the look of the old Ancient, Medieval, Industrial and Modern ages. Buildings and units unlock gradually across the ages, each age has its own research pair (twelve picks), and the setup screen lists all twelve. Old saves convert (each old age becomes the first age of its era); `tests/ages.gd` checks it.
@@ -16,7 +17,6 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 ## [0.8.0] - 2026-10-18
 
 ### Added
-- Hauling, first slice: lumber camps deliver wood to sawmills and toolworks only as fast as their carts can shuttle, so a camp far from a mill delivers less (12 tiles or closer is full speed).
 - Medieval terraces (a row of timber-framed houses) and tenements (stone, jettied upper floor, tiled roof).
 - Units and vehicles by age (ages finish line AF5): Industrial-age cars are boxy open tourers in dark colours with brass lamps (Modern cars keep the sleek painted look), and people's clothes shift with the age (earth tones, dyed wool, grey cloth, bright) while the mood colour still shows.
 - Full-ages playthrough test `tests/ageplay.gd` (manual, about 3 minutes).
