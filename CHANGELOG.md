@@ -4,6 +4,10 @@ All notable changes to Murmur are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
+- The game now ends only when one side holds every living town: the 70% land conquest and the score-lead hegemony wins are gone (they ended games in minutes). A town with a single citizen keeps the game going.
+- The start menu scrolls when it is taller than the screen.
+- Floating windows never overlap: they snap to the edges of other windows and the screen while you drag, and a window dropped, opened or resized onto another moves to the nearest free spot beside it (`tests/winlayout.gd`).
+- Sound now starts at zero volume (raise it from the menu); the generated sound is being reworked.
 - Hauling, first slices: lumber camps deliver wood to sawmills and toolworks, farms deliver crops to mills, and mines deliver ore to foundries and refineries only as fast as carts can shuttle, so a source far from its processor delivers less (12 tiles or closer is full speed, 30% at worst).
 - Staffed and supplied (supply chains step 1): sawmills, toolworks, foundries, mills, refineries and armouries run only as far as they have workers and materials, and the people who work there are paid only for what actually runs (an idle sawmill pays nothing). Hover a building to see "Working", "Running at 40% (no wood)" or "Idle: no wood, workers unpaid". `tests/staffed.gd`.
 - Fixed the late-game money crash: upkeep grew with the square of the population (cost per building rose without limit with town size), so every town above about 400 people slowly went broke, lost mood and shrank. The size cost now stops growing at 6x (about 300 people), and the planner no longer adds recurring costs unless the treasury can carry them for thirty minutes (it was ten). At peace the four-town playthrough now ends at 630 to 790 people instead of 50 to 750 with some towns at zero.

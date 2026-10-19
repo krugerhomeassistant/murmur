@@ -224,3 +224,6 @@ Rules: keep `Military` deterministic enough for `tests/war.gd`; the host simulat
 - [ ] CI: cache the Godot binary, `set -o pipefail`, export job, tag-triggered release workflow (smoke step once hung 25 min on a runner; per-step timeouts now exist).
 - [ ] UX: hotkey help (F1), settings and pause menu, volume persistence, multiple save slots, UI scale, colour-blind overlays.
 - [ ] Planner economy: utilities lag demand (score ignores output), overbuilt jobs vs housing, annexation unbounded (all 6144 cells at pop 78), `to_dict` omits a few runtime fields.
+
+## Audio rework (owner, 2026-10-19)
+- [ ] The generated sound is harsh (screechy noise). Rework it to sound pleasant: softer, lower filtered ambience, gentle cues, per-channel volume (ambience, cues, music) with a saved setting. It starts at zero volume until then.

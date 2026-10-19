@@ -55,6 +55,7 @@ jobs:
           timeout 300 godot --headless --path client -s tests/vassal.gd | tee va.txt && grep -q VASSAL_OK va.txt
           GODOT=$(which godot) python3 scripts/gen_wiki.py --check
           timeout 300 godot --headless --path client -s tests/popout.gd | tee po.txt && grep -q POPOUT_OK po.txt
+          timeout 300 godot --headless --path client -s tests/winlayout.gd | tee wl.txt && grep -q WINLAYOUT_OK wl.txt
           timeout 300 godot --headless --path client -s tests/defeat.gd | tee de.txt && grep -q DEFEAT_OK de.txt
           timeout 120 godot --headless --path client -s tests/tools.gd | tee tl.txt && grep -q TOOLS_OK tl.txt
           timeout 120 godot --headless --path client -s tests/traffic.gd | tee tr.txt && grep -q TRAFFIC_OK tr.txt

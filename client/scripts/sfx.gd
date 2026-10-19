@@ -15,7 +15,7 @@ const CUES := {
 }
 
 var m: Node2D
-var vol := 0.3
+var vol := 0.0  # starts at the minimum; raise it from the menu
 var muted := false
 var pb: AudioStreamGeneratorPlayback
 var brown := 0.0

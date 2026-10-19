@@ -36,10 +36,17 @@ func _ready() -> void:
 	add_child(cc)
 	var pc := PanelContainer.new()
 	cc.add_child(pc)
+	var sc := ScrollContainer.new()  # the menu is taller than a small screen: scroll instead of cutting it off
+	sc.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	pc.add_child(sc)
+	var fit := func() -> void: sc.custom_minimum_size = Vector2(560, maxf(get_viewport_rect().size.y - 90.0, 200.0))
+	fit.call()
+	get_viewport().size_changed.connect(fit)
 	var v := VBoxContainer.new()
 	v.add_theme_constant_override("separation", 8)
 	v.custom_minimum_size = Vector2(520, 0)
-	pc.add_child(v)
+	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	sc.add_child(v)
 	var t := Label.new()
 	t.text = "MURMUR"
 	t.add_theme_font_size_override("font_size", 34)
