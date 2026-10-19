@@ -49,10 +49,15 @@ func _init() -> void:
 		ok = false
 		print("FAIL advanced while unhappy")
 	c.mood = 0.8
-	var up := Ages.second(c)
-	if up != 1 or c.age != 1:
+	c.stock["planks"] = 0.0
+	if Ages.ready(c) or Ages.second(c) != -1 or float(Ages.missing(c).get("planks", 0.0)) < 19.9:
 		ok = false
-		print("FAIL did not advance: %d" % up)
+		print("FAIL advanced without the materials")
+	c.stock["planks"] = 20.0
+	var up := Ages.second(c)
+	if up != 1 or c.age != 1 or float(c.stock["planks"]) > 0.01:
+		ok = false
+		print("FAIL did not advance (or kept the materials): %d" % up)
 	# units follow the age
 	if Ages.unit("inf") != 6 or Ages.unit("jet") != 10 or c.age >= Ages.unit("inf"):
 		ok = false

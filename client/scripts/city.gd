@@ -3381,9 +3381,11 @@ func _trade(_market: float) -> Array:
 		if lvl[i] == 0 and build[i] > 0.0:
 			sites += 1
 	var plank_need := sites * 0.02
-	var w_planks := maxf(0.0, plank_need - float(stock["planks"]))
+	var proj := Ages.missing(self)  # materials for the next age, bought ahead of time
+	var rsv := Ages.reserve(self)  # and held back from everyday use
+	var w_planks := maxf(0.0, plank_need - float(stock["planks"])) + float(proj.get("planks", 0.0))
 	var w_wood := maxf(0.0, works * 0.3 + saws * 0.5 - float(stock["wood"]) - wood_in)
-	var w_tools := maxf(0.0, tool_need - float(stock["tools"]))
+	var w_tools := maxf(0.0, tool_need - float(stock["tools"])) + float(proj.get("tools", 0.0))
 	var w_crops := maxf(0.0, mills * 3.0 - (float(stock["crops"]) + crops))
 	var refs := (bt.get(T.REFINERY, []) as Array).size()
 	var burn := 0.0
@@ -3400,7 +3402,7 @@ func _trade(_market: float) -> Array:
 			stock[k] = float(stock[k]) + got
 			bought[k] = got
 			spent += got * float(mk.price[k]) * RATE
-	var tool_used := minf(float(stock["tools"]), tool_need)  # worn out in use; a stocked workforce is up to 15% more productive
+	var tool_used := minf(maxf(float(stock["tools"]) - float(rsv.get("tools", 0.0)), 0.0), tool_need)  # worn out in use; a stocked workforce is up to 15% more productive
 	stock["tools"] = float(stock["tools"]) - tool_used
 	var tool_mult := 1.0 + 0.15 * (tool_used / tool_need if tool_need > 0.0 else 0.0)
 	crops *= tool_mult
@@ -3418,26 +3420,27 @@ func _trade(_market: float) -> Array:
 	var m_fac := fac_jobs * emp * 0.02
 	var m_arm := armouries * 0.25 * emp * minf(foc("military"), 1.0)  # low military focus: buy arms instead of making them
 	var m_tool := works * 0.15 * emp
-	var w_metal := maxf(0.0, m_fac + m_arm + m_tool - float(stock["metal"]))
+	var w_metal := maxf(0.0, m_fac + m_arm + m_tool - float(stock["metal"])) + float(proj.get("metal", 0.0))
 	want["metal"] = w_metal
 	if w_metal > 0.0 and rich:
 		var gm := mk.take("metal", minf(w_metal, coins * 0.05 / (float(mk.price["metal"]) * RATE)))
 		stock["metal"] = float(stock["metal"]) + gm
 		bought["metal"] = gm
 		spent += gm * float(mk.price["metal"]) * RATE
-	var mused := minf(float(stock["metal"]), m_fac)
+	var mfree := maxf(float(stock["metal"]) - float(rsv.get("metal", 0.0)), 0.0)
+	var mused := minf(mfree, m_fac)
 	stock["metal"] = float(stock["metal"]) - mused
-	var marms := minf(float(stock["metal"]), m_arm)  # armouries smelt what is left into arms
+	var marms := minf(maxf(float(stock["metal"]) - float(rsv.get("metal", 0.0)), 0.0), m_arm)  # armouries smelt what is left into arms
 	stock["metal"] = float(stock["metal"]) - marms
 	stock["arms"] = float(stock["arms"]) + marms * 2.0
-	var made := minf(minf(works * 0.3 * emp, float(stock["wood"]) + wood_in), float(stock["metal"]) * 2.0)  # toolworks: wood and metal into tools
+	var made := minf(minf(works * 0.3 * emp, float(stock["wood"]) + wood_in), maxf(float(stock["metal"]) - float(rsv.get("metal", 0.0)), 0.0) * 2.0)  # toolworks: wood and metal into tools
 	stock["wood"] = maxf(float(stock["wood"]) + wood_in - made, 0.0)
 	stock["metal"] = float(stock["metal"]) - made * 0.5
 	stock["tools"] = float(stock["tools"]) + made
 	var sawn := minf(saws * 0.5 * emp, float(stock["wood"]))  # sawmills take the wood the toolworks left
 	stock["wood"] = float(stock["wood"]) - sawn
 	stock["planks"] = float(stock["planks"]) + sawn * 0.5
-	var plank_used := minf(float(stock["planks"]), plank_need)
+	var plank_used := minf(maxf(float(stock["planks"]) - float(rsv.get("planks", 0.0)), 0.0), plank_need)
 	stock["planks"] = float(stock["planks"]) - plank_used
 	plank_mult = 1.0 + 0.25 * (plank_used / plank_need if plank_need > 0.0 else 0.0)
 	var milled := minf(float(stock["crops"]) + crops, mills * 3.0)
@@ -3461,7 +3464,8 @@ func _trade(_market: float) -> Array:
 	var offered := {}
 	var xp := 0.8 * (1.0 + 0.25 * deps)
 	for k in stock:
-		var lim := cap * (0.2 if deps > 0 else 0.8)
+		var keep := float(Ages.cost(mini(age + 1, Ages.LAST)).get(k, 0.0)) if age < Ages.LAST else 0.0  # the next age's materials are never sold off
+		var lim := maxf(cap * (0.2 if deps > 0 else 0.8), keep)
 		if float(stock[k]) > lim:
 			# Cheap goods are held back, dear goods are pushed out.
 			var sell := (float(stock[k]) - lim) * (0.25 if deps > 0 else 0.5) * clampf(mk.ratio(k), 0.4, 1.5)
@@ -3469,7 +3473,7 @@ func _trade(_market: float) -> Array:
 			stock[k] = float(stock[k]) - sell
 			sold += sell
 			offered[k] = sell
-		stock[k] = minf(float(stock[k]), cap)
+		stock[k] = minf(float(stock[k]), maxf(cap, keep))
 	mk.report(offered, want)
 	_util(T.TOOLWORKS, made, works * 0.3 * emp)
 	_util(T.SAWMILL, sawn, saws * 0.5 * emp)

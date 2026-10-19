@@ -9,6 +9,7 @@ func _init() -> void:
 	t.peak = 500
 	t.know = 1.0e9
 	t.coins = 1.0e6
+	t.stock["planks"] = 100.0
 	t.mood = 1.0
 	var seen := -1
 	for i in 5:
