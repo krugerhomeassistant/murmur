@@ -36,6 +36,7 @@ const RANKS := ["Recruit", "Veteran", "Elite", "Legend"]
 const RANK_XP := [250.0, 800.0, 2000.0]  # damage dealt (or healed) to reach rank 1, 2, 3
 const RANK_DMG := 0.15  # per rank
 const RANK_HP := 0.10
+const SOLDIER_SHARE := 3  # soldiers come from the town's own people: at most one in three
 const ARMY_MAX := 150  # per town: training stops here (upkeep, and fights cost O(n^2))
 const INF_D := 1 << 29
 const BUILD_GAP_MS := 30  # at most one flow-field build per this many ms
@@ -187,7 +188,7 @@ static func _gain(u: Dictionary, xp: float) -> void:
 
 ## A declaration of war calls up a militia so even a town with no barracks fields something.
 static func conscript(c: City) -> void:
-	for i in clampi(c.pop / 15, 3, 12):
+	for i in mini(clampi(c.pop / 15, 3, 12), c.pop / SOLDIER_SHARE):
 		c.army.append(_unit("inf", 0.7))
 
 
@@ -209,7 +210,7 @@ static func econ(c: City) -> void:
 			c.train_t["_a"] = 0.0
 			adapt(c)
 	c.arms_use *= 0.9
-	if c.train_on and c.army.size() < ARMY_MAX:
+	if c.train_on and c.army.size() < mini(ARMY_MAX, c.pop / SOLDIER_SHARE):
 		var cap := caps(c)
 		var cnt := counts(c)
 		var w := weights(c)
