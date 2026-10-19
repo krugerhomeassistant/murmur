@@ -227,6 +227,7 @@ var know := 0.0  # knowledge toward the next age
 var age_up := -1  # set for one tick when the town enters an age; the UI shows a banner
 var tree: Array = []  # skill tree nodes taken (Research.id)
 var pts := 0.0  # research points to spend on the tree
+var news := 0.0  # -1..1: how the town feels about what it hears (its own scandals and good news), fades back to 0; it used to be one value shared by every town
 var age_t := 1.0e9  # seconds since the town entered its age (grace period for the services the age expects)
 var elections_won := 0
 var rally_used := false
@@ -1279,7 +1280,7 @@ func _tribes() -> void:
 		"union": 0.6 - unemp * 1.5 - (tax_i - 0.1) * 2.0 + (0.15 if bt.has(T.UNION_HALL) else 0.0),
 		"business": 0.6 - (tax_c - 0.1) * 3.0 - (tax_i - 0.1) * 2.0 + com_dem * 0.1 + mk * 0.2 + (0.15 if bt.has(T.CHAMBER) else 0.0),
 		"artists": 0.3 + float(cov["culture"]) * 0.7,
-		"rebels": 0.6 - (0.25 if is_policy("curfew") else 0.0) - (0.25 if is_policy("stop_search") else 0.0) - (0.2 if protest else 0.0) + sig.get_f("news") * 0.2,
+		"rebels": 0.6 - (0.25 if is_policy("curfew") else 0.0) - (0.25 if is_policy("stop_search") else 0.0) - (0.2 if protest else 0.0) + news * 0.2,
 		"club": 0.3 + float(cov["leisure"]) * 0.6,
 	}
 	for k in sat:
@@ -1460,7 +1461,7 @@ func trigger(id: String) -> bool:
 			for i in mini(-n, citizens.size()):
 				citizens.remove_at(rng.randi() % citizens.size())
 	if inst.has("news"):
-		sig.bump("news", float(inst["news"]))
+		news = clampf(news + float(inst["news"]), -1.0, 1.0)
 	if inst.has("market"):
 		sig.bump("market", float(inst["market"]))
 	recent[id] = day
@@ -1664,6 +1665,7 @@ func _second() -> void:
 			offline.erase(k)
 			_log("The power plant is back online.")
 	pt = _pf("offline", pt)
+	news = move_toward(news, 0.0, 0.02)
 	var up := Ages.second(self)
 	if up >= 0:
 		msg = "%s enters the %s age." % [town_name, Ages.name_of(up)]
@@ -1795,7 +1797,7 @@ func _second() -> void:
 	unemp = 0.0 if pop == 0 else 1.0 - float(employed) / pop
 	shop_gap = clampf(1.0 - shop_jobs / maxf(pop * 0.5, 3.0), 0.0, 1.0)
 	var target := 0.72 - shop_gap * 0.15 - minf(burning * 0.03, 0.2) - (tax_r - 0.10) * 2.0 - unemp * 0.3
-	target += sig.get_f("news") * 0.3 - float(WEATHER_PENALTY.get(sig.weather_at(world_pos()), 0.0))
+	target += news * 0.3 - float(WEATHER_PENALTY.get(sig.weather_at(world_pos()), 0.0))
 	for m in Catalog.METRICS:
 		var M: Dictionary = Catalog.METRICS[m]
 		if String(M["kind"]) == "need":
@@ -3164,9 +3166,9 @@ func thought(c: Citizen) -> String:
 		return "Miserable weather today."
 	if w == "heatwave":
 		return "It's far too hot."
-	if sig.get_f("news") < -0.4:
+	if news < -0.4:
 		return "Did you see the headlines?"
-	if sig.get_f("news") > 0.4:
+	if news > 0.4:
 		return "Heard some good news today."
 	if c.mood > 0.65:
 		return ["Nice day for a walk.", "Can't complain.", "Good to live here."][rng.randi() % 3]
@@ -3691,7 +3693,7 @@ func work_status(t: int) -> String:
 # ---------- save / load ----------
 
 ## What a save or snapshot carries (also the only keys from_dict accepts, since snapshots come from a possibly hostile host).
-const SAVE_KEYS := ["age", "tree", "pts", "etier", "fit", "derelict", "empty_t", "raze_left", "claim_by", "claim_t", "garrison", "inbound", "side_key", "know", "age_t", "town_name", "grid", "lvl", "build", "wire", "pipe", "sewer", "lamp", "water", "ore", "ground", "coins", "mood", "tax_r", "tax_c", "tax_i", "clock", "day",
+const SAVE_KEYS := ["age", "tree", "pts", "news", "etier", "fit", "derelict", "empty_t", "raze_left", "claim_by", "claim_t", "garrison", "inbound", "side_key", "know", "age_t", "town_name", "grid", "lvl", "build", "wire", "pipe", "sewer", "lamp", "water", "ore", "ground", "coins", "mood", "tax_r", "tax_c", "tax_i", "clock", "day",
 	"policies", "auto_mode", "auto_policy", "peak", "announced", "next_id", "recent", "active", "approval", "rep", "favor",
 	"petitions", "promises", "pet_recent", "kept", "broken", "next_election", "elections_won", "rally_used", "last_vote",
 	"season", "wage_ix", "price_loc", "stock", "exported", "loans", "done_ms", "disasters_survived", "burned", "hist_coins", "hist_pop", "ruins", "offline", "lamp", "terr", "expansions", "auto_expand", "human", "owner", "temper", "rel", "treaty", "liege", "ev_scale", "gpos", "war_n", "war_sc", "war_goal", "tension", "occ", "train_on", "train_t", "train_w", "stance", "group", "belief", "power_cd", "focus", "auto_focus", "ask_build", "vetoed"]
@@ -3912,7 +3914,7 @@ static func selfcheck() -> String:
 	f.coins = 1000.0
 	f.tax_r = 0.3
 	s3.set_weather("storm", 999.0)  # global, over every town
-	s3.bump("news", -1.0)
+	f.news = -1.0
 	for i in 600:
 		f.tick(0.1)
 	if not f.protest:
