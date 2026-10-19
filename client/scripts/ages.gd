@@ -118,9 +118,11 @@ static func ready(c: City) -> bool:
 static func second(c: City) -> int:
 	if c.mood >= HOLD_MOOD:  # an unhappy town is given time: new expectations do not stack on one already struggling
 		c.age_t += 1.0
+	var r := rate(c)
+	c.pts += r * Research.POINTS_PER_KNOW
 	if c.age >= LAST:
 		return -1
-	c.know += rate(c)
+	c.know += r
 	if ready(c):
 		var cs := cost(c.age + 1)
 		for k in cs:
@@ -136,5 +138,6 @@ static func second(c: City) -> int:
 static func set_age(c: City, age: int) -> void:
 	c.age = clampi(age, 0, LAST)
 	c.know = float(KNOW[c.age])
+	c.pts = c.know * Research.POINTS_PER_KNOW * 0.5  # a town that starts late brings some of what it would have learnt
 	c.age_t = 1.0e9  # no grace period for the age a town starts in
 	c.etier.fill(0)  # what is already built counts as built in this age

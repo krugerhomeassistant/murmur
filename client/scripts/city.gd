@@ -225,7 +225,8 @@ var next_election := Civics.YEAR_DAYS + 1
 var age := Ages.LAST  # see Ages; saves from before ages count as Modern, where everything is open
 var know := 0.0  # knowledge toward the next age
 var age_up := -1  # set for one tick when the town enters an age; the UI shows a banner
-var tech: Array = [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1]  # chosen option (0 or 1) per age, -1 = not chosen yet (Research)
+var tree: Array = []  # skill tree nodes taken (Research.id)
+var pts := 0.0  # research points to spend on the tree
 var age_t := 1.0e9  # seconds since the town entered its age (grace period for the services the age expects)
 var elections_won := 0
 var rally_used := false
@@ -1668,10 +1669,9 @@ func _second() -> void:
 		msg = "%s enters the %s age." % [town_name, Ages.name_of(up)]
 		_log("The town enters the %s age." % Ages.name_of(up))
 		age_up = up
-		if not human:
-			Research.auto(self)
-		else:
-			msg += " Choose its research in the Mayor's office."
+		msg += " New research can be taken in the Mayor's office." if human else ""
+	if not human and age_refit_t % 7 == 0:
+		Research.auto(self)
 	if fit_n > 0:
 		_refits()
 	if auto_mode > 0 and age_refit_t % 5 == 0:
@@ -3691,7 +3691,7 @@ func work_status(t: int) -> String:
 # ---------- save / load ----------
 
 ## What a save or snapshot carries (also the only keys from_dict accepts, since snapshots come from a possibly hostile host).
-const SAVE_KEYS := ["age", "tech", "etier", "fit", "derelict", "empty_t", "raze_left", "claim_by", "claim_t", "garrison", "inbound", "side_key", "know", "age_t", "town_name", "grid", "lvl", "build", "wire", "pipe", "sewer", "lamp", "water", "ore", "ground", "coins", "mood", "tax_r", "tax_c", "tax_i", "clock", "day",
+const SAVE_KEYS := ["age", "tree", "pts", "etier", "fit", "derelict", "empty_t", "raze_left", "claim_by", "claim_t", "garrison", "inbound", "side_key", "know", "age_t", "town_name", "grid", "lvl", "build", "wire", "pipe", "sewer", "lamp", "water", "ore", "ground", "coins", "mood", "tax_r", "tax_c", "tax_i", "clock", "day",
 	"policies", "auto_mode", "auto_policy", "peak", "announced", "next_id", "recent", "active", "approval", "rep", "favor",
 	"petitions", "promises", "pet_recent", "kept", "broken", "next_election", "elections_won", "rally_used", "last_vote",
 	"season", "wage_ix", "price_loc", "stock", "exported", "loans", "done_ms", "disasters_survived", "burned", "hist_coins", "hist_pop", "ruins", "offline", "lamp", "terr", "expansions", "auto_expand", "human", "owner", "temper", "rel", "treaty", "liege", "ev_scale", "gpos", "war_n", "war_sc", "war_goal", "tension", "occ", "train_on", "train_t", "train_w", "stance", "group", "belief", "power_cd", "focus", "auto_focus", "ask_build", "vetoed"]
@@ -3732,8 +3732,6 @@ func from_dict(d: Dictionary) -> void:
 		if k == "cit" or k == "v" or not (k in SAVE_KEYS or k == "army"):
 			continue
 		var cur: Variant = get(k)
-		if k == "tech":
-			continue
 		if cur is Array:
 			(cur as Array).assign(d[k])
 		else:
@@ -3741,10 +3739,6 @@ func from_dict(d: Dictionary) -> void:
 	var old_ages: bool = int(d.get("av", 1)) < 2  # saves from before the twelve ages count four ages: each becomes the first age of its era
 	if old_ages and d.has("age"):
 		age = clampi(int(d["age"]), 0, 3) * Ages.PER_ERA
-	tech.fill(-1)
-	var saved_tech: Array = d.get("tech", [])
-	for i in mini(saved_tech.size(), tech.size()):
-		tech[i * Ages.PER_ERA if old_ages else i] = clampi(int(saved_tech[i]), -1, 1)
 	citizens.clear()
 	for a in d.get("cit", []):
 		var c := Citizen.new()

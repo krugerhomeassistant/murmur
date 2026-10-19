@@ -77,16 +77,15 @@ func _init() -> void:
 	if bad_arg:
 		ok = false
 		print("FAIL set_age accepted junk")
-	# a save from before the twelve ages: each of the four ages becomes the first age of its era, research choices follow
+	# a save from before the twelve ages: each of the four ages becomes the first age of its era
 	var old := c.to_dict()
 	old.erase("av")
 	old["age"] = 2
-	old["tech"] = [0, 1, -1, -1]
 	var c3 := City.new(sig)
 	c3.from_dict(old)
-	if c3.age != 6 or c3.tech.size() != 12 or c3.tech[0] != 0 or c3.tech[3] != 1 or c3.tech[6] != -1:
+	if c3.age != 6:
 		ok = false
-		print("FAIL old four-age save: age %d tech %s" % [c3.age, c3.tech])
+		print("FAIL old four-age save: age %d" % c3.age)
 	# a save from before ages keeps the classic start
 	var d := c.to_dict()
 	var c2 := City.new(sig)

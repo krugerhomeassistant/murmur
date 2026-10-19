@@ -215,7 +215,7 @@ static func econ(c: City) -> void:
 				if float(c.train_t[k]) >= float(KIND[k]["train"]):
 					if _pay(c, k):
 						c.train_t[k] = 0.0
-						c.army.append(_unit(k))
+						c.army.append(_unit(k, c.mod("army_mult") if c.mods.has("army_mult") else 1.0))
 	var foes: Array = []
 	for p in c.partners:
 		if Diplo.treaty(c, p) == "war":
