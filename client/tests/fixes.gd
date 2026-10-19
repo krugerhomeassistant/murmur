@@ -8,7 +8,7 @@ func _init() -> void:
 	var s2 := Signals.new()
 	var b := City.new(s2)
 	b.from_dict(d)
-	var ok := s2.weather() == "storm"
+	var ok := s2.weather_at(Vector2(5, 5)) == "storm"
 	d["wx"] = ["x", "bad"]
 	b.from_dict(d)  # hostile weather value must not crash
 	b.petitions = [{"kind": "recover", "cost": 1e9}]

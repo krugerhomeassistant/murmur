@@ -361,7 +361,7 @@ Fires use a separate timer, `next_fire`: after each ignition it is set to `unifo
 2. If the event has a `cost` (only `festival`, $40) it needs the coins and must not already be active; the cost is paid.
 3. Softening: if the event has a `scale` stat, `k = 1 - 0.7 * cov[scale]` (a full coverage cuts to 30%). Otherwise `k = 1`. Note this applies to the whole event, including events that would otherwise help you (see Open questions).
 4. Timed modifiers: if `dur > 0` and the event has `mods`, each value is scaled (`1 + (v - 1) * k` for `_mult` keys, `v * k` otherwise) and stored in `active` as `{id, left: dur, mods}`. Re-triggering an active event refreshes `left` and the mods. `_collect_mods` is called.
-5. Weather: if the event has a `weather` key, `sig.set_weather(weather, dur)`.
+5. Weather: if the event has a `weather` key, `sig.set_weather(weather, dur, world_pos())` (a front over that town).
 6. Instant effects (`inst`):
 
 | `inst` key | Effect |
@@ -389,7 +389,7 @@ Each tick every `active[i].left` falls by `dt`. When any reaches 0 the entry is 
 `Signals` (`signals.gd`) holds the world conditions, shared by all towns of a region (one `Signals` object created in `Main`, passed to each `City`):
 
 - `market` and `news` are floats in -1..1 which decay towards 0 by 0.02 per second (`Signals.tick`, called once per sim step). A bump of 0.7 therefore takes 35 seconds to fade. `market` feeds `econ = 1 + 0.5 * market` in `_money` (so a boom of +0.7 is +35% to incomes at its peak) and the demand formulas; `news` feeds mood (`news * 0.3`) and the rebels' satisfaction.
-- Weather is one string with a countdown, set by the last weather event that fired (`set_weather`) and reset to "clear" when its timer ends. Because the object is shared, weather in one town is weather in all towns and a later weather event overwrites an earlier one, including the earlier one's countdown. Weather drives `WEATHER_PENALTY` (mood), fire behaviour (rain and storm), and the rain, snow and other overlays in `Main._draw`.
+- Weather is regional: `Signals.fronts` are clouds that drift downwind across the world, each with a kind, position, radius, speed and countdown; a town reads the front over its plot (`Signals.weather_at(City.world_pos())`). A weather event starts a front over its town (the same kind nearby is only prolonged); a front builds up and dies away over 8 seconds and its edge shrinks and grows with it. Weather drives `WEATHER_PENALTY` (mood), fire behaviour (rain and storm), and the soft clouds with rain or snow in `Main._front`. Seasons share one world calendar (`Signals.day_hi`, the oldest town's day), so every town is in the same season.
 
 ### Recovery offers
 
