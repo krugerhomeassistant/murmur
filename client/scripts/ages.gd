@@ -137,3 +137,4 @@ static func set_age(c: City, age: int) -> void:
 	c.age = clampi(age, 0, LAST)
 	c.know = float(KNOW[c.age])
 	c.age_t = 1.0e9  # no grace period for the age a town starts in
+	c.etier.fill(0)  # what is already built counts as built in this age

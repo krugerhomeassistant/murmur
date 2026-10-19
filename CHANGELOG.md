@@ -4,6 +4,7 @@ All notable changes to Murmur are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
+- Planner towns with outdated buildings buy and keep the planks, tools and metal for refits and refit up to three buildings per five seconds when they have a free crew. Fixed: the buildings a new game starts with were built in the Modern era whatever the starting age.
 - Buildings keep the era they were built in: a new age no longer repaints the whole town. Each building can be refitted for the town's age (select it, press U): it costs coins, planks, tools and metal, needs a free building crew (one per 60 people), and is a construction site meanwhile (it houses and employs nobody). Buildings left behind by the age hold and employ 6% less per era. Planner towns refit their most outdated building when they have spare money and stock (`tests/era.gd`, `tests/refit.gd`).
 - Weather is regional: rain, storms, snow, fog and heat are soft drifting fronts that cross the map and fade in and out; a town has the weather of the front over it (it used to be one global state drawn as a flat tint). Seasons now follow one world calendar, so neighbouring towns are no longer in different seasons (`tests/weather.gd`).
 - Research buttons: the tech you picked stays lit (it used to turn grey like a disabled button) and only its rival dims.

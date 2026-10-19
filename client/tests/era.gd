@@ -19,7 +19,7 @@ func _init() -> void:
 	if c.lvl[old_i] == 0 or c.tier_at(old_i) != 0:
 		ok = false
 		print("FAIL old building: lvl %d tier %d" % [c.lvl[old_i], c.tier_at(old_i)])
-	Ages.set_age(c, 6)  # the Industrial age
+	c.age = 6  # the Industrial age
 	c.place(City.OX + 6, City.OY + 6, Catalog.Id.ROAD)
 	c.place(City.OX + 6, City.OY + 5, Catalog.Id.RES)
 	for i in 900:
