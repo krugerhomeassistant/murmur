@@ -34,8 +34,8 @@ func _init() -> void:
 			var g: int = t.grid[i]
 			if g != Catalog.Id.EMPTY and Ages.building(g) > t.age:
 				early += 1
-		var done: bool = Research.pending(t).is_empty()
-		rep.append("%s age=%d pop=%d tech=%s early=%d" % [t.town_name, t.age, t.pop, t.tech, early])
+		var done: bool = t.tree.size() >= 3
+		rep.append("%s age=%d pop=%d tree=%d early=%d" % [t.town_name, t.age, t.pop, t.tree.size(), early])
 		ok = ok and early == 0 and done and t.pop >= 60
 	ok = ok and best_age >= 2
 	print("AGEPLAY_OK %s (%d s)" % [rep, (Time.get_ticks_msec() - t0) / 1000] if ok else "AGEPLAY_FAIL %s" % [rep])

@@ -45,7 +45,8 @@ var log_l: RichTextLabel
 var pol_btns := {}
 var banner_l: Label
 var banner_t := 0.0
-var tech_btns := {}  # age -> [button, button]
+var tech_btns := {}  # skill tree node -> button
+var tree_l: Label
 var auto_opt: OptionButton
 var focus_auto: CheckButton
 var ask_chk: CheckButton
@@ -651,22 +652,23 @@ func _right() -> void:
     ask_chk = ab
     ab.toggled.connect(func(on: bool) -> void: m.cmd("ask_build", [on]))
     po.add_child(ab)
-    _hdr(po, "RESEARCH (one choice for each age you reach)")
-    for a in Research.TECHS.size():
-        var rh := HBoxContainer.new()
-        po.add_child(rh)
-        _lbl(rh, 80, "Choice made on entering this age.").text = Ages.name_of(a)
-        var pair := []
-        for o in 2:
+    _hdr(po, "SKILL TREE (spend research points; a node needs the one before it or a neighbour branch's)")
+    tree_l = _lbl(po, 0, "Points come from knowledge. You cannot take everything: choose a direction.")
+    var tg := GridContainer.new()
+    tg.columns = Research.TIERS + 1
+    po.add_child(tg)
+    for b in Research.BRANCHES.size():
+        _lbl(tg, 100, "").text = String(Research.BRANCHES[b]["n"])
+        for t in Research.TIERS:
+            var i := Research.id(b, t)
             var tb := Button.new()
-            tb.text = String(Research.TECHS[a][o]["n"])
-            tb.tooltip_text = String(Research.TECHS[a][o]["d"])
+            tb.text = String(Research.node(i)["n"])
             tb.toggle_mode = true
             tb.focus_mode = Control.FOCUS_NONE
-            tb.pressed.connect(func() -> void: m.cmd("tech", [a, o]))
-            rh.add_child(tb)
-            pair.append(tb)
-        tech_btns[a] = pair
+            tb.custom_minimum_size = Vector2(92, 0)
+            tb.pressed.connect(func() -> void: m.cmd("node", [i]))
+            tg.add_child(tb)
+            tech_btns[i] = tb
     _hdr(po, "POLICIES (continuous cost or saving)")
     for k in Catalog.POLICIES:
         var cb := CheckButton.new()
@@ -1087,11 +1089,13 @@ func _process(_d: float) -> void:
         at += "[b]%s[/b]  %ds left\n" % [WorldEvents.EVENTS[a["id"]]["n"], int(a["left"])]
     act_l.text = at if at != "" else "Nothing happening."
     log_l.text = "\n".join(c.event_log.slice(0, 14))
-    for a in tech_btns:
-        for o in 2:
-            var tb: Button = tech_btns[a][o]
-            tb.set_pressed_no_signal(int(c.tech[a]) == o)
-            tb.disabled = a > c.age or (int(c.tech[a]) >= 0 and int(c.tech[a]) != o)  # the chosen tech stays lit; its rival dims
+    tree_l.text = "Research points: %d" % int(c.pts)
+    for i in tech_btns:
+        var tb: Button = tech_btns[i]
+        var why := Research.block(c, i)
+        tb.set_pressed_no_signal(Research.has(c, i))
+        tb.disabled = why != "" and why != "taken"
+        tb.tooltip_text = "%s (%d points). %s" % [Research.node(i)["d"], int(Research.cost(i)), "" if why == "" else why.capitalize() + "."]
     for k in pol_btns:
         var pb: CheckButton = pol_btns[k]
         if pb.button_pressed != bool(c.policies.get(k, false)):

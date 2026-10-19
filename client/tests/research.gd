@@ -1,5 +1,5 @@
 extends SceneTree
-## Research choices: one tech per reached age, applied through the modifiers, picked once, chosen by planner towns on their own.
+## Skill tree: points from knowledge, nodes need a connected node and their age, effects apply through the modifiers, planner towns choose by temper, saves keep the tree.
 
 
 func _init() -> void:
@@ -8,26 +8,36 @@ func _init() -> void:
 	t.seed_start()
 	t.human = true
 	ts.append(t)
-	Ages.set_age(t, 3)
-	var pend: bool = Research.pending(t) == [0, 1, 2, 3]
-	var future: bool = not Research.pick(t, 4, 0) and Cmd.run(ts, t, "tech", [4, 0]) == null
+	Ages.set_age(t, 0)
+	t.pts = 100000.0
+	var locked: bool = Research.block(t, Research.id(0, 1)) != "" and not Research.pick(t, Research.id(0, 1)) and Cmd.run(ts, t, "node", [Research.id(0, 1)]) == null
+	var first: bool = Cmd.run(ts, t, "node", [Research.id(2, 0)]) == true
+	var twice: bool = not Research.pick(t, Research.id(2, 0))
+	var early: bool = not Research.pick(t, Research.id(2, 1)) and Research.block(t, Research.id(2, 1)).begins_with("needs the")
+	Ages.set_age(t, 4)
+	t.pts = 100000.0
 	t.pop = 500
 	var base := Ages.rate(t)
-	var cost0 := t.mod("build_cost_mult")
-	var picked: bool = Cmd.run(ts, t, "tech", [1, 1]) == true and Research.pick(t, 3, 0)
-	var twice: bool = not Research.pick(t, 1, 0)
-	var applied: bool = Ages.rate(t) > base * 1.07 and t.mod("build_cost_mult") < cost0 and Research.pending(t) == [0, 2]
-	var ai := City.new(Signals.new())
-	ai.seed_start()
-	ai.town_name = "Auria"
-	Ages.set_age(ai, Ages.LAST)
-	Research.auto(ai)
-	var auto_ok: bool = Research.pending(ai).is_empty() and ai.tech == (func() -> Array:
-		var a := City.new(Signals.new())
-		a.town_name = "Auria"
-		Ages.set_age(a, Ages.LAST)
-		Research.auto(a)
-		return a.tech).call()
-	var ok: bool = pend and future and picked and twice and applied and auto_ok
-	print("RESEARCH_OK" if ok else "RESEARCH_FAIL pend=%s future=%s picked=%s twice=%s applied=%s auto=%s" % [pend, future, picked, twice, applied, auto_ok])
+	var chain: bool = Research.pick(t, Research.id(2, 1)) and Research.pick(t, Research.id(2, 2))
+	var side: bool = Research.pick(t, Research.id(3, 1)) and Research.pick(t, Research.id(1, 1))  # a neighbouring branch opens its next tier too
+	var applied: bool = Ages.rate(t) > base * 1.1
+	var poor: bool = (func() -> bool:
+		t.pts = 10.0
+		return not Research.pick(t, Research.id(0, 0)) and Research.block(t, Research.id(0, 0)) == "needs 300 points").call()
+	var back := City.new(Signals.new())
+	back.from_dict(t.to_dict())
+	var saved: bool = back.tree == t.tree and absf(back.pts - t.pts) < 0.01
+	var picks := []
+	for n in 2:
+		var ai := City.new(Signals.new())
+		ai.seed_start()
+		ai.town_name = "Auria"
+		Ages.set_age(ai, Ages.LAST)
+		ai.pts = 20000.0
+		for k in 12:
+			Research.auto(ai)
+		picks.append(ai.tree)
+	var auto_ok: bool = picks[0].size() >= 6 and picks[0] == picks[1]
+	var ok: bool = locked and first and twice and early and chain and side and applied and poor and saved and auto_ok
+	print("RESEARCH_OK" if ok else "RESEARCH_FAIL locked=%s first=%s twice=%s early=%s chain=%s side=%s applied=%s poor=%s saved=%s auto=%s" % [locked, first, twice, early, chain, side, applied, poor, saved, auto_ok])
 	quit(0 if ok else 1)

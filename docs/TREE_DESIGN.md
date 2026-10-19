@@ -5,7 +5,9 @@ upgrades etc. Allowing players to focus on specific things but not be limited to
 the ages." And: "I also dont want this connection stuff anymore, I want it to be physical connections with roads/railways built by the towns,
 the towns shouldnt be limited in their space, their only limitation should be their resources and choices made."
 
-Status: design only. Nothing here is built yet. It replaces the one-choice-per-age research list (`Research.TECHS`) and the territory rectangle.
+Status: part 1 (the skill tree, slices T1 to T3 in a lean form) is built; part 2 (physical links, no territory limit) is design only. The tree replaced the one-choice-per-age research list.
+
+Built (`research.gd`, `tests/research.gd`): six branches (Economy, Industry, Knowledge, Society, Military, Infrastructure) of six nodes. Points are 0.6 per knowledge gained; a node costs 300 x tier squared, needs the previous node of its branch or the same tier's predecessor in a neighbouring branch, and opens with the age (tier x 2). The whole tree costs far more than a town earns, so each town chooses a direction. Planner towns pick by a temper hashed from the town name. The grid is in the Mayor's office, Policies tab. Still open: nodes that unlock buildings and units (replacing `Ages.BUILDING`), a full-screen tree view, and removing the age gate.
 
 ## 1. The town skill tree
 
