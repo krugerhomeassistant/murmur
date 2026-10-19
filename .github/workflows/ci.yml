@@ -82,6 +82,7 @@ jobs:
           timeout 120 godot --headless --path client -s tests/era.gd | tee er.txt && grep -q ERA_OK er.txt
           timeout 120 godot --headless --path client -s tests/refit.gd | tee rf.txt && grep -q REFIT_OK rf.txt
           timeout 150 godot --headless --path client -s tests/capture.gd | tee cp.txt && grep -q CAPTURE_OK cp.txt
+          timeout 60 godot --headless --path client -s tests/units.gd | tee un.txt && grep -q UNITS_OK un.txt
           timeout 120 godot --headless --path client -s tests/painter.gd | tee pa.txt && grep -q PAINTER_OK pa.txt
           timeout 120 godot --headless --path client -s tests/art.gd | tee ar.txt && grep -q ART_OK ar.txt
           timeout 300 godot --headless --path client -s tests/ages.gd | tee ag.txt && grep -q AGES_OK ag.txt
