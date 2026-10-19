@@ -8,6 +8,7 @@ var o_name: LineEdit
 var o_seed: LineEdit
 var o_sand: CheckButton
 var o_towns: OptionButton
+var o_runs: OptionButton
 var o_mood: OptionButton
 var o_diff: OptionButton
 var o_land: OptionButton
@@ -70,6 +71,7 @@ func _ready() -> void:
 	o_name.max_length = 18
 	_row(v, "Your town's name", o_name, "What your town is called.")
 	o_towns = _opt(v, "Towns at the start", ["1 (just you)", "2 (you + 1 neighbour)", "3 (you + 2 neighbours)", "4 (you + 3 neighbours)", "5", "6", "7", "8 (busy region)"], 1, "Neighbour towns run themselves. You trade, ally, embargo or fight with them. You can found more later from the Towns menu.")
+	o_runs = _opt(v, "Towns you run", ["Just the first", "2 (a province)", "4", "All of them (a continent)"], 0, "How many of the starting towns are yours. The rest run themselves. Tab switches between your towns. Never more than the towns at the start.")
 	o_mood = _opt(v, "Neighbours are", ["Friendly", "Mixed (each has its own temper)", "Prickly", "Random"], 1, "How the neighbours feel about you at the start. Friendly towns offer pacts; prickly ones smuggle, raid and demand tribute.")
 	o_diff = _opt(v, "Difficulty", ["Relaxed ($600, calmer world)", "Normal ($300)", "Hard ($150, more disasters)"], 1, "Starting money and how often world events strike.")
 	o_land = _opt(v, "Starting land", ["Small (40x24)", "Medium (48x32)", "Large (64x40)"], 1, "How much of the map you own at the start. You can annex more at any time.")
@@ -157,6 +159,7 @@ func _go() -> void:
 	m.start_game({
 		"name": nm if nm != "" else "Murmur",
 		"towns": o_towns.selected + 1,
+		"runs": [1, 2, 4, 99][o_runs.selected],
 		"mood": o_mood.selected,
 		"diff": o_diff.selected,
 		"land": o_land.selected,
