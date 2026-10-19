@@ -186,12 +186,6 @@ static func _gain(u: Dictionary, xp: float) -> void:
 		u["hp"] = float(u["hp"]) + float(u["mx"]) - m0
 
 
-## A declaration of war calls up a militia so even a town with no barracks fields something.
-static func conscript(c: City) -> void:
-	for i in mini(clampi(c.pop / 15, 3, 12), c.pop / SOLDIER_SHARE):
-		c.army.append(_unit("inf", 0.7))
-
-
 ## Coins per second the army costs.
 static func upkeep(c: City) -> float:
 	var up := 0.0

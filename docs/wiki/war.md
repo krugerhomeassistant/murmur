@@ -144,11 +144,11 @@ Planner towns do not build ports (`water` buildings) unless a naval yard is need
 
 ### Declaring
 
-`Diplo.declare(a, b, goal, why)` (the player's "war" action uses goal `land`) signs a `war` treaty on both sides, sets `war_n`, `war_sc`, `war_goal[other]` and tension to 0 / 0 / the goal / 0 on both, calls `Military.conscript` for both, shifts opinions by -0.30 and -0.60, logs "X declares war on Y (why)! Goal: g." and queues the alarm sound on both. No cost. The war lasts until a treaty is signed.
+`Diplo.declare(a, b, goal, why)` (the player's "war" action uses goal `land`) signs a `war` treaty on both sides, sets `war_n`, `war_sc`, `war_goal[other]` and tension to 0 / 0 / the goal / 0 on both, shifts opinions by -0.30 and -0.60, logs "X declares war on Y (why)! Goal: g." and queues the alarm sound on both. No cost. The war lasts until a treaty is signed.
 
 The AI picks the goal with `Diplo.pick_goal`: `total` when its `strength` exceeds the target's by more than 1.5, otherwise `land` if it can expand towards the target, otherwise `tribute`. The goal sets the occupation needed to force a surrender (`Diplo.OCC_NEED`: tribute 15, land 40, total 60) the spoils below, and what the surrender does: tribute takes spoils only, land also annexes a strip, and total makes the loser a vassal (see Vassals). `Diplo.wars(towns)` lists the wars in progress with goal, occupation and duration; the Empire window's Domination text shows them.
 
-`Military.conscript(c)` adds `clamp(pop / 15, 3, 12)` Riflemen at 70% hit points, so a town with no barracks still fields a militia. (This ignores the 150 army cap.)
+Declaring war raises no troops: a town fights only with the units it has trained in its barracks and bases, in kinds its age allows (`Ages.unit`). A computer-run town starts a war only with at least `Diplo.MIN_ARMY` (3) trained units (`Diplo.ready`).
 
 ### Consequences
 
@@ -207,7 +207,7 @@ cap[kind] = min(cap[kind], 2 * radar_posts)    for kinds flagged radar (jets, fi
 
 Barracks house infantry types and medics; bases also house armour, helicopters and air; naval yards house ships; radar limits air units to two per radar post, taken across all air kinds separately (each kind is limited to `2 * radar posts`, not their sum). The exact table of "housed by" is in [units.md](units.md).
 
-A town also has a hard `ARMY_MAX = 150` units: training stops at this size (the comment cites upkeep and the O(n^2) cost of fights). Conscripts ignore it.
+A town also has a hard `ARMY_MAX = 150` units: training stops at this size (the comment cites upkeep and the O(n^2) cost of fights).
 
 ### Training
 
@@ -374,7 +374,7 @@ Known limits listed by the design: units go home instantly when peace comes, def
 | Topic | Location |
 |---|---|
 | Opinions, treaties, actions, neighbour events | `client/scripts/diplomacy.gd`: `Diplo.act`, `second`, `_event`, `_raid`, `surrender`, `resolve`, `_ask`, `_offer`, `tmult`, `linked`, `side`, `mil`, `stance`, `COSTS` |
-| Unit data, caps, training, ranks | `client/scripts/military.gd`: `KIND`, `DEF_W`, `caps`, `counts`, `weights`, `power`, `econ`, `conscript`, `adapt`, `_gain`, `RANK_XP`, `RANK_DMG`, `RANK_HP`, `ARMY_MAX` |
+| Unit data, caps, training, ranks | `client/scripts/military.gd`: `KIND`, `DEF_W`, `caps`, `counts`, `weights`, `power`, `econ`, `adapt`, `_gain`, `RANK_XP`, `RANK_DMG`, `RANK_HP`, `ARMY_MAX` |
 | Fighting | `Military.fight`, `_go`, `_follow`, `_slide`, `_spawn`, `_row` |
 | Terrain and flow fields | `Military._field`, `_tile_ok`, `passable`, `nearest_ok`, `river`, `_wet_edge`, `_shore`, `terrain_changed`, `register`, `FIELD_TTL`, `BUILD_GAP_MS` |
 | Occupation, bombing | `Military._occupy`, `_bomb` |
@@ -391,6 +391,5 @@ Known limits listed by the design: units go home instantly when peace comes, def
 - `a.war_t` is the war counter timer and it lives on the lower-indexed town. If that town is at war with two neighbours, the timer is decremented once per war per second, so both wars' counters advance faster (about every 10 s instead of 20). The documentation above assumes one war.
 - `Diplo.act` rejects any verb when `coins < cost`; with a cost of 0 that only fails for a town with negative coins, so a town in debt may be unable to declare war or cancel treaties. Not tested.
 - The stalemate ceasefire counts `army.size()` of both sides, including units that are at home and not committed to this war; it is not specific to the pair of towns in a multi-war game.
-- `Military.conscript` ignores `ARMY_MAX`, and re-declaring a war repeatedly adds more militia each time. Whether a limit is intended is not stated.
 - It is not clear whether ground units are meant to shoot across a river with no bridge (they do hold at the shore; they can fire at targets in range) or whether this behaviour is incidental.
 - Land buildings do not block movement, and the only damage to buildings comes from `strike` (raids and bombers). Whether buildings should gain hit points is a phase 2 design question.
