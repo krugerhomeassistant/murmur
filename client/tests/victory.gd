@@ -26,20 +26,19 @@ func _init() -> void:
 	if absf(Victory.culture(ct) - 100.0 * Victory.CULTURE_SCORE * 1.2) > 0.01 or cultured <= plain or Victory.score(ct) <= cultured:
 		ok = false
 		print("FAIL culture: %s %s %s" % [plain, cultured, Victory.culture(ct)])
-	# conquest: the state is enough, on the first second it holds
+	# a huge land share alone never wins: only the last side standing does
 	var ts := _world([80, 10, 10])
 	var v := Victory.new()
-	v.second(ts)
-	if v.winner != "V0" or v.route != "conquest" or not v.fresh:
-		ok = false
-		print("FAIL conquest: %s %s" % [v.winner, v.route])
-	var after := v.winner
-	ts[1].terr = Rect2i(0, 0, 500, 1)  # sandbox: the standings move on, the winner stays
 	for i in 50:
 		v.second(ts)
-	if v.winner != after:
+	if v.winner != "":
 		ok = false
-		print("FAIL winner changed")
+		print("FAIL won on land share: %s %s" % [v.winner, v.route])
+	ts[1].over = "bankrupt"
+	v.second(ts)
+	if v.winner != "":
+		ok = false
+		print("FAIL won with one rival left")
 	# just under the share: no win
 	ts = _world([69, 31])
 	v = Victory.new()
@@ -65,16 +64,16 @@ func _init() -> void:
 	if v.winner != "":
 		ok = false
 		print("FAIL lone win")
-	# hegemony: a clear lead (1.5x the next score) and 40% allied, nobody near 70%
+	# a clear lead with allies is not a win either
 	ts = _world([30, 20, 25, 25])
 	ts[0].pop = 500
 	ts[0].treaty["V1"] = "alliance"
 	ts[1].treaty["V0"] = "alliance"
 	v = Victory.new()
 	v.second(ts)
-	if v.winner != "V0" or v.route != "hegemony":
+	if v.winner != "":
 		ok = false
-		print("FAIL hegemony: %s %s" % [v.winner, v.route])
+		print("FAIL hegemony won: %s %s" % [v.winner, v.route])
 	# no alliance, no hegemony
 	ts = _world([30, 20, 25, 25])
 	ts[0].pop = 500

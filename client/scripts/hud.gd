@@ -1518,7 +1518,7 @@ func _tax_all(k: String, d: float) -> void:
 ## The standings as text: land share, allied share, score and how close each side is to each victory.
 func _domination() -> String:
     var v: Victory = m.sig.vic
-    var out := "DOMINATION: conquest = %d%% of the land (or the last side); hegemony = a clear top score and %d%% allied. No timers.\n" % [int(Victory.CONQUEST_SHARE * 100.0), int(Victory.ALLY_SHARE * 100.0)]
+    var out := "DOMINATION: the game ends only when one side holds every living town (a town with a single citizen counts as alive). Land share and score are standings only.\n"
     if v.winner != "":
         out += v.describe() + "\n"
     for r: Dictionary in v.rows:
