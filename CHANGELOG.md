@@ -4,6 +4,7 @@ All notable changes to Murmur are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
+- Scenario setup (sandbox plan G1, first part): the new-game screen has a "Towns you run" option (just the first, 2, 4 or all; Tab switches between your towns) and scenarios can give each town its own starting age; `tests/scenario.gd` checks both.
 
 ## [0.8.0] - 2026-10-18
 

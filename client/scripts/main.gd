@@ -271,8 +271,9 @@ func _fresh(o: Dictionary) -> void:
 		towns[k].acc = 0.3 * k
 		towns[k].set_start(lw, lh)
 		towns[k].ev_scale = [1.5, 1.0, 0.7][diff]
-	for t in towns:
-		Ages.set_age(t, o.get("age", Ages.LAST))
+	var ages: Array = o.get("ages", [])  # scenario: per-town age, the "age" option fills the rest
+	for k in towns.size():
+		Ages.set_age(towns[k], ages[k] if k < ages.size() else o.get("age", Ages.LAST))
 	city.coins = [600.0, 300.0, 150.0][diff]
 	city.auto_mode = o.get("auto", 2)
 	city.auto_policy = o.get("policy", true)
@@ -284,6 +285,14 @@ func _fresh(o: Dictionary) -> void:
 			t.auto_mode = 2
 			t.auto_policy = true
 			t.auto_expand = true
+	for k in range(1, mini(int(o.get("runs", 1)), towns.size())):  # scenario: you run several towns (Tab switches)
+		var mine := towns[k]
+		mine.human = true
+		mine.coins = city.coins
+		mine.temper = 0.0
+		mine.auto_mode = city.auto_mode
+		mine.auto_policy = city.auto_policy
+		mine.auto_expand = city.auto_expand
 	if o.get("spectate", false):
 		headline = "Spectating: no mayor. Tab or the Towns menu switches town, F toggles auto-follow, 8x speeds it up."
 		return
