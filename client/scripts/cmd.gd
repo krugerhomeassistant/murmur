@@ -53,8 +53,8 @@ static func run(towns: Array[City], t: City, name: String, a: Array) -> Variant:
 		"tech":  # research: [age, option]
 			if a.size() == 2 and a[0] is int and a[1] is int:
 				return true if Research.pick(t, a[0], a[1]) else null
-		"set_age":  # sandbox: puts the town in an age (setup and tests)
-			if a.size() == 1 and a[0] is int:
+		"set_age":  # sandbox only: puts the town in an age
+			if sandbox and a.size() == 1 and a[0] is int:
 				Ages.set_age(t, a[0])
 				return true
 		"grant":

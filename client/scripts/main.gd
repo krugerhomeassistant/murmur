@@ -519,7 +519,7 @@ func found_cost(g: Vector2i) -> float:
 	var d := 1 << 20
 	for t in towns:
 		d = mini(d, maxi(absi(t.gpos.x - g.x), absi(t.gpos.y - g.y)))
-	return FOUND_COST + FOUND_STEP * float(maxi(d - 1, 0))
+	return 0.0 if Cmd.sandbox else FOUND_COST + FOUND_STEP * float(maxi(d - 1, 0))
 
 
 func plot_at(p: Vector2) -> Vector2i:
@@ -557,6 +557,7 @@ func found_town_at(g: Vector2i) -> bool:
 			var spec := spectating()
 			var t := _new_town("", g)
 			t.coins = 300.0
+			Ages.set_age(t, city.age)  # a new town starts in the age of the town that founded it
 			t.ev_scale = city.ev_scale  # same difficulty as the rest of the game
 			if spec:  # spectating stays spectating: the new town runs on the planner like the others
 				t.human = false
