@@ -67,6 +67,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 - Globe view: the old town labels and shaded plots no longer draw underneath the town discs, discs have a minimum readable size, and lines join only towns that are at war or linked by road (the all-pairs lines were a hairball).
 - The Windows build no longer ships the editor's debugging helper addon (it is excluded from the export and its autoload is removed in the build workflow).
 
+### Added
+- Globe view overlays (G4c): press O to cycle a colour ring (cool to hot) around each town disc by side, age, population, wealth or military. Checked headless only, not yet on screen.
+
 ## [0.7.0] - 2026-10-18
 
 ### Added
