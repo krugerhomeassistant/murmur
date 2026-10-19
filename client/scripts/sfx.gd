@@ -20,6 +20,7 @@ var muted := false
 var pb: AudioStreamGeneratorPlayback
 var brown := 0.0
 var lp := 0.0
+var out := 0.0
 var t := 0.0
 var tones: Array = []  # [freq, start, dur, amp, phase]
 
@@ -37,7 +38,7 @@ func _ready() -> void:
 
 func cue(name_: String) -> void:
 	for n in CUES.get(name_, []):
-		tones.append([n[0] * 0.5, t + n[1], n[2] * 1.6, 0.05, 0.0])
+		tones.append([n[0] * 0.5, t + n[1], n[2] * 2.5, 0.05, 0.0])
 
 
 func _process(dt: float) -> void:
@@ -51,9 +52,9 @@ func _process(dt: float) -> void:
 	var rain := 0.025 if w == "rain" else (0.05 if w == "storm" else 0.0)
 	var crick := 0.0 if (not day and c.season != 3) else 0.0
 	if m.started and day and c.season != 3 and randf() < dt * 0.12:
-		var f := randf_range(1800.0, 2600.0)
+		var f := randf_range(880.0, 1320.0)  # low and soft: high chirps sounded screechy
 		for k in randi_range(2, 4):
-			tones.append([f * randf_range(0.9, 1.1), t + k * 0.09, 0.09, 0.008, 0.0])
+			tones.append([f * randf_range(0.9, 1.1), t + k * 0.14, 0.16, 0.006, 0.0])
 	if not m.started:
 		hum = 0.0
 		rain = 0.0
@@ -71,9 +72,12 @@ func _process(dt: float) -> void:
 		for tn in tones:
 			var age: float = t - float(tn[0 + 1])
 			if age >= 0.0 and age < float(tn[2]):
-				var env := minf(1.0, age * 40.0) * (1.0 - age / float(tn[2]))
-				s += sin(age * TAU * float(tn[0])) * float(tn[3]) * env
-		buf[i] = Vector2(s, s) * g
+				var u: float = age / float(tn[2])
+				var env := smoothstep(0.0, 0.03, age) * (1.0 - u) * (1.0 - u)  # soft attack, smooth fade
+				var ph := age * TAU * float(tn[0])
+				s += (sin(ph) + 0.25 * sin(ph * 2.0)) * float(tn[3]) * env
+		out += (s - out) * 0.35  # gentle low-pass takes the edge off
+		buf[i] = Vector2(out, out) * g
 		t += step
 	pb.push_buffer(buf)
 	var keep: Array = []
