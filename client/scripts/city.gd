@@ -3290,13 +3290,26 @@ func _sickness() -> void:
 # ---------- economy: crops -> food, goods, storage, trade ----------
 
 ## Wood per second from the lumber camps: the forest within 5 tiles of each (cached until the town changes).
+var wood_haul := 1.0  # share of the felled wood the camps' carts bring to the mills (distance limited)
+
+
 func _wood_rate(emp: float) -> float:
 	if wood_sig != scan_sig:
 		wood_sig = scan_sig
 		wood_yield = 0.0
+		wood_haul = 1.0
+		var dests: Array = (bt.get(T.SAWMILL, []) as Array) + (bt.get(T.TOOLWORKS, []) as Array)
+		var cap_haul := 0.0
 		for i in bt.get(T.LUMBER, []):
-			wood_yield += minf(float(_forest_near(i)), 12.0)
-	return wood_yield * 0.02 * emp
+			var y := minf(float(_forest_near(i)), 12.0)
+			wood_yield += y
+			var d := 1e9  # one cart per camp: it shuttles to the nearest mill, so a far mill carries less
+			for j in dests:
+				d = minf(d, absf(float(i % W - j % W)) + absf(float(i / W - j / W)))
+			cap_haul += y * (1.0 if dests.is_empty() else clampf(12.0 / maxf(d, 1.0), 0.3, 1.0))
+		if wood_yield > 0.0:
+			wood_haul = cap_haul / wood_yield
+	return wood_yield * 0.02 * emp * wood_haul
 
 
 func _lumber_site() -> bool:
