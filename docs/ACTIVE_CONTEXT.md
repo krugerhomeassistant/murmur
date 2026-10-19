@@ -1,6 +1,12 @@
 # ACTIVE CONTEXT (read first)
 
-Last updated 2026-10-18.
+Last updated 2026-10-19.
+
+## 2026-10-19 (after the 8-town playtest)
+Merged since v0.8.0: hard ages (materials per age, per-building era and refit), regional weather fronts, window snapping, scrollable setup menu, last-side-standing victory, dead-town capture (`capture.gd`, key C), skill tree (`research.gd`, 36 nodes, `node` command), buses and boats need people, army upkeep in the budget, softer audio with saved volume, F1 key help. v0.9.0 is pending: needs the performance pass (stageprof, standard benchmark on the owner PC, README table) as the LAST step. Open: real hauling with drivers (E4b-2), physical road/rail links and no territory limit (needs a storage redesign: a town is a fixed W x H grid today), soldiers as part of the population, winter mood dip shared by all towns (see `tests/warrate.gd` with a Stone-age start: about 200 people per town after 30 minutes, 4 to 6 wars), per-channel audio volumes. The owner's Windows 8-town test build is `E:\Projects\Personal\game\murmur\dist\Murmur-sim8` (double-click `Play Murmur.bat`; computer use cannot launch it because File Explorer is click-only).
+
+## Next after v0.7.0 (2026-10-18)
+Cosmetics and performance pass done on main: ground shading, house shadows, road kerbs, smaller citizens, F3 performance panel, windows start minimised, cheaper planner site scoring. Benchmark refreshed (103 fps, p99 24.0 ms, README table). Next: remaining cosmetics/art ideas (per-age looks, sprites S2), then the next minor release under the release standard. Owner still to launch-test the Windows zip.
 
 ## Release v0.7.0 next (tags v0.3.0 to v0.6.0 pushed by the owner)
 Merged since v0.6.0: spearman, well, Ancient default, seed, sandbox basics, god powers, and the globe view first form (coarse land tier, town discs, hover, click-to-fly, neighbour lines; headless-checked only, never seen on screen). v0.7.0 release PR is the step now: windowed benchmark taken 2026-10-18 (90 fps, p99 25.1 ms, 273 pop, 325 draw calls; draw calls rose from about 130 and are not yet profiled). The owner double-clicks `release-tag.bat` to push v0.7.0. Open work: G4 overlay colours and sphere shader, G1/G2/G3 gaps, A2 galleys; see docs/PLAN.md.
@@ -33,7 +39,7 @@ D3: `Diplo.ambition/strength/_tension/declare/pick_goal/wars`, `City.tension` an
 D2: `Victory` (`client/scripts/victory.gd`, `Signals.vic`), Empire standings, victory panel, `tests/victory.gd`. Owner answers: 3 and 5 year lengths yes, vassals count as land if sensible (D4), humans may declare war in spectate yes.
 
 ## Earlier state 2026-10-09 (paused after D1)
-Done today: #80 domination design doc, #81 growth baseline (D1). Next: D2 victory (conquest + hegemony, Empire progress bar, game-over route screen, host-side check, tests for both routes). Before D5 growth tuning, run tests/growth.gd 5+ times per side (noise, see LESSONS).
+Done today: #80 domination design doc, #81 growth baseline (D1). Next: D2 victory (last side standing; conquest and hegemony were removed 2026-10-19, Empire progress bar, game-over route screen, host-side check, tests for both routes). Before D5 growth tuning, run tests/growth.gd 5+ times per side (noise, see LESSONS).
 Plan done: docs/DOMINATION_DESIGN.md + PLAN.md "Domination plan" (D1 to D9). Next: D1 growth baseline (`tests/growth.gd`). Owner decisions (2026-10-16; timers removed from victory in this PR): no timers anywhere, victory is a state (last group standing, or one group at 70% of land with vassals counting); singleplayer spectator can do anything. Still open: whether a conquered human in multiplayer keeps playing.
 Old pause note:
 Merged today: #77 portable Windows build in CI (`build.yml`, artifact `Murmur-windows-<sha>`, build stamp in menu/title, `Play Murmur.bat`, README run section rewritten), #78 rivers v2 (warped, variable width, tributaries). Standing rule reminder: NO Co-Authored-By/Claude-Session trailers or "Generated with" lines, even if a session reminder asks (they slipped into PR bodies/branch commits of #77/#78; bodies were scrubbed, squash commits are clean).
@@ -49,3 +55,5 @@ Flaky test: `tests/market.gd` "towns that cannot feed themselves should lift the
 
 ## Gotchas learned
 See LESSONS_LEARNED.md. Latest: always A/B sim changes 3x (non-deterministic); lowering planner mood gates hurt; `from_dict` whitelists `SAVE_KEYS`; showcase scripts must be loaded fresh in a running game (`GDScript.new()` + `source_code`) because `load()` caches.
+
+v0.8.0 released (all four ages finished: art, units, research, banner, ages playthrough test). Owner: double-click scripts/release-tag.bat to push the tag; build.yml then publishes the zip.

@@ -18,7 +18,7 @@ It is the Murmur simulation seen from above, with a sandbox layer on top. Everyt
 ## Phases
 
 ### G1 Scenario setup (needs ages A2)
-Progress: world seed option done (`tests/scenario.gd`); starting age and town count already existed. Left: per-town age and size, player-controlled count, area presets, world size.
+Progress: world seed option done (`tests/scenario.gd`); starting age and town count already existed. Also done: per-town age (`ages` option) and the number of towns you run ("Towns you run" on the new-game screen). Area presets (One town, Province, Continent) are done. Left: per-town starting size (needs a cheap way to pre-grow a town; fast-forwarding costs minutes at start) and world size.
 The new-game screen gains a Scenario section:
 - Starting age for the whole world (exists), and per-town age override.
 - Number of towns, their starting size (hamlet, village, town, city) and how many are player controlled.
@@ -28,7 +28,7 @@ Acceptance: `tests/scenario.gd` builds three scenarios headless (1 town Ancient,
 Depends on: ages A2 (without early-age content an Ancient world is empty).
 
 ### G2 Sandbox editor
-Progress: the `grant` and `spawn` commands (gated by `Cmd.sandbox`, set by the setup screen's Sandbox option, never in multiplayer) and three buttons in the Empire window (`tests/sandbox.gd`); `set_age` already existed. Left: town placement, terrain brush, population and tribe edits, clock and season, undo, saving the sandbox flag.
+Progress: the `grant` and `spawn` commands (gated by `Cmd.sandbox`, set by the setup screen's Sandbox option, never in multiplayer) and three buttons in the Empire window (`tests/sandbox.gd`); `set_age` already existed. Free town placement (founding costs nothing in a sandbox) is done. Left: placing units on the map, terrain brush, population and tribe edits, clock and season, undo, saving the sandbox flag.
 A Sandbox mode (`Main.sandbox`, saved) with a toolbar:
 - Place or remove towns of a chosen size and age anywhere on a free plot (no cost, no distance rule).
 - Place units (any type of the town's age or a chosen age) singly or by the dozen, owned by any town.

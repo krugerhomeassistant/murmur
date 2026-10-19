@@ -4,6 +4,68 @@ All notable changes to Murmur are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
+- The squares around towns are gone: the world view shows only names, and the buildable edge is a faint fade and line in the town you are in.
+- War rework, first step: declaring war no longer hands both towns free Riflemen (they appeared even in the Stone age). Only units trained in a town's barracks and bases, in kinds its age allows, fight; a computer-run town starts a war only with at least three trained units.
+- Cart drivers are real jobs: farms, mines and lumber camps that deliver to a mill, foundry, refinery or sawmill need one driver per eight units of output, taken from the town's workforce and counted in its jobs (none while there is no processor to deliver to).
+- Separate ambience and cue volumes (Menu: Ambience up/down, Cues up/down), saved with the master volume.
+- Fixed a mood drag in games with many towns: the "news" signal was one value shared by every town and each town's scandals and bad news added to it, so with eight towns it sat strongly negative and pulled every town's mood down together (people stopped arriving, then left). News is now each town's own. Eight-town test runs: total people after 30 minutes went from about 600 to about 840 (3 to 7 runs each, noisy).
+- Full-screen skill tree (key K): six arms from a hub with six nodes each, taken nodes lit, available ones outlined, hover for cost and effect, click to take (`treeview.gd`).
+- The sound volume and mute choice are remembered between runs (`user://settings.cfg`); F1 shows a help panel with the keys.
+- Army upkeep is now a line of the budget ("Army upkeep"). It used to be taken from the treasury without showing in income, so planners and policies spent money the army was already costing and towns with big armies shrank. Fixed.
+- Every unit on the map is one of the town's people: a bus needs eight people to run it and a port boat twelve, so a town of four has none (`tests/units.gd`). Soldiers also come from the people: training and the war-time levy stop at one soldier for every three people. Real freight drivers are still open (see PLAN, E4b-2).
+- Skill tree: the one-pick-per-age research list is replaced by a tree of six branches (Economy, Industry, Knowledge, Society, Military, Infrastructure) with six nodes each. Nodes are bought with research points earned from knowledge, need a connected node and their age, and cost more each tier, so a town cannot take everything and has to choose a direction. Planner towns choose by a temper of their own. Old saves keep their age but start with an empty tree (`tests/research.gd`).
+- Softer sound: birds are lower and gentler, cues have a soft attack and a smooth fade, and the output is gently low-passed so nothing is screechy. Per-channel volumes are still to do.
+- Dead towns can be captured: a town with no people for 15 seconds is abandoned (it keeps its buildings, treaties end, the game goes on without it). Another town sends troops (select the abandoned town, press C, or the `capture` command; they march, raze the old town hall, then hold the town alone for 120 seconds to claim it). A second claimant arriving forces a fight and breaks any alliance between them. The new owner gets the capturer's side, six settlers and part of its coins; towns never share money automatically (`tests/capture.gd`).
+- Planner towns with outdated buildings buy and keep the planks, tools and metal for refits and refit up to three buildings per five seconds when they have a free crew. Fixed: the buildings a new game starts with were built in the Modern era whatever the starting age.
+- Buildings keep the era they were built in: a new age no longer repaints the whole town. Each building can be refitted for the town's age (select it, press U): it costs coins, planks, tools and metal, needs a free building crew (one per 60 people), and is a construction site meanwhile (it houses and employs nobody). Buildings left behind by the age hold and employ 6% less per era. Planner towns refit their most outdated building when they have spare money and stock (`tests/era.gd`, `tests/refit.gd`).
+- Weather is regional: rain, storms, snow, fog and heat are soft drifting fronts that cross the map and fade in and out; a town has the weather of the front over it (it used to be one global state drawn as a flat tint). Seasons now follow one world calendar, so neighbouring towns are no longer in different seasons (`tests/weather.gd`).
+- Research buttons: the tech you picked stays lit (it used to turn grey like a disabled button) and only its rival dims.
+- Design for a per-town skill tree and for physical road and rail links without a territory limit (docs/TREE_DESIGN.md); nothing built yet.
+- Ages are hard to enter: about six times more knowledge per age, and each age costs planks, tools and (later) metal that the town must have in stock; it buys and makes them ahead of time and does not sell them off. Per-building upgrades are planned next (docs/PLAN.md, "Hard ages and building upgrades").
+- The game now ends only when one side holds every living town: the 70% land conquest and the score-lead hegemony wins are gone (they ended games in minutes). A town with a single citizen keeps the game going.
+- The start menu scrolls when it is taller than the screen.
+- Floating windows never overlap: they snap to the edges of other windows and the screen while you drag, and a window dropped, opened or resized onto another moves to the nearest free spot beside it (`tests/winlayout.gd`).
+- Sound now starts at zero volume (raise it from the menu); the generated sound is being reworked.
+- Hauling, first slices: lumber camps deliver wood to sawmills and toolworks, farms deliver crops to mills, and mines deliver ore to foundries and refineries only as fast as carts can shuttle, so a source far from its processor delivers less (12 tiles or closer is full speed, 30% at worst).
+- Staffed and supplied (supply chains step 1): sawmills, toolworks, foundries, mills, refineries and armouries run only as far as they have workers and materials, and the people who work there are paid only for what actually runs (an idle sawmill pays nothing). Hover a building to see "Working", "Running at 40% (no wood)" or "Idle: no wood, workers unpaid". `tests/staffed.gd`.
+- Fixed the late-game money crash: upkeep grew with the square of the population (cost per building rose without limit with town size), so every town above about 400 people slowly went broke, lost mood and shrank. The size cost now stops growing at 6x (about 300 people), and the planner no longer adds recurring costs unless the treasury can carry them for thirty minutes (it was ten). At peace the four-town playthrough now ends at 630 to 790 people instead of 50 to 750 with some towns at zero.
+- Twelve ages instead of four: Stone, Bronze, Classical, Dark, Medieval, Renaissance, Industrial, Electric, Atomic, Information, Digital, Future, in four eras of three that keep the look of the old Ancient, Medieval, Industrial and Modern ages. Buildings and units unlock gradually across the ages, each age has its own research pair (twelve picks), and the setup screen lists all twelve. Old saves convert (each old age becomes the first age of its era); `tests/ages.gd` checks it.
+- Fixed: a town founded from the map now starts in the age of the town that founded it (it used to start in the Modern age even in an Ancient game).
+- Fixed: the `set_age` command is sandbox-only (any player in multiplayer could skip ages).
+- Sandbox: founding a town from the map is free (sandbox editor, G2 first part).
+- Scenario presets on the new-game screen (One town, Province, Continent) set the number of towns and how many you run.
+- Scenario setup (sandbox plan G1, first part): the new-game screen has a "Towns you run" option (just the first, 2, 4 or all; Tab switches between your towns) and scenarios can give each town its own starting age; `tests/scenario.gd` checks both.
+
+## [0.8.0] - 2026-10-18
+
+### Added
+- Medieval terraces (a row of timber-framed houses) and tenements (stone, jettied upper floor, tiled roof).
+- Units and vehicles by age (ages finish line AF5): Industrial-age cars are boxy open tourers in dark colours with brass lamps (Modern cars keep the sleek painted look), and people's clothes shift with the age (earth tones, dyed wool, grey cloth, bright) while the mood colour still shows.
+- Full-ages playthrough test `tests/ageplay.gd` (manual, about 3 minutes).
+- Age banner (ages finish line AF7): entering a new age shows a large fading line near the top (and, for you, a pointer to the research choice); `tests/banner.gd`.
+- Research choices (ages finish line AF6): on reaching each age a town picks one of two techs (bronze tools or writing, masonry or guilds, steam power or public health, computing or efficiency). They act through the same modifiers as policies, so they cost nothing per frame; planner towns choose by themselves, humans choose in the Policies tab of the Mayor's office; saved with the town; `tests/research.gd`.
+- Galleys (ages finish line AF2): an oared Medieval warship housed at the port (two per port), fighting on shared rivers like the later boats; `tests/galley.gd`.
+- Roads by age (ages finish line AF3): beaten earth with ruts and pebbles in the Ancient age, cobbles in the Medieval age, asphalt with lane lines from the Industrial age. Drawn into the cached chunks, no per-frame cost.
+- Medieval units (ages finish line AF1): archers (long range) and knights (fast, armoured) trained at barracks from the Medieval age, drawn on the field with a bow and a lance; `tests/medieval.gd`. The plan gains an "ages finish line" (docs/PLAN.md): the next release waits for it.
+- Buildings by age (ages finish line AF4, first part): Ancient market stalls and open workshops, Medieval timber-framed shops and stone smithies; and art for the thirteen buildings that showed only two letters on a grey square (well, street lamp, lumber camp, sawmill, toolworks, rail yard, refinery, armoury, hydro dam, reservoir, gas plant, nuclear plant, desalination plant).
+- Soft painted look for moving things (art direction C): cars have rounded bodies, glass, wheels and lights, carts have spoked wheels and a straw load, and people have a body and shadow. `Painter` bakes each sprite once into a small texture, so every car or person is one textured draw instead of several rectangles (`tests/painter.gd`).
+- Globe view draws each town as the outline of where it has built (the convex hull of its built cells, filled in its relation colour, with the overlay value on the edge) instead of a plain disc; towns that have built nothing yet keep the disc.
+- Painted houses and windows: soft wall shading toward the foot and right side, an eave shadow under the roof, a light catch on the roof slope, and window sills. Baked into the cached chunks, so no per-frame cost.
+- Before the Industrial age, citizens who would drive are drawn as wooden carts instead of cars.
+- Homes and terraces change look with the age: pale plaster under thatch in the Medieval age, brick under slate in the Industrial age (Ancient huts and the Modern look as before).
+- Ancient-age homes are drawn as round mud huts under a straw cone (bigger with level) instead of the generic house; other ages keep the house look (first step of per-age building looks).
+- Globe view overlays (G4c): press O to cycle a colour ring (cool to hot) around each town disc by side, age, population, wealth or military. Checked on screen in the editor.
+
+### Changed
+- Roads have a pale kerb on every side that is not joined to another road; drawn into the cached chunks, so no per-frame cost.
+- Citizens are drawn smaller (a 2 px head on a small body, with a smaller shadow) instead of a large head.
+- Performance: the planner's service-site scoring works out each home's missing services once per decision instead of once per candidate site (same choices, less work).
+- F3 performance panel: fps, average / p99 / worst frame time over the last 240 frames, sim and draw cost, draw calls, objects, nodes, memory, video memory, towns, population and speed, plus a frame-time bar graph (green under 16.7 ms, amber under 25, red above).
+- Floating windows start minimised on a first launch and on every new game, leaving just the tutorial open.
+- Houses get a soft ground shadow and a shaded roof side, drawn in the same cached art as before (no extra per-frame work).
+- Open land has soft shading in patches instead of one flat green; drawn into the cached ground chunks, so it adds no per-frame cost.
+- Globe view: the old town labels and shaded plots no longer draw underneath the town discs, discs have a minimum readable size, and lines join only towns that are at war or linked by road (the all-pairs lines were a hairball).
+- The Windows build no longer ships the editor's debugging helper addon (it is excluded from the export and its autoload is removed in the build workflow).
 
 ### Added
 - Globe view overlays (G4c): press O to cycle a colour ring (cool to hot) around each town disc by side, age, population, wealth or military. Checked headless only, not yet on screen.

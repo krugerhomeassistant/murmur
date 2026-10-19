@@ -47,6 +47,7 @@ jobs:
           timeout 300 godot --headless --path client -s tests/arms.gd | tee ar.txt && grep -q ARMS_OK ar.txt
           timeout 120 godot --headless --path client -s tests/focus.gd | tee fo.txt && grep -q FOCUS_OK fo.txt
           timeout 100 godot --headless --path client -s tests/fixes.gd | tee fx.txt && grep -q FIXES_OK fx.txt
+          timeout 100 godot --headless --path client -s tests/weather.gd | tee wx.txt && grep -q WEATHER_OK wx.txt
           timeout 100 godot --headless --path client -s tests/propose.gd | tee pr.txt && grep -q PROPOSE_OK pr.txt
           timeout 300 godot --headless --path client -s tests/market.gd | tee mk.txt && grep -q MARKET_OK mk.txt
           timeout 300 godot --headless --path client -s tests/marketwin.gd | tee mw.txt && grep -q MARKETWIN_OK mw.txt
@@ -55,6 +56,7 @@ jobs:
           timeout 300 godot --headless --path client -s tests/vassal.gd | tee va.txt && grep -q VASSAL_OK va.txt
           GODOT=$(which godot) python3 scripts/gen_wiki.py --check
           timeout 300 godot --headless --path client -s tests/popout.gd | tee po.txt && grep -q POPOUT_OK po.txt
+          timeout 300 godot --headless --path client -s tests/winlayout.gd | tee wl.txt && grep -q WINLAYOUT_OK wl.txt
           timeout 300 godot --headless --path client -s tests/defeat.gd | tee de.txt && grep -q DEFEAT_OK de.txt
           timeout 120 godot --headless --path client -s tests/tools.gd | tee tl.txt && grep -q TOOLS_OK tl.txt
           timeout 120 godot --headless --path client -s tests/traffic.gd | tee tr.txt && grep -q TRAFFIC_OK tr.txt
@@ -66,12 +68,23 @@ jobs:
           timeout 120 godot --headless --path client -s tests/stance.gd | tee st.txt && grep -q STANCE_OK st.txt
           timeout 120 godot --headless --path client -s tests/group.gd | tee gr.txt && grep -q GROUP_OK gr.txt
           timeout 120 godot --headless --path client -s tests/spear.gd | tee spe.txt && grep -q SPEAR_OK spe.txt
+          timeout 120 godot --headless --path client -s tests/medieval.gd | tee me.txt && grep -q MEDIEVAL_OK me.txt
+          timeout 120 godot --headless --path client -s tests/galley.gd | tee ga.txt && grep -q GALLEY_OK ga.txt
           timeout 120 godot --headless --path client -s tests/scenario.gd | tee scn.txt && grep -q SCENARIO_OK scn.txt
           timeout 120 godot --headless --path client -s tests/sandbox.gd | tee sbx.txt && grep -q SANDBOX_OK sbx.txt
           timeout 120 godot --headless --path client -s tests/powers.gd | tee pow.txt && grep -q POWERS_OK pow.txt
           timeout 120 godot --headless --path client -s tests/globe.gd | tee glo.txt && grep -q GLOBE_OK glo.txt
           timeout 120 godot --headless --path client -s tests/fuel.gd | tee fu.txt && grep -q FUEL_OK fu.txt
           timeout 120 godot --headless --path client -s tests/sprites.gd | tee sp.txt && grep -q SPRITES_OK sp.txt
+          timeout 120 godot --headless --path client -s tests/research.gd | tee rs.txt && grep -q RESEARCH_OK rs.txt
+          timeout 120 godot --headless --path client -s tests/banner.gd | tee bn.txt && grep -q BANNER_OK bn.txt
+          timeout 120 godot --headless --path client -s tests/staffed.gd | tee st.txt && grep -q STAFFED_OK st.txt
+          timeout 120 godot --headless --path client -s tests/era.gd | tee er.txt && grep -q ERA_OK er.txt
+          timeout 120 godot --headless --path client -s tests/refit.gd | tee rf.txt && grep -q REFIT_OK rf.txt
+          timeout 150 godot --headless --path client -s tests/capture.gd | tee cp.txt && grep -q CAPTURE_OK cp.txt
+          timeout 60 godot --headless --path client -s tests/units.gd | tee un.txt && grep -q UNITS_OK un.txt
+          timeout 120 godot --headless --path client -s tests/painter.gd | tee pa.txt && grep -q PAINTER_OK pa.txt
+          timeout 120 godot --headless --path client -s tests/art.gd | tee ar.txt && grep -q ART_OK ar.txt
           timeout 300 godot --headless --path client -s tests/ages.gd | tee ag.txt && grep -q AGES_OK ag.txt
           timeout 300 godot --headless --path client -s tests/efficiency.gd | tee ef.txt && grep -q EFFICIENCY_OK ef.txt
           timeout 120 godot --headless --path client -s tests/warmap.gd | tee wm.txt && grep -q WARMAP_OK wm.txt

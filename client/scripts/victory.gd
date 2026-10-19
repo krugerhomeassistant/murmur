@@ -26,6 +26,8 @@ var fresh := false  # set when a win has just been decided; the game reads and c
 
 ## The side a town plays for: a multiplayer owner, "human" for offline player towns, otherwise the town on its own.
 static func side(t: City) -> String:
+	if t.side_key != "":
+		return t.side_key
 	if t.owner != 0:
 		return "o%d" % t.owner
 	return "human" if t.human else t.town_name
@@ -88,12 +90,8 @@ func second(towns: Array[City]) -> void:
 		rows.append({"side": k, "name": s["name"], "towns": s["towns"], "land": s["land"], "allied": s["allied"], "score": s["score"], "cul": s["cul"], "con": con, "heg": heg})
 		if winner != "" or seen < 2:
 			continue
-		if list.size() == 1:
+		if list.size() == 1:  # owner rule: only the last side standing wins; one town with one citizen left keeps the game going
 			_win(k, s["name"], "last")
-		elif float(s["land"]) >= CONQUEST_SHARE:
-			_win(k, s["name"], "conquest")
-		elif heg >= 1.0:
-			_win(k, s["name"], "hegemony")
 
 
 func _win(k: String, nm: String, how: String) -> void:

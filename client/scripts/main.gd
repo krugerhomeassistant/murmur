@@ -55,6 +55,7 @@ var net_apply_ms := 0.0  # last snapshot apply cost
 var sfx: Sfx
 const SAVE := "user://murmur_save.bin"
 var last_day := -1
+const AGE_CLOTH := [Color(0.9, 0.8, 0.65), Color(0.85, 0.75, 0.85), Color(0.8, 0.82, 0.85), Color(1, 1, 1)]  # earth, dyed wool, grey cloth, bright
 const CAR_COLS := [Color("c0392b"), Color("2e86c1"), Color("f4f1e8"), Color("2c3e50"), Color("27ae60"), Color("d68910")]
 
 
@@ -270,8 +271,9 @@ func _fresh(o: Dictionary) -> void:
 		towns[k].acc = 0.3 * k
 		towns[k].set_start(lw, lh)
 		towns[k].ev_scale = [1.5, 1.0, 0.7][diff]
-	for t in towns:
-		Ages.set_age(t, o.get("age", Ages.LAST))
+	var ages: Array = o.get("ages", [])  # scenario: per-town age, the "age" option fills the rest
+	for k in towns.size():
+		Ages.set_age(towns[k], ages[k] if k < ages.size() else o.get("age", Ages.LAST))
 	city.coins = [600.0, 300.0, 150.0][diff]
 	city.auto_mode = o.get("auto", 2)
 	city.auto_policy = o.get("policy", true)
@@ -283,6 +285,14 @@ func _fresh(o: Dictionary) -> void:
 			t.auto_mode = 2
 			t.auto_policy = true
 			t.auto_expand = true
+	for k in range(1, mini(int(o.get("runs", 1)), towns.size())):  # scenario: you run several towns (Tab switches)
+		var mine := towns[k]
+		mine.human = true
+		mine.coins = city.coins
+		mine.temper = 0.0
+		mine.auto_mode = city.auto_mode
+		mine.auto_policy = city.auto_policy
+		mine.auto_expand = city.auto_expand
 	if o.get("spectate", false):
 		headline = "Spectating: no mayor. Tab or the Towns menu switches town, F toggles auto-follow, 8x speeds it up."
 		return
@@ -403,6 +413,7 @@ func start_game(o: Dictionary) -> void:
 	_fresh(o)
 	_begin()
 	hud.guide.visible = false
+	hud.collapse_all()
 	if o.get("river", 0) == 2:
 		tool = WATER_ADD
 		speed = 0.0
@@ -508,7 +519,7 @@ func found_cost(g: Vector2i) -> float:
 	var d := 1 << 20
 	for t in towns:
 		d = mini(d, maxi(absi(t.gpos.x - g.x), absi(t.gpos.y - g.y)))
-	return FOUND_COST + FOUND_STEP * float(maxi(d - 1, 0))
+	return 0.0 if Cmd.sandbox else FOUND_COST + FOUND_STEP * float(maxi(d - 1, 0))
 
 
 func plot_at(p: Vector2) -> Vector2i:
@@ -546,6 +557,7 @@ func found_town_at(g: Vector2i) -> bool:
 			var spec := spectating()
 			var t := _new_town("", g)
 			t.coins = 300.0
+			Ages.set_age(t, city.age)  # a new town starts in the age of the town that founded it
 			t.ev_scale = city.ev_scale  # same difficulty as the rest of the game
 			if spec:  # spectating stays spectating: the new town runs on the planner like the others
 				t.human = false
@@ -643,9 +655,14 @@ func _unhandled_input(e: InputEvent) -> void:
 				headline = "Auto-train troops %s." % ("on" if city.train_on else "off")
 			KEY_F3:
 				perf_on = not perf_on
+			KEY_K:
+				hud.tree_view.visible = not hud.tree_view.visible
+			KEY_F1:
+				hud.help_panel.visible = not hud.help_panel.visible
 			KEY_SPACE:
 				speed = 1.0 if speed == 0.0 else 0.0
 			KEY_Q, KEY_ESCAPE:
+				hud.tree_view.visible = false
 				tool = INSPECT
 				if found_mode:
 					found_mode = false
@@ -654,6 +671,20 @@ func _unhandled_input(e: InputEvent) -> void:
 				toggle_map()
 			KEY_B:
 				tool = BULLDOZE
+			KEY_C:  # send half the army to the abandoned town under the mouse
+				var gp := plot_at(get_global_mouse_position())
+				for tw: City in towns:
+					if tw.gpos == gp and tw.derelict:
+						var cnt := clampi(city.army.size() / 2, 1, 30)
+						headline = ("%d troops sent to %s." % [cnt, tw.town_name]) if cmd("capture", [tw.town_name, cnt]) else "No troops to spare (or still resting from the last march)."
+			KEY_U:  # refit the inspected building for the town's age
+				if sel_cell >= 0:
+					var why := city.refit_block(sel_cell)
+					if why == "":
+						cmd("refit", [sel_cell % City.W, sel_cell / City.W])
+						headline = "Refit started."
+					else:
+						headline = why
 			KEY_1:
 				tool = T.ROAD
 			KEY_2:
@@ -955,6 +986,9 @@ func _process(delta: float) -> void:
 				dacc -= 1.0
 				Diplo.second(towns, city.rng)
 				Market.link_trade(towns)
+				Capture.second(towns)
+				if int(city.clock * 10.0) % 10 == 0:
+					Capture.ai(towns)
 				sig.vic.second(towns)
 				if sig.vic.fresh:
 					sig.vic.fresh = false
@@ -976,6 +1010,11 @@ func _process(delta: float) -> void:
 			if city.msg != "":
 				headline = city.msg
 				city.msg = ""
+			if city.age_up >= 0:
+				hud.banner("The %s age begins" % Ages.name_of(city.age_up), "New buildings and expectations arrive. Pick this age's research in the Policy tab." if city.human else "")
+				city.age_up = -1
+			for t in towns:
+				t.age_up = -1  # only the town you watch gets a banner
 		for t in towns:
 			if t == city:
 				for snd in t.sounds:
@@ -1037,10 +1076,12 @@ func _draw_globe() -> void:
 	var ms := Globe.markers(towns, city, ov)
 	for m in ms:  # links first, so the discs sit on top: red = war, green = joined by road, grey = neighbours without a road
 		for d in m.t.partners:
-			if towns.find(d) > towns.find(m.t):  # each pair once
+			if towns.find(d) > towns.find(m.t):  # each pair once; neighbours without a road or war are left out (they would be a hairball)
 				var war := Diplo.treaty(m.t, d) == "war"
+				if not war and not Diplo.linked(m.t, d):
+					continue
 				var q: Vector2 = (Vector2(d.gpos) + Vector2(0.5, 0.5)) * Vector2(City.W, City.H) * TILE
-				draw_line(m.pos * TILE, q, Color("d9382a") if war else (Color("9fd3a0") if Diplo.linked(m.t, d) else Color(0.55, 0.55, 0.5)), (6.0 if war else 3.0) / cam.zoom.x)
+				draw_line(m.pos * TILE, q, Color("d9382a") if war else Color("9fd3a0"), (6.0 if war else 3.0) / cam.zoom.x)
 	for m in ms:
 		var p: Vector2 = m.pos * TILE
 		var r: float = m.r * TILE
@@ -1063,22 +1104,43 @@ func _draw() -> void:  # world level: weather and the links between towns; every
 	var vp := get_viewport_rect().size / cam.zoom
 	var view := Rect2(cam.position - vp * 0.5, vp)
 	if _lod() < 3:
-		match sig.weather():
-			"rain":
-				ci.draw_rect(view, Color(0.2, 0.25, 0.35, 0.22))
-				_rain(view, 120)
-			"storm":
-				ci.draw_rect(view, Color(0.1, 0.12, 0.2, 0.4))
-				_rain(view, 220)
-			"heatwave":
-				ci.draw_rect(view, Color(0.9, 0.55, 0.15, 0.14))
-			"snow":
-				ci.draw_rect(view, Color(0.85, 0.9, 1.0, 0.16))
-				_snow(view)
-			"fog":
-				ci.draw_rect(view, Color(0.8, 0.82, 0.85, 0.3))
-			"cold_snap":
-				ci.draw_rect(view, Color(0.6, 0.75, 1.0, 0.12))
+		for f: Dictionary in sig.fronts:
+			_front(f, view)
+
+
+const WX_TINT := {"rain": Color(0.2, 0.25, 0.35, 0.22), "storm": Color(0.1, 0.12, 0.2, 0.4), "heatwave": Color(0.9, 0.55, 0.15, 0.14), "snow": Color(0.85, 0.9, 1.0, 0.16), "fog": Color(0.8, 0.82, 0.85, 0.3), "cold_snap": Color(0.6, 0.75, 1.0, 0.12)}
+
+
+## One weather front: a soft, irregular cloud over its place with rain or snow falling inside it, or a plain tint when it covers the whole world.
+func _front(f: Dictionary, view: Rect2) -> void:
+	var kind: String = f["t"]
+	var tint: Color = WX_TINT.get(kind, Color(0, 0, 0, 0))
+	var st := sig.strength(f)
+	if float(f["r"]) < 0.0:
+		ci.draw_rect(view, Color(tint, tint.a * st))
+		_fall(kind, view, Vector2.INF, 0.0)
+		return
+	var c: Vector2 = f["p"]
+	var rad: float = float(f["r"]) * st
+	if not view.grow(rad).has_point(c):
+		return
+	var seed_a := fmod(absf(float(f["p"].x) - float(f["v"].x) * float(f["age"])) * 0.01, TAU)  # a cloud keeps its shape as it drifts
+	for j in 5:
+		var o := Vector2.from_angle(seed_a + j * 1.26) * rad * 0.32
+		for k in 5:
+			ci.draw_circle(c + o, rad * 0.68 * (1.0 - k * 0.16), Color(tint, tint.a * 0.45 * st))
+	_fall(kind, view.intersection(Rect2(c - Vector2(rad, rad), Vector2(rad, rad) * 2.0)), c, rad * 0.9)
+
+
+func _fall(kind: String, area: Rect2, c: Vector2, rad: float) -> void:
+	if area.size.x <= 0.0 or area.size.y <= 0.0:
+		return
+	if kind == "rain":
+		_rain(area, 120, c, rad)
+	elif kind == "storm":
+		_rain(area, 220, c, rad)
+	elif kind == "snow" or kind == "cold_snap":
+		_snow(area, c, rad)
 
 
 ## The plot under the mouse while choosing where to found a town: green if it can be afforded, red if not, with the price.
@@ -1119,14 +1181,23 @@ func draw_fx(node: CanvasItem) -> void:
 					var ang := float(un.get("h", 0.0))
 					var fresh: bool = now - int(un.get("ft", -9999)) < 700
 					match String(un["k"]):
-						"spear", "inf", "gren", "snip", "medic":
+						"knight":  # a rider: horse body, rider and a lance
+							node.draw_set_transform(pos, ang)
+							node.draw_rect(Rect2(-7 * sz, -3 * sz, 14 * sz, 6 * sz), col.darkened(0.45))
+							node.draw_circle(Vector2(1, 0) * sz, 3.0 * sz, col)
+							node.draw_line(Vector2(3, 0) * sz, Vector2(18, 0) * sz, Color.WHITE, 1.2 * sz)
+							node.draw_set_transform(Vector2.ZERO)
+						"spear", "archer", "inf", "gren", "snip", "medic":
 							var k := String(un["k"])
 							node.draw_circle(pos, (3.8 if k == "gren" else 3.2) * sz, Color.WHITE if k == "medic" else col)
 							if k == "medic":
 								node.draw_rect(Rect2(pos + Vector2(-1, -2.4) * sz, Vector2(2, 4.8) * sz), Color("d9382a"))
 								node.draw_rect(Rect2(pos + Vector2(-2.4, -1) * sz, Vector2(4.8, 2) * sz), Color("d9382a"))
 							else:
-								node.draw_line(pos, pos + Vector2.from_angle(ang) * (14.0 if k == "snip" else 8.0) * sz, Color.WHITE, (0.8 if k == "snip" else 1.2) * sz)
+								if k == "archer":  # a drawn bow in front of the archer
+									node.draw_arc(pos + Vector2.from_angle(ang) * 4.0 * sz, 5.0 * sz, ang - 1.2, ang + 1.2, 8, Color("c9a96a"), 1.2 * sz)
+								else:
+									node.draw_line(pos, pos + Vector2.from_angle(ang) * (14.0 if k == "snip" else 8.0) * sz, Color.WHITE, (0.8 if k == "snip" else 1.2) * sz)
 								if k == "gren":
 									node.draw_rect(Rect2(pos + Vector2(-1.5, -6) * sz, Vector2(3, 3) * sz), Color("e0a030"))
 						"ltank", "tank", "htank", "art", "aa":
@@ -1157,6 +1228,15 @@ func draw_fx(node: CanvasItem) -> void:
 								node.draw_set_transform(pos, ang)
 								node.draw_colored_polygon(PackedVector2Array([Vector2(12, 0) * sz * f, Vector2(-8, -8 if k != "fighter" else -5) * sz * f, Vector2(-4, 0) * sz * f, Vector2(-8, 8 if k != "fighter" else 5) * sz * f]), col.lightened(0.2))
 								node.draw_set_transform(Vector2.ZERO)
+						"galley":  # an oared hull: pale wood, a row of oars and a square sail
+							node.draw_circle(pos, 13.0 * sz, Color(0.25, 0.5, 0.8, 0.35))
+							node.draw_set_transform(pos, ang)
+							for q in 4:
+								node.draw_line(Vector2(-7 + q * 4.5, -4) * sz, Vector2(-9 + q * 4.5, -9) * sz, Color("5a432a"), 0.9 * sz)
+								node.draw_line(Vector2(-7 + q * 4.5, 4) * sz, Vector2(-9 + q * 4.5, 9) * sz, Color("5a432a"), 0.9 * sz)
+							node.draw_colored_polygon(PackedVector2Array([Vector2(13, 0) * sz, Vector2(8, -4) * sz, Vector2(-11, -4) * sz, Vector2(-11, 4) * sz, Vector2(8, 4) * sz]), Color("a98856"))
+							node.draw_rect(Rect2(-3 * sz, -3 * sz, 3 * sz, 6 * sz), col)
+							node.draw_set_transform(Vector2.ZERO)
 						"patrol", "destroyer", "transport":
 							var k := String(un["k"])
 							var f := 0.8 if k == "patrol" else (1.4 if k == "destroyer" else 1.2)
@@ -1177,7 +1257,7 @@ func draw_fx(node: CanvasItem) -> void:
 					if float(un["hp"]) < mx * 0.99:
 						node.draw_rect(Rect2(pos + Vector2(-8, -10) * sz, Vector2(16 * sz, 2.0 * sz)), Color(0, 0, 0, 0.6))
 						node.draw_rect(Rect2(pos + Vector2(-8, -10) * sz, Vector2(16 * sz * float(un["hp"]) / mx, 2.0 * sz)), Color("6fd06f") if float(un["hp"]) / mx > 0.4 else Color("e0a030"))
-					if not fresh and zone.has_point(pos) and String(un["k"]) in ["spear", "inf", "gren", "snip", "ltank", "tank", "htank", "art"]:  # unopposed at the enemy's edge: shell the town
+					if not fresh and zone.has_point(pos) and String(un["k"]) in ["spear", "archer", "knight", "inf", "gren", "snip", "ltank", "tank", "htank", "art"]:  # unopposed at the enemy's edge: shell the town
 						var cyc := int((now + int(float(un["l"]) * 700.0 + 1000.0)) / 900)
 						if (now + int(float(un["l"]) * 700.0 + 1000.0)) % 900 < 160:
 							var rr := float(hash([un["l"], cyc]) % 1000) / 1000.0
@@ -1255,6 +1335,8 @@ func _town_col(c: City) -> Color:
 
 ## Everything live in one town that is not baked into its chunks: overlays, fire, lights, traffic, people, rim, cursor.
 func draw_overlay(node: CanvasItem, t: City) -> void:
+	if cam.zoom.x < GLOBE_ZOOM:  # the globe view draws the towns itself (_draw_globe)
+		return
 	var d0 := Time.get_ticks_usec()
 	var tcol := _town_col(t)  # relative to the viewed town, so before `city` is swapped
 	var keep := city
@@ -1270,16 +1352,17 @@ func draw_overlay(node: CanvasItem, t: City) -> void:
 	var y1 := mini(City.H - 1, floori((tl.y + vp.y) / TILE))
 	var night := city.clock >= 19.0 or city.clock < 6.0
 	var tr := city.terr
-	var dim := Color(0.05, 0.08, 0.04, 0.42)
-	ci.draw_rect(Rect2(0, 0, City.W * TILE, tr.position.y * TILE), dim)
-	ci.draw_rect(Rect2(0, tr.end.y * TILE, City.W * TILE, (City.H - tr.end.y) * TILE), dim)
-	ci.draw_rect(Rect2(0, tr.position.y * TILE, tr.position.x * TILE, tr.size.y * TILE), dim)
-	ci.draw_rect(Rect2(tr.end.x * TILE, tr.position.y * TILE, (City.W - tr.end.x) * TILE, tr.size.y * TILE), dim)
 	var rim := Rect2(Vector2(tr.position) * TILE, Vector2(tr.size) * TILE)
-	ci.draw_rect(rim, tcol if lod == 3 else Color(1.0, 0.82, 0.4, 0.5), false, 3.0 / cam.zoom.x if lod == 3 else 3.0)
-	if lod == 3:  # world view: just the name and the rim
+	if t == city_view and lod < 3:  # the buildable edge shows only in the town you are in, as a faint fade and line; the world view has no squares
+		var dim := Color(0.05, 0.08, 0.04, 0.22)
+		ci.draw_rect(Rect2(0, 0, City.W * TILE, tr.position.y * TILE), dim)
+		ci.draw_rect(Rect2(0, tr.end.y * TILE, City.W * TILE, (City.H - tr.end.y) * TILE), dim)
+		ci.draw_rect(Rect2(0, tr.position.y * TILE, tr.position.x * TILE, tr.size.y * TILE), dim)
+		ci.draw_rect(Rect2(tr.end.x * TILE, tr.position.y * TILE, (City.W - tr.end.x) * TILE, tr.size.y * TILE), dim)
+		ci.draw_rect(rim, Color(1.0, 0.82, 0.4, 0.3), false, 2.0)
+	if lod == 3:  # world view: just the name
 		var fs := int(22.0 / cam.zoom.x)
-		var lab := "%s  pop %d" % [t.town_name, t.pop]
+		var lab := "%s  pop %d" % [t.town_name, t.pop] if not t.derelict else "%s  ABANDONED (C to send troops)" % t.town_name
 		var font0 := ThemeDB.fallback_font
 		var lp := Vector2(rim.get_center().x - font0.get_string_size(lab, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x * 0.5, rim.position.y - fs * 0.4)
 		ci.draw_string(font0, lp + Vector2(2, 2) / cam.zoom.x, lab, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Color(0, 0, 0, 0.8))
@@ -1331,8 +1414,11 @@ func draw_overlay(node: CanvasItem, t: City) -> void:
 				var dv := c.path[mini(c.pi, c.path.size() - 1)] - c.pos
 				var lane := Vector2(-dv.y, dv.x).normalized() * 0.19 if dv.length() > 0.01 else Vector2.ZERO  # keep to the right-hand lane so opposite traffic and followers do not stack
 				ci.draw_set_transform((c.pos + lane) * TILE, dv.angle() if dv.length() > 0.01 else 0.0)
-				ci.draw_rect(Rect2(-5, -3, 10, 6), CAR_COLS[c.id % CAR_COLS.size()])
-				ci.draw_rect(Rect2(0, -2, 3, 4), Color(0.6, 0.75, 0.85))
+				if Ages.tier(city.age) < 2:  # before the Industrial age there are no cars: wooden carts
+					ci.draw_texture_rect(Painter.cart(), Rect2(-5, -3, 10, 6), false)
+					ci.draw_set_transform(Vector2.ZERO, 0.0)
+					continue
+				ci.draw_texture_rect(Painter.car(CAR_COLS[c.id % CAR_COLS.size()].darkened(0.3) if Ages.tier(city.age) == 2 else CAR_COLS[c.id % CAR_COLS.size()], Ages.tier(city.age) == 2), Rect2(-6, -3.5, 12, 7), false)
 				if night:
 					ci.draw_circle(Vector2(6, -2), 1.2, Color("fff3b0"))
 					ci.draw_circle(Vector2(6, 2), 1.2, Color("fff3b0"))
@@ -1343,11 +1429,10 @@ func draw_overlay(node: CanvasItem, t: City) -> void:
 			var wv := c.path[mini(c.pi, c.path.size() - 1)] - c.pos if c.path.size() > 0 else Vector2.ZERO
 			var side := Vector2(-wv.y, wv.x).normalized() * (0.34 if c.id % 2 == 0 else -0.34) if wv.length() > 0.01 else Vector2.ZERO  # walkers use the pavements, one per side
 			var p := (c.pos + side) * TILE
-			ci.draw_circle(p + Vector2(0, 1.5), 4.2, Color(0, 0, 0, 0.3))
 			var col := Color("f3e7cf") if c.mood > 0.6 else (Color("e0a458") if c.mood > 0.35 else Color("c0392b"))
 			if c.sick > 0.0:
 				col = Color("8fc46a")
-			ci.draw_circle(p, 3.4, col)
+			ci.draw_texture_rect(Painter.person(), Rect2(p - Vector2(3, 2.5), Vector2(6, 8)), false, col * AGE_CLOTH[Ages.tier(city.age)])  # clothes drift with the age; the mood colour still shows through
 			if c.protesting and city.protest:
 				ci.draw_line(p, p + Vector2(0, -9), Color.WHITE, 1.0)
 				ci.draw_rect(Rect2(p + Vector2(-4, -14), Vector2(8, 5)), Color("f3e7cf"))
@@ -1440,8 +1525,26 @@ func draw_chunk(c_item: CanvasItem, t_: City, x0: int, y0: int, x1: int, y1: int
 				continue
 			match String(d["kind"]):
 				"road":
-					ci.draw_rect(r, d["col"])
+					var rc: Color = d["col"]
+					if Ages.tier(city.age) < 2:  # before the Industrial age roads are beaten earth (Ancient) or cobbles (Medieval)
+						rc = Color("a68e63") if Ages.tier(city.age) == 0 else Color("8f8776")
+					ci.draw_rect(r, rc)
+					if Ages.tier(city.age) < 2:
+						_old_road(r, x, y, rc, Ages.tier(city.age))
+					var kerb: Color = rc.lightened(0.25)  # pale kerb on every side that is not another road
+					if x == 0 or not city.is_road(city.grid[i - 1]):
+						ci.draw_rect(Rect2(r.position, Vector2(2, TILE)), kerb)
+					if x + 1 >= City.W or not city.is_road(city.grid[i + 1]):
+						ci.draw_rect(Rect2(r.position + Vector2(TILE - 2, 0), Vector2(2, TILE)), kerb)
+					if y == 0 or not city.is_road(city.grid[i - City.W]):
+						ci.draw_rect(Rect2(r.position, Vector2(TILE, 2)), kerb)
+					if y + 1 >= City.H or not city.is_road(city.grid[i + City.W]):
+						ci.draw_rect(Rect2(r.position + Vector2(0, TILE - 2), Vector2(TILE, 2)), kerb)
 					var c := r.get_center()
+					if Ages.tier(city.age) < 2:  # no painted lanes on earth and cobbles
+						if wet:
+							Art.bridge(ci, r, x > 0 and city.is_road(city.grid[i - 1]) or x + 1 < City.W and city.is_road(city.grid[i + 1]))
+						continue
 					ci.draw_circle(c, 1.5, lane)
 					if x + 1 < City.W and city.is_road(city.grid[i + 1]):
 						ci.draw_line(c, c + Vector2(TILE, 0), lane, 1.0 if t == T.ROAD else 2.5)
@@ -1450,12 +1553,16 @@ func draw_chunk(c_item: CanvasItem, t_: City, x0: int, y0: int, x1: int, y1: int
 					if wet:
 						Art.bridge(ci, r, x > 0 and city.is_road(city.grid[i - 1]) or x + 1 < City.W and city.is_road(city.grid[i + 1]))
 				"zone":
+					cell_tier = city.tier_at(i)
 					if city.lvl[i] == 0:
 						_zone(r, t, i)
 					else:
 						_building(r, d, city.lvl[i], city.connected[i] == 1, night, t)
+						_refit_mark(r, i)
 				_:
+					cell_tier = city.tier_at(i)
 					_service(r, d, city.connected[i] == 1, night, t)
+					_refit_mark(r, i)
 	if lod == 0:
 		_nets(x0, y0, x1, y1)
 	ci = self
@@ -1503,10 +1610,35 @@ func _overlay(x0: int, y0: int, x1: int, y1: int) -> void:
 				ci.draw_rect(r, Color(0.2, 0.8, 0.4, c * 0.45) if c > 0.0 else Color(0.8, 0.2, 0.2, 0.18))
 
 
+## Ancient dirt (ruts and pebbles) or Medieval cobbles (rounded stones), seeded by the tile so neighbours differ.
+func _old_road(r: Rect2, x: int, y: int, rc: Color, age: int) -> void:
+	var h := (x * 73856093) ^ (y * 19349663)
+	if age == 0:
+		for k in 5:
+			var q := (h >> (k * 3)) & 7
+			var p := r.position + Vector2(3.0 + q * 3.2, 3.0 + ((h >> (k * 5 + 1)) & 7) * 3.2)
+			ci.draw_rect(Rect2(p, Vector2(3, 2)), rc.darkened(0.12) if k % 2 == 0 else rc.lightened(0.1))
+	else:
+		for j in 2:
+			for i in 2:
+				var tone := float((h >> (i + 2 * j)) & 3) * 0.02
+				ci.draw_rect(Rect2(r.position + Vector2(2.0 + i * 15.0, 2.0 + j * 15.0), Vector2(13, 13)), rc.lightened(0.05 + tone))
+
+
+var cell_tier := 0  # era tier of the building being drawn
+
+
+## A building being refitted is a construction site: washed out with a progress bar.
+func _refit_mark(r: Rect2, i: int) -> void:
+	if city.fit[i] > 0.0:
+		ci.draw_rect(r, Color(1, 1, 1, 0.35))
+		ci.draw_rect(Rect2(r.position + Vector2(3, TILE - 8), Vector2((TILE - 6) * city.fit[i], 4)), Color("ffd166"))
+
+
 func _building(r: Rect2, d: Dictionary, lv: int, ok: bool, night: bool, id := -1) -> void:
-	if id >= 0 and Sprites.draw(ci, r, id, lv, city.age, ok):
+	if id >= 0 and Sprites.draw(ci, r, id, lv, cell_tier, ok):
 		return
-	if Art.building(ci, r, String(d.get("shape", "")), d["col"], lv, ok, night, int(r.position.x / 32.0) * 7 + int(r.position.y / 32.0) * 13):
+	if Art.building(ci, r, String(d.get("shape", "")), d["col"], lv, ok, night, int(r.position.x / 32.0) * 7 + int(r.position.y / 32.0) * 13, Ages.tier(city.age)):
 		if not ok:
 			ci.draw_string(ThemeDB.fallback_font, r.position + Vector2(12, 20), "!", HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color(1, 0.3, 0.2))
 		return
@@ -1551,19 +1683,23 @@ func _building(r: Rect2, d: Dictionary, lv: int, ok: bool, night: bool, id := -1
 		ci.draw_string(ThemeDB.fallback_font, r.position + Vector2(12, 24), "!", HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color("b03a2e"))
 
 
-func _rain(area: Rect2, n: int) -> void:
+func _rain(area: Rect2, n: int, c := Vector2.INF, rad := 0.0) -> void:
 	var t := Time.get_ticks_msec() * 0.001
 	for i in n:
 		var x := area.position.x + fmod(i * 97.0 + 13.0, area.size.x)
 		var y := area.position.y + fmod(i * 53.0 + t * 380.0, area.size.y)
+		if c != Vector2.INF and Vector2(x, y).distance_to(c) > rad:
+			continue
 		ci.draw_line(Vector2(x, y), Vector2(x - 3, y + 10), Color(0.8, 0.85, 1.0, 0.5), 1.0)
 
 
-func _snow(area: Rect2) -> void:
+func _snow(area: Rect2, c := Vector2.INF, rad := 0.0) -> void:
 	var t := Time.get_ticks_msec() * 0.001
 	for i in 100:
 		var x := area.position.x + fmod(i * 97.0 + 13.0 + sin(t + i) * 12.0, area.size.x)
 		var y := area.position.y + fmod(i * 53.0 + t * 60.0, area.size.y)
+		if c != Vector2.INF and Vector2(x, y).distance_to(c) > rad:
+			continue
 		ci.draw_circle(Vector2(x, y), 1.6, Color(1, 1, 1, 0.8))
 
 
@@ -1583,7 +1719,7 @@ func _zone(r: Rect2, t: int, i: int) -> void:
 
 
 func _service(r: Rect2, d: Dictionary, ok: bool, night: bool, id := -1) -> void:
-	if id >= 0 and (Sprites.draw(ci, r, id, 1, city.age, ok) or Art.service(ci, r, id, ok, night)):
+	if id >= 0 and (Sprites.draw(ci, r, id, 1, cell_tier, ok) or Art.service(ci, r, id, ok, night)):
 		if not ok:
 			ci.draw_line(r.position + Vector2(4, 4), r.end - Vector2(4, 4), Color("b03a2e"), 2.0)
 		return
@@ -1653,8 +1789,12 @@ func _wet(p: Vector2i) -> bool:
 ## Cargo ships (ports) and warships (naval yards) patrol the river stretch beside their dock.
 func _boats() -> void:
 	var t := Time.get_ticks_msec() * 0.001
+	var crews := city.pop / 12  # a boat needs a crew from the town's own people
 	for id in [T.PORT, T.NAVYARD]:
 		for i in city.bt.get(id, []):
+			if crews <= 0:
+				return
+			crews -= 1
 			var x: int = i % City.W
 			var y: int = i / City.W
 			var w := Vector2i(-1, -1)

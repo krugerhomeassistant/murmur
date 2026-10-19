@@ -39,6 +39,7 @@ jobs:
       - name: Stamp and import
         run: |
           python3 scripts/stamp_build.py
+          sed -i '/_mcp_game_helper/d' client/project.godot  # the editor's debugging helper is development tooling, not part of the player build
           godot --headless --path client --import || true
       - name: Export Windows build
         run: |

@@ -8,6 +8,7 @@ var o_name: LineEdit
 var o_seed: LineEdit
 var o_sand: CheckButton
 var o_towns: OptionButton
+var o_runs: OptionButton
 var o_mood: OptionButton
 var o_diff: OptionButton
 var o_land: OptionButton
@@ -35,10 +36,17 @@ func _ready() -> void:
 	add_child(cc)
 	var pc := PanelContainer.new()
 	cc.add_child(pc)
+	var sc := ScrollContainer.new()  # the menu is taller than a small screen: scroll instead of cutting it off
+	sc.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	pc.add_child(sc)
+	var fit := func() -> void: sc.custom_minimum_size = Vector2(560, maxf(get_viewport_rect().size.y - 90.0, 200.0))
+	fit.call()
+	get_viewport().size_changed.connect(fit)
 	var v := VBoxContainer.new()
 	v.add_theme_constant_override("separation", 8)
 	v.custom_minimum_size = Vector2(520, 0)
-	pc.add_child(v)
+	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	sc.add_child(v)
 	var t := Label.new()
 	t.text = "MURMUR"
 	t.add_theme_font_size_override("font_size", 34)
@@ -69,12 +77,18 @@ func _ready() -> void:
 	o_name.text = "Murmur"
 	o_name.max_length = 18
 	_row(v, "Your town's name", o_name, "What your town is called.")
+	var pre := _opt(v, "Scenario", ["Custom (set below)", "One town", "Province (4 towns, you run 2)", "Continent (8 towns, you run all)"], 0, "A shortcut that sets the number of towns and how many you run. Change either below afterwards if you like.")
+	pre.item_selected.connect(func(i: int) -> void:
+		if i > 0:
+			o_towns.select([0, 0, 3, 7][i])
+			o_runs.select([0, 0, 1, 3][i]))
 	o_towns = _opt(v, "Towns at the start", ["1 (just you)", "2 (you + 1 neighbour)", "3 (you + 2 neighbours)", "4 (you + 3 neighbours)", "5", "6", "7", "8 (busy region)"], 1, "Neighbour towns run themselves. You trade, ally, embargo or fight with them. You can found more later from the Towns menu.")
+	o_runs = _opt(v, "Towns you run", ["Just the first", "2 (a province)", "4", "All of them (a continent)"], 0, "How many of the starting towns are yours. The rest run themselves. Tab switches between your towns. Never more than the towns at the start.")
 	o_mood = _opt(v, "Neighbours are", ["Friendly", "Mixed (each has its own temper)", "Prickly", "Random"], 1, "How the neighbours feel about you at the start. Friendly towns offer pacts; prickly ones smuggle, raid and demand tribute.")
 	o_diff = _opt(v, "Difficulty", ["Relaxed ($600, calmer world)", "Normal ($300)", "Hard ($150, more disasters)"], 1, "Starting money and how often world events strike.")
 	o_land = _opt(v, "Starting land", ["Small (40x24)", "Medium (48x32)", "Large (64x40)"], 1, "How much of the map you own at the start. You can annex more at any time.")
 	o_river = _opt(v, "Rivers", ["Natural (rivers, lakes, coast)", "None (flat land)", "Custom: I paint it (world editor)"], 0, "The world has its own rivers, lakes and coast, continuous across neighbouring towns. Zones can't go on water; roads over it become bridges (4x cost). Custom starts paused with the paint-water tool so you can draw your own rivers and lakes first.")
-	o_age = _opt(v, "Starting age", ["Ancient (the default)", "Medieval", "Industrial", "Modern (everything open, the classic start)"], 0, "The age every town starts in. Each age opens new buildings and units; towns reach the next age by themselves as knowledge and population grow (schools, libraries and culture speed it up).")
+	o_age = _opt(v, "Starting age", ["Stone (the default)", "Bronze", "Classical", "Dark", "Medieval", "Renaissance", "Industrial", "Electric", "Atomic", "Information", "Digital", "Future (everything open, the classic start)"], 0, "The age every town starts in. There are twelve ages in four eras (Ancient, Medieval, Industrial, Modern); each opens new buildings and units, and towns reach the next age by themselves as knowledge and population grow (schools, libraries and culture speed it up).")
 	o_seed = LineEdit.new()
 	o_seed.placeholder_text = "random"
 	o_seed.max_length = 9
@@ -157,6 +171,7 @@ func _go() -> void:
 	m.start_game({
 		"name": nm if nm != "" else "Murmur",
 		"towns": o_towns.selected + 1,
+		"runs": [1, 2, 4, 99][o_runs.selected],
 		"mood": o_mood.selected,
 		"diff": o_diff.selected,
 		"land": o_land.selected,

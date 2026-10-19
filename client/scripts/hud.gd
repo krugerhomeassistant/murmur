@@ -6,7 +6,13 @@ const T = Catalog.Id
 var m: Node2D
 var lbl_time: Label
 var perf_l: Label
+var perf_g: Control  # frame-time graph under the F3 text
+var frame_ms := PackedFloat32Array()  # last PERF_N frame times
+const PERF_N := 240
+const HELP := "KEYS  (F1 closes this)\n\nMouse: left paint or select, right or middle drag to pan, wheel to zoom\nSpace pause   Tab next town (spectating)   F follow   M map   O globe overlay\n1 road  2 houses  3 shops  4 industry  5 park  6 fire station   B bulldoze   Q or Esc inspect\nK skill tree   U refit the selected building for the town's age   T auto-train troops\nC send troops to the abandoned town under the mouse   Enter chat   F3 performance   F9 benchmark   R new game after game over"
 var pintip: PanelContainer
+var help_panel: PanelContainer
+var tree_view: TreeView
 var pintip_lbl: RichTextLabel
 var lbl_coins: Label
 var lbl_pop: Label
@@ -40,6 +46,10 @@ var people_l: RichTextLabel
 var act_l: RichTextLabel
 var log_l: RichTextLabel
 var pol_btns := {}
+var banner_l: Label
+var banner_t := 0.0
+var tech_btns := {}  # skill tree node -> button
+var tree_l: Label
 var auto_opt: OptionButton
 var focus_auto: CheckButton
 var ask_chk: CheckButton
@@ -122,11 +132,29 @@ func _ready() -> void:
     pintip_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
     pintip.add_child(pintip_lbl)
     add_child(pintip)
+    banner_l = Label.new()
+    banner_l.add_theme_font_size_override("font_size", 30)
+    banner_l.add_theme_color_override("font_color", Color("fff3c4"))
+    banner_l.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.8))
+    banner_l.add_theme_constant_override("outline_size", 6)
+    banner_l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    banner_l.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    banner_l.visible = false
+    add_child(banner_l)
     perf_l = Label.new()
     perf_l.position = Vector2(8, 62)
     perf_l.visible = false
     perf_l.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    perf_l.add_theme_stylebox_override("normal", _perf_bg())
     add_child(perf_l)
+    perf_g = Control.new()
+    perf_g.position = Vector2(8, 150)
+    perf_g.custom_minimum_size = Vector2(PERF_N, 40)
+    perf_g.size = Vector2(PERF_N, 40)
+    perf_g.visible = false
+    perf_g.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    perf_g.draw.connect(_draw_perf_graph)
+    add_child(perf_g)
     guide = Guide.new()
     guide.m = m
     guide.visible = false
@@ -134,6 +162,16 @@ func _ready() -> void:
     _load_ui()
     get_viewport().size_changed.connect(_clamp_all)
     _clamp_all.call_deferred()
+    tree_view = TreeView.new()
+    tree_view.m = m
+    add_child(tree_view)
+    help_panel = PanelContainer.new()
+    help_panel.position = Vector2(300, 80)
+    help_panel.visible = false
+    add_child(help_panel)
+    var hl := Label.new()
+    hl.text = HELP
+    help_panel.add_child(hl)
     over_panel = PanelContainer.new()
     over_panel.position = Vector2(400, 250)
     over_panel.custom_minimum_size = Vector2(480, 150)
@@ -356,6 +394,10 @@ func _top() -> void:
     cp.add_item("Sound on / off", 6)
     cp.add_item("Volume up", 7)
     cp.add_item("Volume down", 8)
+    cp.add_item("Ambience up", 20)
+    cp.add_item("Ambience down", 21)
+    cp.add_item("Cues up", 22)
+    cp.add_item("Cues down", 23)
     cp.id_pressed.connect(func(id: int) -> void:
         if id == 10:
             guide.restart()
@@ -367,9 +409,19 @@ func _top() -> void:
         elif id == 6:
             m.sfx.muted = not m.sfx.muted
             m.headline = "Sound off." if m.sfx.muted else "Sound on."
+            m.sfx.save_prefs()
         elif id == 7 or id == 8:
             m.sfx.vol = clampf(m.sfx.vol + (0.1 if id == 7 else -0.1), 0.0, 1.0)
             m.headline = "Volume %d%%" % int(m.sfx.vol * 100.0)
+            m.sfx.save_prefs()
+        elif id >= 20 and id <= 23:
+            var dv := 0.1 if id % 2 == 0 else -0.1
+            if id < 22:
+                m.sfx.amb = clampf(m.sfx.amb + dv, 0.0, 1.0)
+            else:
+                m.sfx.cues = clampf(m.sfx.cues + dv, 0.0, 1.0)
+            m.headline = "Ambience %d%%, cues %d%%" % [int(m.sfx.amb * 100.0), int(m.sfx.cues * 100.0)]
+            m.sfx.save_prefs()
         else:
             m.cmd("auto_mode", [id])
             auto_opt.select(id))
@@ -627,6 +679,23 @@ func _right() -> void:
     ask_chk = ab
     ab.toggled.connect(func(on: bool) -> void: m.cmd("ask_build", [on]))
     po.add_child(ab)
+    _hdr(po, "SKILL TREE (spend research points; a node needs the one before it or a neighbour branch's)")
+    tree_l = _lbl(po, 0, "Points come from knowledge. You cannot take everything: choose a direction.")
+    var tg := GridContainer.new()
+    tg.columns = Research.TIERS + 1
+    po.add_child(tg)
+    for b in Research.BRANCHES.size():
+        _lbl(tg, 100, "").text = String(Research.BRANCHES[b]["n"])
+        for t in Research.TIERS:
+            var i := Research.id(b, t)
+            var tb := Button.new()
+            tb.text = String(Research.node(i)["n"])
+            tb.toggle_mode = true
+            tb.focus_mode = Control.FOCUS_NONE
+            tb.custom_minimum_size = Vector2(92, 0)
+            tb.pressed.connect(func() -> void: m.cmd("node", [i]))
+            tg.add_child(tb)
+            tech_btns[i] = tb
     _hdr(po, "POLICIES (continuous cost or saving)")
     for k in Catalog.POLICIES:
         var cb := CheckButton.new()
@@ -805,6 +874,15 @@ func _insp_text() -> String:
             s += "\nResidents %d / %d" % [c.home_load[i], int(d.get("home", 0)) * c.lvl[i]]
         if c.work_load.has(i):
             s += "\nWorkers %d / %d" % [c.work_load[i], int(d.get("jobs", 0)) * maxi(c.lvl[i], 1)]
+        if c.work_status(t) != "":
+            s += "\n" + c.work_status(t)
+        if t != T.EMPTY and not c.is_road(t) and not (c.is_zone(t) and c.lvl[i] == 0):
+            s += "\nBuilt in the %s era" % Ages.ERA[c.tier_at(i)]
+            if c.fit[i] > 0.0:
+                s += "\n[color=#ffd166]Being refitted: %d%%[/color]" % int(c.fit[i] * 100.0)
+            elif c.tier_at(i) < Ages.tier(c.age):
+                var rc := c.refit_cost(i)
+                s += "  [color=#e07a5f](behind the age: holds and employs less)[/color]\nRefit (U): $%d, %d planks, %d tools%s" % [int(rc["coins"]), int(rc["planks"]), int(rc["tools"]), (", %d metal" % int(rc["metal"])) if float(rc["metal"]) > 0.0 else ""]
         if c.burn[i] > 0.0:
             s += "\n[color=#e07a5f]ON FIRE[/color]"
         return s
@@ -896,13 +974,73 @@ func _tint(l: Label, col: Color) -> void:
         l.add_theme_color_override("font_color", col)
 
 
+func _perf_bg() -> StyleBoxFlat:
+    var sb := StyleBoxFlat.new()
+    sb.bg_color = Color(0, 0, 0, 0.6)
+    sb.set_content_margin_all(6)
+    return sb
+
+
+## F3 panel: fps, frame-time percentiles over the last PERF_N frames, sim/draw cost, renderer and memory figures.
+func _update_perf(delta: float) -> void:
+    frame_ms.append(delta * 1000.0)
+    if frame_ms.size() > PERF_N:
+        frame_ms.remove_at(0)
+    var s := frame_ms.duplicate()
+    s.sort()
+    var avg := 0.0
+    for v in frame_ms:
+        avg += v
+    avg /= frame_ms.size()
+    var p99: float = s[mini(s.size() - 1, int(s.size() * 0.99))]
+    var pop := 0
+    for t in m.towns:
+        pop += t.pop
+    perf_l.text = "%d fps   avg %.1f ms   p99 %.1f ms   worst %.1f ms\nsim %.1f ms   draw %.1f ms   (per frame, smoothed)\ndraw calls %d   objects %d   nodes %d\nmemory %.0f MB   video memory %.0f MB\ntowns %d   population %d   speed %sx" % [
+        Engine.get_frames_per_second(), avg, p99, s[-1], m.sim_ms, m.draw_ms,
+        Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME),
+        Performance.get_monitor(Performance.RENDER_TOTAL_OBJECTS_IN_FRAME),
+        Performance.get_monitor(Performance.OBJECT_NODE_COUNT),
+        Performance.get_monitor(Performance.MEMORY_STATIC) / 1048576.0,
+        Performance.get_monitor(Performance.RENDER_VIDEO_MEM_USED) / 1048576.0,
+        m.towns.size(), pop, String.num(m.speed)]
+    perf_l.position = Vector2(size.x - perf_l.size.x - 8.0, 120.0)  # right edge, clear of the window column
+    perf_g.position = Vector2(size.x - perf_g.size.x - 8.0, perf_l.position.y + perf_l.size.y + 4.0)
+    perf_g.queue_redraw()
+
+
+## Bars of recent frame times; the line marks 16.7 ms (60 fps), the bars are capped at 50 ms.
+func _draw_perf_graph() -> void:
+    perf_g.draw_rect(Rect2(Vector2.ZERO, perf_g.size), Color(0, 0, 0, 0.6))
+    for i in frame_ms.size():
+        var h := minf(frame_ms[i], 50.0) / 50.0 * perf_g.size.y
+        var col := Color("9fd3a0") if frame_ms[i] <= 16.7 else (Color("e8c66a") if frame_ms[i] <= 25.0 else Color("e07a5f"))
+        perf_g.draw_rect(Rect2(i, perf_g.size.y - h, 1, h), col)
+    var y := perf_g.size.y * (1.0 - 16.7 / 50.0)
+    perf_g.draw_line(Vector2(0, y), Vector2(perf_g.size.x, y), Color(1, 1, 1, 0.4))
+
+
+## A big line near the top that fades out: the age you have just entered.
+func banner(text: String, sub := "") -> void:
+    banner_l.text = text + ("\n" + sub if sub != "" else "")
+    banner_t = 6.0
+    banner_l.visible = true
+
+
 func _process(_d: float) -> void:
+    if banner_t > 0.0:
+        banner_t -= _d
+        banner_l.modulate.a = clampf(banner_t / 1.5, 0.0, 1.0)
+        banner_l.size = Vector2(size.x, 0)
+        banner_l.position = Vector2(0, 70)
+        banner_l.visible = banner_t > 0.0
     var c: City = m.city
     tick_n += 1
     _update_maptip()
     perf_l.visible = m.perf_on
+    perf_g.visible = m.perf_on
     if m.perf_on:
-        perf_l.text = "%d fps   sim %.1f ms   draw %.1f ms   towns %d" % [Engine.get_frames_per_second(), m.sim_ms, m.draw_ms, m.towns.size()]
+        _update_perf(_d)
     lbl_time.text = "%s  %s  %s" % [c.town_name, c.clock_str(), Civics.SEASONS[c.season]["n"]]
     lbl_appr.text = "Approval %d%%" % int(c.approval * 100.0)
     _tint(lbl_appr, Color("e07a5f") if c.approval < 0.5 else Color("9fd3a0"))
@@ -978,6 +1116,13 @@ func _process(_d: float) -> void:
         at += "[b]%s[/b]  %ds left\n" % [WorldEvents.EVENTS[a["id"]]["n"], int(a["left"])]
     act_l.text = at if at != "" else "Nothing happening."
     log_l.text = "\n".join(c.event_log.slice(0, 14))
+    tree_l.text = "Research points: %d" % int(c.pts)
+    for i in tech_btns:
+        var tb: Button = tech_btns[i]
+        var why := Research.block(c, i)
+        tb.set_pressed_no_signal(Research.has(c, i))
+        tb.disabled = why != "" and why != "taken"
+        tb.tooltip_text = "%s (%d points). %s" % [Research.node(i)["d"], int(Research.cost(i)), "" if why == "" else why.capitalize() + "."]
     for k in pol_btns:
         var pb: CheckButton = pol_btns[k]
         if pb.button_pressed != bool(c.policies.get(k, false)):
@@ -1127,7 +1272,7 @@ func _empire() -> void:
     body.add_child(emp_sand)
     _lbl(emp_sand, 70).text = "Sandbox"
     _btn(emp_sand, "+$1000", func() -> void: m.cmd("grant", [1000]))
-    _btn(emp_sand, "+12 troops", func() -> void: m.cmd("spawn", ["spear" if m.city.age < 2 else "inf", 12]))
+    _btn(emp_sand, "+12 troops", func() -> void: m.cmd("spawn", ["spear" if Ages.tier(m.city.age) < 2 else "inf", 12]))
     _btn(emp_sand, "Next age", func() -> void: m.cmd("set_age", [mini(m.city.age + 1, Ages.LAST)]))
     emp_pow = HFlowContainer.new()
     body.add_child(emp_pow)
@@ -1411,7 +1556,7 @@ func _tax_all(k: String, d: float) -> void:
 ## The standings as text: land share, allied share, score and how close each side is to each victory.
 func _domination() -> String:
     var v: Victory = m.sig.vic
-    var out := "DOMINATION: conquest = %d%% of the land (or the last side); hegemony = a clear top score and %d%% allied. No timers.\n" % [int(Victory.CONQUEST_SHARE * 100.0), int(Victory.ALLY_SHARE * 100.0)]
+    var out := "DOMINATION: the game ends only when one side holds every living town (a town with a single citizen counts as alive). Land share and score are standings only.\n"
     if v.winner != "":
         out += v.describe() + "\n"
     for r: Dictionary in v.rows:
@@ -1755,11 +1900,13 @@ func _win(key: String, title: String, pos: Vector2, body_min: Vector2) -> VBoxCo
         if e is InputEventMouseMotion and (e.button_mask & MOUSE_BUTTON_MASK_LEFT) != 0:
             p.position += e.relative
             _clamp(p)
+            _snap(p)
         elif e is InputEventMouseButton and e.button_index == MOUSE_BUTTON_LEFT:
             if e.pressed:
                 p.move_to_front()
                 tk_front()
             else:
+                _separate(p)
                 _save_ui())
     return body
 
@@ -1823,6 +1970,14 @@ func tk_front() -> void:
     ticker.get_parent().move_to_front()
 
 
+## Minimise every floating window (first launch and new games start with just the tutorial open).
+func collapse_all() -> void:
+    for k in wins:
+        var body: Control = (wins[k] as PanelContainer).get_child(0).get_child(1)
+        if k != "detail" and body.visible:
+            _minimize.call_deferred(k, body)
+
+
 func _minimize(key: String, body: Control) -> void:
     body.visible = not body.visible
     win_min[key] = not body.visible
@@ -1840,6 +1995,7 @@ func _set_open(key: String, on: bool) -> void:
         if on:
             (wins[key] as PanelContainer).move_to_front()
             _clamp.call_deferred(wins[key])
+            _separate.call_deferred(wins[key])
     _save_ui()
 
 
@@ -1853,6 +2009,77 @@ func _clamp_all() -> void:
     for k in wins:
         if not pop_wins.has(k):
             _clamp(wins[k])
+            _separate(wins[k])
+
+
+func _rect(p: Control) -> Rect2:
+    return Rect2(p.position, p.get_combined_minimum_size().max(Vector2(120, 28)))
+
+
+## The other docked windows a panel must not cover (the hover card shows and hides itself, so it is left out).
+func _others(p: Control) -> Array:
+    var out: Array = []
+    for k in wins:
+        var q: PanelContainer = wins[k]
+        if q != p and k != "detail" and q.visible and not pop_wins.has(k):
+            out.append(_rect(q))
+    return out
+
+
+## While dragging, stick to the edges of other windows (any side, any orientation) and of the screen.
+func _snap(p: Control) -> void:
+    var r := _rect(p)
+    var vs := get_viewport_rect().size
+    var best := Vector2(12, 12)  # snap distance in pixels, per axis
+    var d := Vector2.ZERO
+    for o in _others(p):
+        var o_r: Rect2 = o
+        if r.position.y < o_r.end.y + 12.0 and r.end.y > o_r.position.y - 12.0:  # side by side: align edges next to each other
+            for dx in [o_r.end.x - r.position.x, o_r.position.x - r.end.x, o_r.position.x - r.position.x, o_r.end.x - r.end.x]:
+                if absf(dx) < best.x:
+                    best.x = absf(dx)
+                    d.x = dx
+        if r.position.x < o_r.end.x + 12.0 and r.end.x > o_r.position.x - 12.0:  # stacked: same
+            for dy in [o_r.end.y - r.position.y, o_r.position.y - r.end.y, o_r.position.y - r.position.y, o_r.end.y - r.end.y]:
+                if absf(dy) < best.y:
+                    best.y = absf(dy)
+                    d.y = dy
+    for dx in [-r.position.x, vs.x - r.end.x]:
+        if absf(dx) < best.x:
+            best.x = absf(dx)
+            d.x = dx
+    for dy in [-r.position.y, vs.y - r.end.y]:
+        if absf(dy) < best.y:
+            best.y = absf(dy)
+            d.y = dy
+    p.position += d
+
+
+## Windows never overlap: a panel that covers another moves to the nearest free spot beside it (left, right, above or below).
+func _separate(p: Control) -> void:
+    var vs := get_viewport_rect().size
+    for _i in 8:
+        var r := _rect(p)
+        var hit := false
+        for o in _others(p):
+            var o_r: Rect2 = o
+            if not r.intersects(o_r):
+                continue
+            hit = true
+            var best := p.position
+            var bd := INF
+            for c in [Vector2(o_r.end.x, r.position.y), Vector2(o_r.position.x - r.size.x, r.position.y), Vector2(r.position.x, o_r.end.y), Vector2(r.position.x, o_r.position.y - r.size.y)]:
+                var cc: Vector2 = c
+                var inside := cc.x >= 0.0 and cc.y >= 0.0 and cc.x + r.size.x <= vs.x and cc.y + r.size.y <= vs.y
+                var cost := cc.distance_to(r.position) + (0.0 if inside else 100000.0)
+                if cost < bd:
+                    bd = cost
+                    best = cc
+            p.position = best
+            break
+        if not hit:
+            break
+    _clamp(p)
 
 
 func _reset_wins() -> void:
@@ -1892,6 +2119,7 @@ func _save_ui() -> void:
 func _load_ui() -> void:
     var cf := ConfigFile.new()
     if cf.load(UI_FILE) != OK:
+        collapse_all()
         return
     for k in wins:
         if not cf.has_section(k):

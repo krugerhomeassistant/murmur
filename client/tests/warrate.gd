@@ -14,6 +14,7 @@ func _init() -> void:
 		t.human = false
 		t.temper = [0.0, 0.2, -0.25, 0.05][k % 4]
 		t.seed_start()
+		Ages.set_age(t, 0)  # a real game starts in the Stone age, not the last one
 		ts.append(t)
 	for t in ts:
 		for o in ts:

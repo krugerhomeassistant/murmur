@@ -181,8 +181,9 @@ Towns belong to a **side** (`Victory.side`): all towns of one multiplayer owner 
 
 | Route | Condition |
 |---|---|
-| Conquest | The side holds at least 70% of all claimed land (live towns), or is the only side left once two or more have existed. The moment the state holds, the game is won. |
-| Hegemony | The side's score is at least 1.5 times the next side's, and its land plus the land of towns it has an alliance with is at least 40% of the whole. No timer: the state wins. |
+| Last side standing | The side is the only one left once two or more have existed. A town stays alive while it has at least one citizen. No land share or score lead ends the game early (owner rule, 2026-10-19). |
+
+Land share and the 1.5x score lead (with 40% allied land) only fill the progress bars in the standings.
 
 Score is population + land / 100 + units exported / 50 + culture. Culture is population x (0.6 x culture coverage + 0.4 x education coverage) x 0.4, 20% more with the free-school policy (`Victory.culture`). There are no timers. After a win the Victory or Defeat panel names the route; "Keep playing" dismisses it and the game continues as a sandbox with the winner kept. The Empire window lists each side's land, allied land, score and progress. Constants are in [constants](constants.md); `tests/victory.gd` covers both routes, a narrow lead, last side standing, a lone town and hostile snapshot input. A player who loses every town gets "Keep spectating" or "Quit" on the game-over panel (`tests/defeat.gd`).
 
@@ -204,3 +205,10 @@ Score is population + land / 100 + units exported / 50 + culture. Culture is pop
 - **Multiplayer feedback.** On a client the Balance button waits for the host's reply (`Main._net_reply`) and shows the amount moved; on the host or offline a no-op shows "Moved $0 between your towns.".
 - **Simulation level of detail.** Reduced-rate simulation for many towns (E2) is not done. Towns share only by trade (goods, power, water, services), never by automatic money transfers: a shared-treasury auto top-up was built and removed on purpose. Manual Send and Balance remain.
 - **Refresh rate.** The window refreshes every sixth frame (`tick_n % 6` in `Hud._process`), which is about ten times a second at 60 frames per second and slower on a slow machine.
+
+## Abandoned towns and capture
+A town with no people for 15 seconds (after it once held 10 or more) is abandoned: it keeps its buildings, treaties end and it leaves the war and trade logic. Another town can take it (`scripts/capture.gd`):
+- Select the abandoned town and press C (or the `capture` command) to send half the army, up to 30 units. At least one unit stays home, and a town can send once every 40 seconds. The march takes 30 seconds per plot of distance.
+- Arrived troops raze the old town hall (30 unit-seconds of work), then must hold the town alone for 120 seconds. Planner towns do this on their own when their army is 12 or more and they are ambitious.
+- If a second town arrives, the armies fight, the claim pauses, and any alliance between the two breaks into war.
+- The winner takes the town's owner, group and side, the surviving troops garrison it, six settlers move in, and it gets half the capturer's coins (at most 200). Money is never shared otherwise.

@@ -50,16 +50,22 @@ static func widen(c: City) -> bool:
 	return n > 0
 
 
-## One bus per bus stop, standing at the road next to it.
+## People per bus: a bus needs a driver and passengers from the town's own people, so a tiny town has none (every unit on the map is one of its people).
+const PEOPLE_PER_BUS := 8
+
+
+## One bus per bus stop, standing at the road next to it, as many as the town's people can run.
 static func sync_buses(c: City) -> void:
 	var stops: Array = c.bt.get(T.BUS, [])
 	var keep: Array = []
 	for b in c.buses:
-		if stops.has(b["stop"]):
+		if stops.has(b["stop"]) and keep.size() < c.pop / PEOPLE_PER_BUS:
 			keep.append(b)
 	c.buses = keep
 	for s in stops:
 		var has := false
+		if c.buses.size() >= c.pop / PEOPLE_PER_BUS:
+			break
 		for b in c.buses:
 			if b["stop"] == s:
 				has = true

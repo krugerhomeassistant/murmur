@@ -20,6 +20,8 @@ const DAY_SECS := 60.0  # sim seconds per day
 const BRIDGE_X := 4.0  # a road tile over water costs this much more
 ## Index offsets of the 13-cell diamond (radius 2) around a tile.
 const DIAMOND: Array[int] = [-2 * W, -W - 1, -W, -W + 1, -2, -1, 0, 1, 2, W - 1, W, W + 1, 2 * W]
+const OBSOLETE := 0.06  # capacity lost per era a building is behind the town
+const REFIT_SECS := 90.0  # a refit takes this long with a free crew at full efficiency
 const WALK := 2.4  # cells per sim second
 const GROW_COST := 25.0
 const BUILD_SECS := 8.0
@@ -61,6 +63,12 @@ var sig: Signals
 var rng := RandomNumberGenerator.new()
 var grid := PackedInt32Array()
 var lvl := PackedByteArray()  # zone building level, 0 = empty zone
+var fit := PackedFloat32Array()  # era refit progress 0..1 (0 = not being refitted)
+var age_refit_t := 0
+var behind_n := 0  # finished buildings older than the town's era
+var refit_ver := 0  # bumped whenever a refit starts or finishes, so the scan sees it
+var fit_n := 0  # buildings being refitted right now
+var etier := PackedByteArray()  # era tier + 1 each building was built in (0 = nothing there yet): old buildings keep their era until upgraded
 var build := PackedFloat32Array()  # construction progress 0..1
 var connected := PackedByteArray()
 var burn := PackedFloat32Array()  # 0 = no fire, else fire age in s
@@ -186,6 +194,16 @@ var treaty := {}  # town_name -> "", "pact", "alliance", "embargo", "vassal"
 var liege := ""  # town_name of the overlord when this town is a vassal
 var dipl_t := 70.0
 var gpos := Vector2i.ZERO  # position in the region (towns are laid out on a grid)
+
+var derelict := false  # abandoned: nobody owns it, any side may claim it (Capture)
+var empty_t := 0  # seconds without a single citizen
+var raze_left := 0.0  # unit-seconds of work left to tear down its town hall
+var claim_by := ""  # side building a new town hall here
+var claim_t := 0.0
+var garrison := {}  # side -> units standing in this derelict town
+var inbound: Array = []  # troops on the road to this derelict town: {side, from, eta, u}
+var side_key := ""  # set when a town was captured: the side it plays for
+var cap_cd := 0.0  # seconds until this town may send troops to an empty town again
 var gate := [0, 0, 0, 0]  # road tiles at the border facing N, E, S, W (a link needs one)
 var war_n := {}  # town_name -> battles fought in the current war
 var war_sc := {}  # town_name -> battles I won in the current war
@@ -206,6 +224,10 @@ var broken := 0
 var next_election := Civics.YEAR_DAYS + 1
 var age := Ages.LAST  # see Ages; saves from before ages count as Modern, where everything is open
 var know := 0.0  # knowledge toward the next age
+var age_up := -1  # set for one tick when the town enters an age; the UI shows a banner
+var tree: Array = []  # skill tree nodes taken (Research.id)
+var pts := 0.0  # research points to spend on the tree
+var news := 0.0  # -1..1: how the town feels about what it hears (its own scandals and good news), fades back to 0; it used to be one value shared by every town
 var age_t := 1.0e9  # seconds since the town entered its age (grace period for the services the age expects)
 var elections_won := 0
 var rally_used := false
@@ -276,6 +298,7 @@ var ore := PackedByteArray()  # ore deposit richness per cell, 0 = none
 var ground := PackedByteArray()  # World.K kind per cell (look only: sand, forest, hills, rock); water/ore above are the rules
 var world_fed := false  # terrain came from the shared World, so set_start must not roll its own river
 var svc_jobs := 0
+var haul_jobs := 0  # drivers of the carts that bring wood, crops and ore to the processors
 var jobs := 0
 var up_zone := 0.0
 var up_svc := 0.0
@@ -301,6 +324,7 @@ var shop_gap := 0.0
 
 # money, per sim second (already scaled)
 var income := 0.0
+var chain_util := PackedFloat32Array()  # per building id: share of full capacity the chain buildings of that kind actually ran at (1 = fully staffed and supplied); workers are paid by it
 var budget_lines: Array = []  # [label, value]
 var inc_tax := 0.0  # kept for tests: all revenue lines summed
 var hist_coins: Array[float] = []
@@ -320,6 +344,8 @@ func _init(s: Signals) -> void:
 	_rebuild_cells()
 	grid.resize(W * H)
 	lvl.resize(W * H)
+	etier.resize(W * H)
+	fit.resize(W * H)
 	build.resize(W * H)
 	connected.resize(W * H)
 	burn.resize(W * H)
@@ -809,12 +835,13 @@ func _add_prov(m: String, c: Vector2i, s: float, r: int) -> void:
 ## Recount everything that depends on the map.
 func _scan() -> void:
 	var scan_t0 := Time.get_ticks_usec()
-	var sg := hash([grid, lvl, lamp, terr])  # the cell pass only reads these; skip it while the layout is unchanged
+	var sg := hash([grid, lvl, lamp, terr, refit_ver, Ages.tier(age)])  # the cell pass only reads these; skip it while the layout is unchanged
 	if sg != scan_sig:
 		roads = 0
 		avenues = 0
 		blds = 0
 		housing = 0
+		behind_n = 0
 		shop_jobs = 0
 		fac_jobs = 0
 		off_jobs = 0
@@ -825,6 +852,8 @@ func _scan() -> void:
 		fish_jobs = 0
 		mine_jobs = 0
 		mine_yield = 0.0
+		farm_src = []
+		mine_src = []
 		svc_jobs = 0
 		up_zone = 0.0
 		tier_sum = 0.0
@@ -843,9 +872,16 @@ func _scan() -> void:
 		var best := 1e9
 		for i in cells:
 			var t := grid[i]
+			if t == T.EMPTY or (lvl[i] == 0 and is_zone(t)):
+				etier[i] = 0
+				fit[i] = 0.0
+			elif etier[i] == 0:
+				etier[i] = Ages.tier(age) + 1
 			if t == T.EMPTY:
 				connected[i] = 0
 				continue
+			if etier[i] > 0 and int(etier[i]) - 1 < Ages.tier(age) and not is_road(t):
+				behind_n += 1
 			var ok := _road_next_to(i) >= 0
 			connected[i] = 1 if ok else 0
 			if not ok:
@@ -863,7 +899,8 @@ func _scan() -> void:
 					plaza = i
 			elif kind == "zone":
 				zones.append(i)
-				var L: int = lvl[i]
+				var L: int = 0 if fit[i] > 0.0 else lvl[i]  # a building being refitted is a construction site: nothing works in it
+				var obs := 1.0 - OBSOLETE * float(clampi(Ages.tier(age) - tier_at(i), 0, 3))  # buildings left behind by the age hold and employ less
 				if L > 0:
 					blds += L
 					up_zone += float(d["up"]) * L
@@ -871,36 +908,41 @@ func _scan() -> void:
 					var jp: int = d["jobs"]
 					if hp > 0:
 						homes.append(i)
-						housing += hp * L
+						housing += roundi(float(hp * L) * obs)
 						tier_sum += hp * L * float(d.get("tier", 1.0))
 					if jp > 0:
 						works.append(i)
+						var jl := roundi(float(jp * L) * obs)
 						match String(d["sector"]):
 							"com":
-								shop_jobs += jp * L
+								shop_jobs += jl
 							"ind":
-								fac_jobs += jp * L
+								fac_jobs += jl
 							"office":
-								off_jobs += jp * L
+								off_jobs += jl
 							"farm":
-								farm_jobs += jp * L
+								farm_jobs += jl
+								farm_src.append([i, float(jl)])
 							"orchard":
-								orch_jobs += jp * L
+								orch_jobs += jl
 							"ranch":
-								ranch_jobs += jp * L
+								ranch_jobs += jl
 							"green":
-								green_jobs += jp * L
+								green_jobs += jl
 							"fishfarm":
-								fish_jobs += jp * L
+								fish_jobs += jl
 							"mine":
-								mine_jobs += jp * L
+								mine_jobs += jl
 								mine_yield += L * maxi(int(ore[i]), 1)
+								mine_src.append([i, float(L * maxi(int(ore[i]), 1))])
 					if d.has("poll"):
 						polluters.append([c.x, c.y, float(d["poll"][1]) * L, int(d["poll"][0])])
 					if t == T.COM:
 						spots.append(i)
 			else:
 				up_svc += float(d["up"])
+				if fit[i] > 0.0:
+					continue  # being refitted
 				if not bt.has(t):
 					bt[t] = []
 				bt[t].append(i)
@@ -925,7 +967,10 @@ func _scan() -> void:
 				_add_prov("light", cell(i), 0.7, 4)
 				up_svc += 0.1
 		_road_net()
-		jobs = shop_jobs + fac_jobs + off_jobs + farm_jobs + orch_jobs + ranch_jobs + green_jobs + fish_jobs + mine_jobs + svc_jobs
+		haul_jobs = _haulers(farm_src, bt.get(T.MILL, [])) + _haulers(mine_src, (bt.get(T.FOUNDRY, []) as Array) + (bt.get(T.REFINERY, []) as Array))
+		var camps: Array = bt.get(T.LUMBER, [])
+		haul_jobs += ceili(float(camps.size()) * HAUL_LOAD / HAUL_PER_DRIVER) if not (bt.get(T.SAWMILL, []) as Array).is_empty() or not (bt.get(T.TOOLWORKS, []) as Array).is_empty() else 0
+		jobs = shop_jobs + fac_jobs + off_jobs + farm_jobs + orch_jobs + ranch_jobs + green_jobs + fish_jobs + mine_jobs + svc_jobs + haul_jobs
 		res_mult = tier_sum / maxf(housing, 1)
 		scan_sig = sg
 		up_svc_base = up_svc
@@ -1239,7 +1284,7 @@ func _tribes() -> void:
 		"union": 0.6 - unemp * 1.5 - (tax_i - 0.1) * 2.0 + (0.15 if bt.has(T.UNION_HALL) else 0.0),
 		"business": 0.6 - (tax_c - 0.1) * 3.0 - (tax_i - 0.1) * 2.0 + com_dem * 0.1 + mk * 0.2 + (0.15 if bt.has(T.CHAMBER) else 0.0),
 		"artists": 0.3 + float(cov["culture"]) * 0.7,
-		"rebels": 0.6 - (0.25 if is_policy("curfew") else 0.0) - (0.25 if is_policy("stop_search") else 0.0) - (0.2 if protest else 0.0) + sig.get_f("news") * 0.2,
+		"rebels": 0.6 - (0.25 if is_policy("curfew") else 0.0) - (0.25 if is_policy("stop_search") else 0.0) - (0.2 if protest else 0.0) + news * 0.2,
 		"club": 0.3 + float(cov["leisure"]) * 0.6,
 	}
 	for k in sat:
@@ -1327,6 +1372,7 @@ func _collect_mods() -> void:
 	for a in active:
 		_add_mods(a["mods"])
 	_add_mods(tribe_mods)
+	_add_mods(Research.mods(self))
 	_add_mods(Civics.SEASONS[season]["mods"])
 	if wars() > 0:
 		_add_mods({"mood": -0.03 * wars() - 0.004 * minf(war_battles(), 15.0)})
@@ -1377,7 +1423,7 @@ func trigger(id: String) -> bool:
 			active.append({"id": id, "left": dur, "mods": scaled})
 		_collect_mods()
 	if e.has("weather"):
-		sig.set_weather(String(e["weather"]), dur)
+		sig.set_weather(String(e["weather"]), dur, world_pos())
 	var inst: Dictionary = e.get("inst", {})
 	if inst.has("shock"):
 		sig.mk.shock_by(inst["shock"])
@@ -1419,7 +1465,7 @@ func trigger(id: String) -> bool:
 			for i in mini(-n, citizens.size()):
 				citizens.remove_at(rng.randi() % citizens.size())
 	if inst.has("news"):
-		sig.bump("news", float(inst["news"]))
+		news = clampf(news + float(inst["news"]), -1.0, 1.0)
 	if inst.has("market"):
 		sig.bump("market", float(inst["market"]))
 	recent[id] = day
@@ -1503,6 +1549,102 @@ func _hit(i: int) -> void:
 
 # ---------- per second ----------
 
+## What refitting one building to the town's next era costs: coins, and materials in stock.
+func refit_cost(i: int) -> Dictionary:
+	var d: Dictionary = Catalog.DEFS[grid[i]]
+	var L := float(maxi(lvl[i], 1))
+	var tr := tier_at(i)
+	return {"coins": float(d["cost"]) * 0.8 * L * float(tr + 1), "planks": 4.0 * L, "tools": 2.0 * L, "metal": 2.0 * L if tr >= 1 else 0.0}
+
+
+## Building crews: how many buildings can be refitted at once (one per 60 people, at least one).
+func crews() -> int:
+	return 1 + pop / 60
+
+
+## "" when the building at i can be refitted now, otherwise why not.
+func refit_block(i: int) -> String:
+	if i < 0 or i >= W * H or grid[i] == T.EMPTY or is_road(grid[i]) or not terr.has_point(cell(i)):
+		return "Nothing to refit here."
+	if is_zone(grid[i]) and lvl[i] == 0:
+		return "Only finished buildings can be refitted."
+	if fit[i] > 0.0:
+		return "Already being refitted."
+	if tier_at(i) >= Ages.tier(age):
+		return "Already up to date with the age."
+	if fit_n >= crews():
+		return "All building crews are busy (%d)." % crews()
+	var c := refit_cost(i)
+	var rsv := Ages.reserve(self)
+	for k in ["planks", "tools", "metal"]:
+		if float(stock.get(k, 0.0)) - float(rsv.get(k, 0.0)) < float(c[k]):
+			return "Needs %d %s in stock." % [ceili(float(c[k])), k]
+	if coins < float(c["coins"]):
+		return "Needs $%d." % ceili(float(c["coins"]))
+	return ""
+
+
+func refit(x: int, y: int) -> bool:
+	var i := y * W + x
+	if refit_block(i) != "":
+		return false
+	var c := refit_cost(i)
+	coins -= float(c["coins"])
+	for k in ["planks", "tools", "metal"]:
+		stock[k] = float(stock.get(k, 0.0)) - float(c[k])
+	fit[i] = 0.001
+	fit_n += 1
+	refit_ver += 1
+	scan_dirty = true
+	return true
+
+
+func _refits() -> void:
+	var step := maxf(mod("build_mult"), 1.0) / REFIT_SECS * efficiency()
+	var n := 0
+	for i in cells:
+		if fit[i] <= 0.0:
+			continue
+		fit[i] += step
+		if fit[i] >= 1.0:
+			fit[i] = 0.0
+			etier[i] = mini(tier_at(i) + 2, Ages.tier(age) + 1)
+			refit_ver += 1
+			scan_dirty = true
+			msg = "A %s was refitted for the age." % String(Catalog.DEFS[grid[i]]["n"]).to_lower().replace(" zone", "")
+		else:
+			n += 1
+	fit_n = n
+
+
+## The planner modernises the most outdated building it can afford, one at a time and only with spare money.
+func _auto_refit() -> void:
+	for _n in 3:
+		if fit_n >= crews() or coins < 300.0:
+			return
+		var best := -1
+		var gap := 0
+		for i in cells:
+			var g := Ages.tier(age) - tier_at(i)
+			if g > gap and fit[i] <= 0.0 and grid[i] != T.EMPTY and not is_road(grid[i]) and not (is_zone(grid[i]) and lvl[i] == 0) and refit_block(i) == "":
+				if coins > float(refit_cost(i)["coins"]) + 200.0:
+					best = i
+					gap = g
+		if best < 0:
+			return
+		refit(best % W, best / W)
+
+
+## The era tier (0 to 3) a building stands in: the one it was built in, or the town's own when unknown.
+func tier_at(i: int) -> int:
+	return int(etier[i]) - 1 if etier[i] > 0 else Ages.tier(age)
+
+
+## The middle of this town's plot in world pixels (32 px tiles): where its weather is read.
+func world_pos() -> Vector2:
+	return (Vector2(gpos) + Vector2(0.5, 0.5)) * Vector2(W, H) * 32.0
+
+
 ## Microseconds spent per stage of _second(), summed over all towns (read by the benchmark).
 static var prof := {}
 
@@ -1515,7 +1657,8 @@ func _pf(stage: String, t0: int) -> int:
 
 func _second() -> void:
 	var pt := Time.get_ticks_usec()
-	var sn := int((day - 1) / 7) % 4
+	sig.day_hi = maxi(sig.day_hi, day)
+	var sn := int((sig.day_hi - 1) / 7) % 4  # one world calendar
 	if sn != season:
 		season = sn
 		msg = "%s has arrived. %s" % [Civics.SEASONS[season]["n"], Civics.SEASONS[season]["txt"]]
@@ -1526,10 +1669,20 @@ func _second() -> void:
 			offline.erase(k)
 			_log("The power plant is back online.")
 	pt = _pf("offline", pt)
+	news = move_toward(news, 0.0, 0.02)
 	var up := Ages.second(self)
 	if up >= 0:
 		msg = "%s enters the %s age." % [town_name, Ages.name_of(up)]
 		_log("The town enters the %s age." % Ages.name_of(up))
+		age_up = up
+		msg += " New research can be taken in the Mayor's office." if human else ""
+	if not human and age_refit_t % 7 == 0:
+		Research.auto(self)
+	if fit_n > 0:
+		_refits()
+	if auto_mode > 0 and age_refit_t % 5 == 0:
+		_auto_refit()
+	age_refit_t += 1
 	_scan()
 	pt = _pf("scan", pt)
 	lod_n += 1
@@ -1648,7 +1801,7 @@ func _second() -> void:
 	unemp = 0.0 if pop == 0 else 1.0 - float(employed) / pop
 	shop_gap = clampf(1.0 - shop_jobs / maxf(pop * 0.5, 3.0), 0.0, 1.0)
 	var target := 0.72 - shop_gap * 0.15 - minf(burning * 0.03, 0.2) - (tax_r - 0.10) * 2.0 - unemp * 0.3
-	target += sig.get_f("news") * 0.3 - float(WEATHER_PENALTY.get(sig.weather(), 0.0))
+	target += news * 0.3 - float(WEATHER_PENALTY.get(sig.weather_at(world_pos()), 0.0))
 	for m in Catalog.METRICS:
 		var M: Dictionary = Catalog.METRICS[m]
 		if String(M["kind"]) == "need":
@@ -1773,7 +1926,7 @@ func _money(market: float) -> void:
 	var r_ind := goods * 1.2 * econ * prodm * wise * laf_i * fin * f
 	var r_off := off_jobs * emp * 1.6 * econ * prodm * (0.5 + 0.5 * float(cov["edu"])) * mod("office_mult") * laf_c * fin * f
 	var r_tour := tour_sum * 3.0 * econ * mood * mod("tour_mult") * f
-	var mult := 1.0 + pop / 60.0  # size has a cost
+	var mult := 1.0 + minf(pop / 60.0, 5.0)  # size has a cost, up to a limit: without one upkeep grows with the square of the population and every big town went broke
 	var um := mod("upkeep_mult")
 	var e_roads := (roads * 0.05 + avenues * 0.08) * mult * um * RATE
 	var e_maint := (roads * 0.03 + avenues * 0.04) * mult * um * RATE  # crews keep roads up; the split keeps the total close to before
@@ -1804,7 +1957,7 @@ func _money(market: float) -> void:
 		["Residential tax", r_tax], ["Commercial tax", r_com], ["Industrial tax", r_ind], ["Office tax", r_off],
 		["Tourism", r_tour], ["Events", mod("income_add") * RATE], ["Military funding", grant_sum * RATE * mod("grant_mult")], ["Regional trade", trade_net], ["Savings tax", hh_tax * RATE],
 		["Roads", -e_roads], ["Maintenance", -e_maint], ["Buildings", -e_zone], ["Services", -e_svc], ["Policies", -e_pol],
-		["City staff", -e_staff], ["Crime losses", -e_crime],
+		["City staff", -e_staff], ["Crime losses", -e_crime], ["Army upkeep", -Military.upkeep(self)],
 		["Exports", tr[0]], ["Imports (food, goods)", -tr[1]], ["Loan repayments", -e_loan],
 	]
 	income = 0.0
@@ -1965,6 +2118,7 @@ static func _build_tiers() -> void:
 func _households() -> void:
 	if _wage_tier.is_empty():
 		_build_tiers()
+	_ensure_util()
 	var mk: Market = sig.mk
 	var pf: float = price_loc["food"]  # what households pay is this town's price, not the world's
 	var pg: float = price_loc["goods"]
@@ -1984,7 +2138,7 @@ func _households() -> void:
 	for c in citizens:
 		var wage := 0.0
 		if c.work >= 0:
-			wage = net * float(_wage_tier[grid[c.work]]) if grid[c.work] != T.EMPTY else net
+			wage = net * float(_wage_tier[grid[c.work]]) * float(chain_util[grid[c.work]]) if grid[c.work] != T.EMPTY else net  # paid only for the shifts the workplace actually ran
 		var rent := RENT * float(_rent_tier[grid[c.home]]) if grid[c.home] != T.EMPTY else 0.0
 		var bills := 0.05 * pf + 0.03 * pg + rent
 		rent_pool += rent
@@ -2464,7 +2618,7 @@ func _plan_service(force := false) -> bool:
 			sc += 0.15
 		if d.has("poll"):
 			sc -= 0.1
-		if income - newup < (0.15 if sc < 0.6 else -0.25) and coins + (income - newup) * 600.0 < 600.0:  # skip what the treasury cannot carry for ten minutes
+		if income - newup < (0.15 if sc < 0.6 else -0.25) and coins + (income - newup) * 1800.0 < 600.0:  # skip what the treasury cannot carry for thirty minutes
 			continue
 		sc *= foc("military") if id in [T.BARRACKS, T.BASE, T.RADAR, T.NAVYARD, T.ARMOURY] else foc("services") if ch == "" and d.has("prov") else 1.0
 		sc = sc / (float(d["cost"]) / 100.0 + 0.5) + rng.randf() * 0.05
@@ -2492,18 +2646,26 @@ func _plan_service(force := false) -> bool:
 	cand.shuffle()
 	var bi := -1
 	var bs := -1e9
+	var hcs: Array[Vector2i] = []  # per home: its cell and how many of this service's metrics it lacks (the same for every candidate site)
+	var hneed := PackedInt32Array()
+	for h in homes:
+		var hc := cell(h)
+		hcs.append(hc)
+		var n := 0
+		for mk in prov:
+			if raw_cov(hc, mk) < 0.5:
+				n += 1
+		hneed.append(n)
+	var poll_r: int = int(d["poll"][0]) if d.has("poll") else -1
 	for k in mini(24, cand.size()):
 		var c := cell(cand[k])
 		var sc := rng.randf() * 0.5
-		for h in homes:
-			var hc := cell(h)
-			var dist := absi(hc.x - c.x) + absi(hc.y - c.y)
-			if d.has("poll") and dist <= int(d["poll"][0]):
+		for j in hcs.size():
+			var dist := absi(hcs[j].x - c.x) + absi(hcs[j].y - c.y)
+			if dist <= poll_r:
 				sc -= 0.6
 			if dist <= r:
-				for mk in prov:
-					if raw_cov(hc, mk) < 0.5:
-						sc += 1.0
+				sc += float(hneed[j])
 		if sc > bs:
 			bs = sc
 			bi = cand[k]
@@ -2816,7 +2978,8 @@ func _fires(dt: float) -> void:
 		next_fire = rng.randf_range(60.0, 110.0) / (1.0 + blds / 80.0) / maxf(mod("fire_mult"), 0.2) / clampf(blds / 14.0, 0.2, 1.0)  # tiny towns rarely burn
 		msg = ignite()
 	burning = 0
-	var wet := sig.weather() == "rain" or sig.weather() == "storm"
+	var wx_now := sig.weather_at(world_pos())
+	var wet := wx_now == "rain" or wx_now == "storm"
 	for i in flames.duplicate():
 		if not burnable(i):
 			_clear_burn(i)
@@ -3002,14 +3165,14 @@ func thought(c: Citizen) -> String:
 		return "Nowhere to shop around here."
 	if c.commute > 25:
 		return "My commute takes forever."
-	var w := sig.weather()
+	var w := sig.weather_at(world_pos())
 	if w == "storm" or w == "rain":
 		return "Miserable weather today."
 	if w == "heatwave":
 		return "It's far too hot."
-	if sig.get_f("news") < -0.4:
+	if news < -0.4:
 		return "Did you see the headlines?"
-	if sig.get_f("news") > 0.4:
+	if news > 0.4:
 		return "Heard some good news today."
 	if c.mood > 0.65:
 		return ["Nice day for a walk.", "Can't complain.", "Good to live here."][rng.randi() % 3]
@@ -3156,8 +3319,21 @@ func tick(dt: float) -> void:
 		coins = maxf(coins, 30.0)  # neighbours are kept alive by the state
 	elif coins < DEBT_LIMIT:
 		over = "Bankrupt. The city could not pay its bills."
-	elif peak >= 10.0 and pop < 1:
-		over = "Everyone left. The city is empty."
+	empty_t = empty_t + 1 if (pop < 1 and peak >= 10.0) else 0
+	if empty_t >= 15 and over == "":
+		_abandon()
+
+
+## Everyone has left: the town stops, ends its treaties and wars, and is up for grabs (docs/PLAN.md, dead-town capture).
+func _abandon() -> void:
+	over = "Everyone left. The city is empty."
+	derelict = true
+	raze_left = Capture.RAZE_NEED if not (bt.get(T.TOWNHALL, []) as Array).is_empty() else 0.0
+	for o in partners:
+		var p: City = o
+		Diplo.sign_treaty(self, p, "")
+		p._log("%s was abandoned. It is up for grabs." % town_name)
+	army.clear()
 
 
 # ---------- mayor: petitions, promises, approval, elections ----------
@@ -3272,13 +3448,54 @@ func _sickness() -> void:
 # ---------- economy: crops -> food, goods, storage, trade ----------
 
 ## Wood per second from the lumber camps: the forest within 5 tiles of each (cached until the town changes).
+var farm_src: Array = []  # [cell, weight] of farm and mine workplaces, for hauling distance
+var mine_src: Array = []
+var crop_haul := 1.0
+var ore_haul := 1.0
+var wood_haul := 1.0  # share of the felled wood the camps' carts bring to the mills (distance limited)
+
+
+const HAUL_PER_DRIVER := 8.0  # output weight one cart driver keeps moving
+const HAUL_LOAD := 6.0  # a lumber camp's output weight
+
+
+## Drivers needed for a source's carts: none while there is no processor to deliver to (the output goes to the depot).
+func _haulers(src: Array, dests: Array) -> int:
+	if dests.is_empty():
+		return 0
+	var tot := 0.0
+	for e in src:
+		tot += float(e[1])
+	return ceili(tot / HAUL_PER_DRIVER)
+
+
+## Share of a source's output its carts bring to the nearest of `dests`: full within 12 tiles, down to 30% far away; no destination means it goes to the depot (1.0).
+func _haul_share(src: Array, dests: Array) -> float:
+	var tot := 0.0
+	var got := 0.0
+	for e in src:
+		var i: int = e[0]
+		var d := 1e9
+		for j in dests:
+			d = minf(d, absf(float(i % W - j % W)) + absf(float(i / W - j / W)))
+		tot += float(e[1])
+		got += float(e[1]) * (1.0 if dests.is_empty() else clampf(12.0 / maxf(d, 1.0), 0.3, 1.0))
+	return got / tot if tot > 0.0 else 1.0
+
+
 func _wood_rate(emp: float) -> float:
 	if wood_sig != scan_sig:
 		wood_sig = scan_sig
 		wood_yield = 0.0
+		var src: Array = []
 		for i in bt.get(T.LUMBER, []):
-			wood_yield += minf(float(_forest_near(i)), 12.0)
-	return wood_yield * 0.02 * emp
+			var y := minf(float(_forest_near(i)), 12.0)
+			wood_yield += y
+			src.append([i, y])
+		wood_haul = _haul_share(src, (bt.get(T.SAWMILL, []) as Array) + (bt.get(T.TOOLWORKS, []) as Array))
+		crop_haul = _haul_share(farm_src, bt.get(T.MILL, []))
+		ore_haul = _haul_share(mine_src, (bt.get(T.FOUNDRY, []) as Array) + (bt.get(T.REFINERY, []) as Array))
+	return wood_yield * 0.02 * emp * wood_haul
 
 
 func _lumber_site() -> bool:
@@ -3318,23 +3535,26 @@ func _trade(_market: float) -> Array:
 	var want := {}  # units this town wants from the market this second
 	var bought := {}  # units it actually bought (production inputs are limited by what the market has on offer)
 	var spent := 0.0
-	var crops := (farm_jobs + 1.5 * orch_jobs) * emp * 0.12 * float(Civics.SEASONS[season]["harvest"]) + green_jobs * emp * 0.12 * 0.85  # greenhouses ignore the season
-	var mined := mine_yield * emp * 0.05
+	var wood_in := _wood_rate(emp)  # also refreshes the haul shares
+	var crops := (farm_jobs * crop_haul + 1.5 * orch_jobs) * emp * 0.12 * float(Civics.SEASONS[season]["harvest"]) + green_jobs * emp * 0.12 * 0.85  # greenhouses ignore the season
+	var mined := mine_yield * ore_haul * emp * 0.05
 	var foundries := (bt.get(T.FOUNDRY, []) as Array).size()
 	# Inputs: a mill with idle capacity buys crops, a foundry ore, factories metal, when the treasury can afford it and the market has any.
 	var rich := coins > 120.0
 	var works := (bt.get(T.TOOLWORKS, []) as Array).size()
 	var tool_need := (farm_jobs + orch_jobs + mine_jobs + fac_jobs) * emp * 0.004
-	var wood_in := _wood_rate(emp)
 	var saws := (bt.get(T.SAWMILL, []) as Array).size()
 	var sites := 0
 	for i in zones:
 		if lvl[i] == 0 and build[i] > 0.0:
 			sites += 1
 	var plank_need := sites * 0.02
-	var w_planks := maxf(0.0, plank_need - float(stock["planks"]))
+	var proj := Ages.missing(self)  # materials for the next age, bought ahead of time
+	var rsv := Ages.reserve(self)  # and held back from everyday use
+	var rf := behind_n > 0 and auto_mode > 0 and fit_n < crews()  # a planner with outdated buildings keeps materials for refits
+	var w_planks := maxf(0.0, plank_need + (12.0 if rf else 0.0) - float(stock["planks"])) + float(proj.get("planks", 0.0))
 	var w_wood := maxf(0.0, works * 0.3 + saws * 0.5 - float(stock["wood"]) - wood_in)
-	var w_tools := maxf(0.0, tool_need - float(stock["tools"]))
+	var w_tools := maxf(0.0, tool_need + (6.0 if rf else 0.0) - float(stock["tools"])) + float(proj.get("tools", 0.0))
 	var w_crops := maxf(0.0, mills * 3.0 - (float(stock["crops"]) + crops))
 	var refs := (bt.get(T.REFINERY, []) as Array).size()
 	var burn := 0.0
@@ -3351,7 +3571,7 @@ func _trade(_market: float) -> Array:
 			stock[k] = float(stock[k]) + got
 			bought[k] = got
 			spent += got * float(mk.price[k]) * RATE
-	var tool_used := minf(float(stock["tools"]), tool_need)  # worn out in use; a stocked workforce is up to 15% more productive
+	var tool_used := minf(maxf(float(stock["tools"]) - float(rsv.get("tools", 0.0)), 0.0), tool_need)  # worn out in use; a stocked workforce is up to 15% more productive
 	stock["tools"] = float(stock["tools"]) - tool_used
 	var tool_mult := 1.0 + 0.15 * (tool_used / tool_need if tool_need > 0.0 else 0.0)
 	crops *= tool_mult
@@ -3369,26 +3589,27 @@ func _trade(_market: float) -> Array:
 	var m_fac := fac_jobs * emp * 0.02
 	var m_arm := armouries * 0.25 * emp * minf(foc("military"), 1.0)  # low military focus: buy arms instead of making them
 	var m_tool := works * 0.15 * emp
-	var w_metal := maxf(0.0, m_fac + m_arm + m_tool - float(stock["metal"]))
+	var w_metal := maxf(0.0, m_fac + m_arm + m_tool + (6.0 if rf and Ages.tier(age) >= 1 else 0.0) - float(stock["metal"])) + float(proj.get("metal", 0.0))
 	want["metal"] = w_metal
 	if w_metal > 0.0 and rich:
 		var gm := mk.take("metal", minf(w_metal, coins * 0.05 / (float(mk.price["metal"]) * RATE)))
 		stock["metal"] = float(stock["metal"]) + gm
 		bought["metal"] = gm
 		spent += gm * float(mk.price["metal"]) * RATE
-	var mused := minf(float(stock["metal"]), m_fac)
+	var mfree := maxf(float(stock["metal"]) - float(rsv.get("metal", 0.0)), 0.0)
+	var mused := minf(mfree, m_fac)
 	stock["metal"] = float(stock["metal"]) - mused
-	var marms := minf(float(stock["metal"]), m_arm)  # armouries smelt what is left into arms
+	var marms := minf(maxf(float(stock["metal"]) - float(rsv.get("metal", 0.0)), 0.0), m_arm)  # armouries smelt what is left into arms
 	stock["metal"] = float(stock["metal"]) - marms
 	stock["arms"] = float(stock["arms"]) + marms * 2.0
-	var made := minf(minf(works * 0.3 * emp, float(stock["wood"]) + wood_in), float(stock["metal"]) * 2.0)  # toolworks: wood and metal into tools
+	var made := minf(minf(works * 0.3 * emp, float(stock["wood"]) + wood_in), maxf(float(stock["metal"]) - float(rsv.get("metal", 0.0)), 0.0) * 2.0)  # toolworks: wood and metal into tools
 	stock["wood"] = maxf(float(stock["wood"]) + wood_in - made, 0.0)
 	stock["metal"] = float(stock["metal"]) - made * 0.5
 	stock["tools"] = float(stock["tools"]) + made
 	var sawn := minf(saws * 0.5 * emp, float(stock["wood"]))  # sawmills take the wood the toolworks left
 	stock["wood"] = float(stock["wood"]) - sawn
 	stock["planks"] = float(stock["planks"]) + sawn * 0.5
-	var plank_used := minf(float(stock["planks"]), plank_need)
+	var plank_used := minf(maxf(float(stock["planks"]) - float(rsv.get("planks", 0.0)), 0.0), plank_need)
 	stock["planks"] = float(stock["planks"]) - plank_used
 	plank_mult = 1.0 + 0.25 * (plank_used / plank_need if plank_need > 0.0 else 0.0)
 	var milled := minf(float(stock["crops"]) + crops, mills * 3.0)
@@ -3412,7 +3633,8 @@ func _trade(_market: float) -> Array:
 	var offered := {}
 	var xp := 0.8 * (1.0 + 0.25 * deps)
 	for k in stock:
-		var lim := cap * (0.2 if deps > 0 else 0.8)
+		var keep := float(Ages.cost(mini(age + 1, Ages.LAST)).get(k, 0.0)) if age < Ages.LAST else 0.0  # the next age's materials are never sold off
+		var lim := maxf(cap * (0.2 if deps > 0 else 0.8), keep)
 		if float(stock[k]) > lim:
 			# Cheap goods are held back, dear goods are pushed out.
 			var sell := (float(stock[k]) - lim) * (0.25 if deps > 0 else 0.5) * clampf(mk.ratio(k), 0.4, 1.5)
@@ -3420,8 +3642,14 @@ func _trade(_market: float) -> Array:
 			stock[k] = float(stock[k]) - sell
 			sold += sell
 			offered[k] = sell
-		stock[k] = minf(float(stock[k]), cap)
+		stock[k] = minf(float(stock[k]), maxf(cap, keep))
 	mk.report(offered, want)
+	_util(T.TOOLWORKS, made, works * 0.3 * emp)
+	_util(T.SAWMILL, sawn, saws * 0.5 * emp)
+	_util(T.FOUNDRY, smelt, foundries * 2.0)
+	_util(T.MILL, milled, mills * 3.0)
+	_util(T.REFINERY, refd, refs * 1.0 * emp)
+	_util(T.ARMOURY, marms, armouries * 0.25 * emp * minf(foc("military"), 1.0))
 	need_rate = {"crops": mills * 3.0, "food": fneed, "goods": gneed, "ore": foundries * 2.0, "metal": m_fac + m_arm + m_tool, "arms": arms_use, "wood": works * 0.3 + saws * 0.5, "tools": tool_need, "planks": plank_need, "fuel": burn}
 	prod_rate = {"crops": crops, "food": milled + fish + ranch_jobs * emp * 0.1 + fish_jobs * emp * 0.12 * river_health, "goods": goods, "ore": mined, "metal": smelt * 0.5, "arms": marms * 2.0, "wood": wood_in, "tools": made, "planks": sawn * 0.5, "fuel": refd * 0.8}
 	for k in Market.GOODS:  # local scarcity: days of cover (stock plus a minute of production) against use, between export and import parity
@@ -3440,10 +3668,50 @@ func _trade(_market: float) -> Array:
 	return [ex, imp]
 
 
+## Smooth the share of full capacity a kind of chain building ran at this second; no buildings of the kind leaves it at 1.
+func _ensure_util() -> void:
+	if _wage_tier.is_empty():
+		_build_tiers()
+	if chain_util.size() != _wage_tier.size():
+		chain_util.resize(_wage_tier.size())
+		chain_util.fill(1.0)
+
+
+func _util(id: int, made: float, capacity: float) -> void:
+	_ensure_util()
+	if capacity <= 0.0:
+		chain_util[id] = 1.0
+		return
+	chain_util[id] = lerpf(chain_util[id], clampf(made / capacity, 0.0, 1.0), 0.1)
+
+
+## Why a chain building is not running at full tilt ("" when it is, or when it is not part of a chain).
+func work_status(t: int) -> String:
+	_ensure_util()
+	if not t in [T.TOOLWORKS, T.SAWMILL, T.FOUNDRY, T.MILL, T.REFINERY, T.ARMOURY]:
+		return ""
+	var u: float = chain_util[t]
+	if u >= 0.9:
+		return "Working"
+	var short := ""
+	match t:
+		T.SAWMILL:
+			short = "no wood" if float(stock.get("wood", 0.0)) < 0.5 else ""
+		T.TOOLWORKS:
+			short = "no wood" if float(stock.get("wood", 0.0)) < 0.5 else ("no metal" if float(stock.get("metal", 0.0)) < 0.2 else "")
+		T.FOUNDRY, T.REFINERY:
+			short = "no ore" if float(stock.get("ore", 0.0)) < 0.5 else ""
+		T.MILL:
+			short = "no crops" if float(stock.get("crops", 0.0)) < 0.5 else ""
+		T.ARMOURY:
+			short = "no metal" if float(stock.get("metal", 0.0)) < 0.2 else ""
+	return "Idle: %s, workers unpaid" % short if (short != "" and u < 0.3) else ("Running at %d%% (%s)" % [int(u * 100.0), short if short != "" else "short of workers"])
+
+
 # ---------- save / load ----------
 
 ## What a save or snapshot carries (also the only keys from_dict accepts, since snapshots come from a possibly hostile host).
-const SAVE_KEYS := ["age", "know", "age_t", "town_name", "grid", "lvl", "build", "wire", "pipe", "sewer", "lamp", "water", "ore", "ground", "coins", "mood", "tax_r", "tax_c", "tax_i", "clock", "day",
+const SAVE_KEYS := ["age", "tree", "pts", "news", "etier", "fit", "derelict", "empty_t", "raze_left", "claim_by", "claim_t", "garrison", "inbound", "side_key", "know", "age_t", "town_name", "grid", "lvl", "build", "wire", "pipe", "sewer", "lamp", "water", "ore", "ground", "coins", "mood", "tax_r", "tax_c", "tax_i", "clock", "day",
 	"policies", "auto_mode", "auto_policy", "peak", "announced", "next_id", "recent", "active", "approval", "rep", "favor",
 	"petitions", "promises", "pet_recent", "kept", "broken", "next_election", "elections_won", "rally_used", "last_vote",
 	"season", "wage_ix", "price_loc", "stock", "exported", "loans", "done_ms", "disasters_survived", "burned", "hist_coins", "hist_pop", "ruins", "offline", "lamp", "terr", "expansions", "auto_expand", "human", "owner", "temper", "rel", "treaty", "liege", "ev_scale", "gpos", "war_n", "war_sc", "war_goal", "tension", "occ", "train_on", "train_t", "train_w", "stance", "group", "belief", "power_cd", "focus", "auto_focus", "ask_build", "vetoed"]
@@ -3452,7 +3720,7 @@ func to_dict() -> Dictionary:
 	var cs: Array = []
 	for c in citizens:
 		cs.append([c.id, c.home, c.work, c.tribe, c.nm, c.bias, c.shift, c.spd, c.commute, c.sick, snappedf(c.wealth, 0.1)])
-	var d := {"v": 1, "cit": cs, "mk": sig.mk.brief(), "vic": sig.vic.brief(), "wx": [sig.weather(), sig._weather_left]}
+	var d := {"v": 1, "av": 2, "cit": cs, "mk": sig.mk.brief(), "vic": sig.vic.brief(), "wx": sig.fronts_brief()}
 	for k in SAVE_KEYS:
 		d[k] = get(k)
 	d["army"] = army.map(func(u: Dictionary) -> Dictionary:
@@ -3472,8 +3740,14 @@ func from_dict(d: Dictionary) -> void:
 		sig.mk.apply_brief(d["mk"])
 	if d.get("vic") is Dictionary:
 		sig.vic.apply(d["vic"])
-	if d.get("wx") is Array and (d["wx"] as Array).size() == 2 and d["wx"][0] is String:
-		sig.set_weather(d["wx"][0], clampf(float(d["wx"][1]), 0.0, 1000.0))  # clients see the host's weather
+	if d.get("wx") is Array:  # clients see the host's weather; saves from before regional weather hold [kind, seconds left]
+		var wx: Array = d["wx"]
+		if wx.size() == 2 and wx[0] is String and (wx[1] is float or wx[1] is int):
+			sig.fronts = []
+			if String(wx[0]) in Signals.KINDS:
+				sig.set_weather(String(wx[0]), clampf(float(wx[1]), 0.0, 1000.0))
+		else:
+			sig.apply_fronts(wx)
 	for k in d:
 		if k == "cit" or k == "v" or not (k in SAVE_KEYS or k == "army"):
 			continue
@@ -3482,6 +3756,9 @@ func from_dict(d: Dictionary) -> void:
 			(cur as Array).assign(d[k])
 		else:
 			set(k, d[k])
+	var old_ages: bool = int(d.get("av", 1)) < 2  # saves from before the twelve ages count four ages: each becomes the first age of its era
+	if old_ages and d.has("age"):
+		age = clampi(int(d["age"]), 0, 3) * Ages.PER_ERA
 	citizens.clear()
 	for a in d.get("cit", []):
 		var c := Citizen.new()
@@ -3502,6 +3779,10 @@ func from_dict(d: Dictionary) -> void:
 		citizens.append(c)
 	pop = citizens.size()
 	_rebuild_cells()
+	fit_n = 0
+	for i in cells:
+		if fit[i] > 0.0:
+			fit_n += 1
 	roads_dirty = true
 	_rebuild_astar()
 	_collect_mods()
@@ -3650,8 +3931,8 @@ static func selfcheck() -> String:
 	f.auto_mode = 0
 	f.coins = 1000.0
 	f.tax_r = 0.3
-	s3.set_weather("storm", 999.0)
-	s3.bump("news", -1.0)
+	s3.set_weather("storm", 999.0)  # global, over every town
+	f.news = -1.0
 	for i in 600:
 		f.tick(0.1)
 	if not f.protest:

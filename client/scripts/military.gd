@@ -11,6 +11,8 @@ const T = Catalog.Id
 const TILE := 32.0
 const KIND := {
 	"spear": {"n": "Spearman", "t": "soft", "hp": 60.0, "dmg": 1.8, "rng": 60.0, "spd": 8.0, "cost": 12.0, "upk": 0.01, "train": 6.0, "cap": {T.BARRACKS: 6}, "vs": {"soft": 1.0, "armor": 0.6, "air": 0.0, "ship": 0.1}},
+	"archer": {"n": "Archer", "t": "soft", "hp": 50.0, "dmg": 2.0, "rng": 170.0, "spd": 8.0, "cost": 20.0, "upk": 0.015, "train": 8.0, "cap": {T.BARRACKS: 4}, "vs": {"soft": 1.1, "armor": 0.3, "air": 0.0, "ship": 0.1}},
+	"knight": {"n": "Knight", "t": "armor", "hp": 170.0, "dmg": 3.4, "rng": 50.0, "spd": 16.0, "cost": 60.0, "upk": 0.035, "train": 18.0, "cap": {T.BARRACKS: 2}, "vs": {"soft": 1.5, "armor": 0.6, "air": 0.0, "ship": 0.1}},
 	"inf": {"n": "Rifleman", "t": "soft", "hp": 75.0, "dmg": 2.4, "rng": 110.0, "spd": 9.0, "cost": 25.0, "upk": 0.02, "train": 8.0, "cap": {T.BARRACKS: 6, T.BASE: 4}, "vs": {"soft": 1.0, "armor": 0.25, "air": 0.15, "ship": 0.1}},
 	"gren": {"n": "Grenadier", "t": "soft", "hp": 80.0, "dmg": 3.2, "rng": 90.0, "spd": 8.0, "cost": 40.0, "upk": 0.03, "train": 12.0, "cap": {T.BARRACKS: 2, T.BASE: 2}, "vs": {"soft": 0.8, "armor": 1.8, "air": 0.0, "ship": 0.3}},
 	"snip": {"n": "Sniper", "t": "soft", "hp": 45.0, "dmg": 5.5, "rng": 330.0, "spd": 8.0, "cost": 50.0, "upk": 0.03, "train": 16.0, "cap": {T.BARRACKS: 2}, "vs": {"soft": 1.6, "armor": 0.1, "air": 0.2, "ship": 0.1}},
@@ -24,15 +26,17 @@ const KIND := {
 	"fighter": {"n": "Fighter", "t": "air", "hp": 120.0, "dmg": 6.0, "rng": 220.0, "spd": 55.0, "cost": 200.0, "upk": 0.1, "train": 45.0, "cap": {T.BASE: 2}, "radar": true, "vs": {"soft": 0.5, "armor": 0.4, "air": 2.2, "ship": 0.5}},
 	"bomber": {"n": "Bomber", "t": "air", "hp": 220.0, "dmg": 10.0, "rng": 140.0, "spd": 38.0, "cost": 300.0, "upk": 0.16, "train": 65.0, "cap": {T.BASE: 1}, "radar": true, "vs": {"soft": 1.3, "armor": 1.8, "air": 0.0, "ship": 2.0}},
 	"heli": {"n": "Helicopter", "t": "air", "hp": 160.0, "dmg": 7.0, "rng": 190.0, "spd": 30.0, "cost": 240.0, "upk": 0.13, "train": 50.0, "cap": {T.BASE: 1}, "vs": {"soft": 1.4, "armor": 1.6, "air": 0.3, "ship": 1.0}},
+	"galley": {"n": "Galley", "t": "ship", "hp": 140.0, "dmg": 3.0, "rng": 110.0, "spd": 14.0, "cost": 80.0, "upk": 0.04, "train": 20.0, "cap": {T.PORT: 2}, "vs": {"soft": 1.0, "armor": 0.4, "air": 0.0, "ship": 1.0}},
 	"patrol": {"n": "Patrol boat", "t": "ship", "hp": 160.0, "dmg": 4.0, "rng": 200.0, "spd": 28.0, "cost": 120.0, "upk": 0.06, "train": 25.0, "cap": {T.NAVYARD: 3}, "vs": {"soft": 1.0, "armor": 0.5, "air": 0.3, "ship": 1.0}},
 	"destroyer": {"n": "Destroyer", "t": "ship", "hp": 520.0, "dmg": 8.0, "rng": 320.0, "spd": 16.0, "cost": 320.0, "upk": 0.15, "train": 60.0, "cap": {T.NAVYARD: 2}, "vs": {"soft": 1.3, "armor": 1.0, "air": 1.0, "ship": 1.4}},
 	"transport": {"n": "Transport", "t": "ship", "hp": 400.0, "dmg": 0.0, "rng": 100.0, "spd": 12.0, "cost": 200.0, "upk": 0.08, "train": 40.0, "cap": {T.NAVYARD: 1}, "vs": {}, "lands": 6},
 }
-const DEF_W := {"spear": 2, "inf": 2, "gren": 1, "snip": 1, "medic": 1, "ltank": 1, "tank": 2, "htank": 1, "art": 1, "aa": 1, "jet": 1, "fighter": 1, "bomber": 1, "heli": 1, "patrol": 1, "destroyer": 1, "transport": 1}
+const DEF_W := {"spear": 2, "archer": 1, "knight": 1, "galley": 1, "inf": 2, "gren": 1, "snip": 1, "medic": 1, "ltank": 1, "tank": 2, "htank": 1, "art": 1, "aa": 1, "jet": 1, "fighter": 1, "bomber": 1, "heli": 1, "patrol": 1, "destroyer": 1, "transport": 1}
 const RANKS := ["Recruit", "Veteran", "Elite", "Legend"]
 const RANK_XP := [250.0, 800.0, 2000.0]  # damage dealt (or healed) to reach rank 1, 2, 3
 const RANK_DMG := 0.15  # per rank
 const RANK_HP := 0.10
+const SOLDIER_SHARE := 3  # soldiers come from the town's own people: at most one in three
 const ARMY_MAX := 150  # per town: training stops here (upkeep, and fights cost O(n^2))
 const INF_D := 1 << 29
 const BUILD_GAP_MS := 30  # at most one flow-field build per this many ms
@@ -152,7 +156,7 @@ static func adapt(c: City) -> void:
 				n += 1
 	var w := DEF_W.duplicate()
 	if n >= 3:
-		var up := {"air": ["aa", "fighter"], "armor": ["gren", "art", "heli", "bomber", "htank"], "soft": ["tank", "snip", "art", "ltank", "bomber"], "ship": ["destroyer", "patrol", "bomber", "art"]}
+		var up := {"air": ["aa", "fighter"], "armor": ["gren", "art", "heli", "bomber", "htank"], "soft": ["tank", "snip", "art", "ltank", "bomber", "knight"], "ship": ["destroyer", "patrol", "galley", "bomber", "art"]}
 		for cl in up:
 			if float(tot[cl]) / n >= 0.25:
 				for k in up[cl]:
@@ -182,18 +186,16 @@ static func _gain(u: Dictionary, xp: float) -> void:
 		u["hp"] = float(u["hp"]) + float(u["mx"]) - m0
 
 
-## A declaration of war calls up a militia so even a town with no barracks fields something.
-static func conscript(c: City) -> void:
-	for i in clampi(c.pop / 15, 3, 12):
-		c.army.append(_unit("inf", 0.7))
-
-
-## Once per sim second per town: pay upkeep, train, send units to the front (or home when peace comes).
-static func econ(c: City) -> void:
+## Coins per second the army costs.
+static func upkeep(c: City) -> float:
 	var up := 0.0
 	for u in c.army:
 		up += float(KIND[u["k"]]["upk"])
-	c.coins -= up
+	return up
+
+
+## Once per sim second per town: train, send units to the front (or home when peace comes). Upkeep is a line of the budget (`City.budget_lines`), so every decision that looks at income sees it.
+static func econ(c: City) -> void:
 	if c.coins < -50.0 and not c.army.is_empty():
 		c.army.pop_back()  # unpaid troops desert
 	if not c.human:
@@ -202,7 +204,7 @@ static func econ(c: City) -> void:
 			c.train_t["_a"] = 0.0
 			adapt(c)
 	c.arms_use *= 0.9
-	if c.train_on and c.army.size() < ARMY_MAX:
+	if c.train_on and c.army.size() < mini(ARMY_MAX, c.pop / SOLDIER_SHARE):
 		var cap := caps(c)
 		var cnt := counts(c)
 		var w := weights(c)
@@ -212,7 +214,7 @@ static func econ(c: City) -> void:
 				if float(c.train_t[k]) >= float(KIND[k]["train"]):
 					if _pay(c, k):
 						c.train_t[k] = 0.0
-						c.army.append(_unit(k))
+						c.army.append(_unit(k, c.mod("army_mult") if c.mods.has("army_mult") else 1.0))
 	var foes: Array = []
 	for p in c.partners:
 		if Diplo.treaty(c, p) == "war":

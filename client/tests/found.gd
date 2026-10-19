@@ -46,5 +46,19 @@ func _init() -> void:
 	if wet == Vector2i.ZERO:
 		ok = false
 		print("FAIL no watery plot found to test the refusal")
+	# a founded town starts in the founder's age; the sandbox founds for free
+	Ages.set_age(m.city, 0)
+	m.city.coins = 0.0
+	Cmd.sandbox = true
+	var free := Vector2i.ZERO
+	for x in range(3, 60):
+		if m.found_block(Vector2i(x, 4)) == "":
+			free = Vector2i(x, 4)
+			break
+	var cnt: int = m.towns.size()
+	if free == Vector2i.ZERO or m.found_cost(free) != 0.0 or not m.found_town_at(free) or m.towns.size() != cnt + 1 or m.towns[cnt].age != 0:
+		ok = false
+		print("FAIL sandbox founding or age of the new town")
+	Cmd.sandbox = false
 	print("FOUND_OK" if ok else "FOUND_FAIL")
 	quit(0 if ok else 1)

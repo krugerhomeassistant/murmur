@@ -19,3 +19,4 @@
 | [SANDBOX_DESIGN.md](SANDBOX_DESIGN.md) | Gods-eye view and sandbox: scenario setup, editor, god powers, globe, real-world map (planned) |
 | [AGES_DESIGN.md](AGES_DESIGN.md) | Ages: advancing, expectations, grace period, phases |
 | [DOMINATION_DESIGN.md](DOMINATION_DESIGN.md) | End goal (conquest or hegemony), faster growth, more frequent war, depth order, readability split |
+| [TREE_DESIGN.md](TREE_DESIGN.md) | Per-town skill tree (a journey through the ages) and physical roads and railways instead of territory and linked flags |

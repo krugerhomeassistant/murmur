@@ -5,6 +5,7 @@ extends RefCounted
 ## Static helpers only; main.gd calls second() once per sim second.
 
 const T = Catalog.Id
+const MIN_ARMY := 3  # trained units a computer-run town needs before it starts a war
 const DIRN := ["north", "east", "south", "west"]
 const COSTS := {"gift": 100.0, "pact": 200.0, "alliance": 400.0, "peace": 150.0}
 const TENSION_RATE := 0.003  # per second between linked towns without a treaty, scaled by ambition
@@ -219,6 +220,11 @@ static func act(a: City, b: City, what: String) -> String:
 
 
 ## `a` declares war on `b` with a stated goal; `why` names the trigger in the headline.
+## A computer-run town goes to war only with a trained army (units come from barracks and bases, never from nothing).
+static func ready(c: City) -> bool:
+	return c.army.size() >= MIN_ARMY
+
+
 static func declare(a: City, b: City, goal: String, why: String) -> void:
 	sign_treaty(a, b, "war")
 	for p in [[a, b], [b, a]]:
@@ -228,8 +234,6 @@ static func declare(a: City, b: City, goal: String, why: String) -> void:
 		x.war_sc[y.town_name] = 0
 		x.war_goal[y.town_name] = goal
 		x.tension[y.town_name] = 0.0
-	Military.conscript(a)
-	Military.conscript(b)
 	_shift(a, b, -0.3, -0.6)
 	_say(a, b, "%s declares war on %s%s! Goal: %s." % [a.town_name, b.town_name, (" (" + why + ")") if why != "" else "", goal])
 	a.sounds.append("alarm")
@@ -343,6 +347,8 @@ static func second(towns: Array, rng: RandomNumberGenerator) -> void:
 		for j in range(i + 1, towns.size()):
 			var a: City = towns[i]
 			var b: City = towns[j]
+			if a.derelict or b.derelict:
+				continue  # an empty town has no diplomacy
 			for pair in [[a, b], [b, a]]:
 				var x: City = pair[0]
 				var y: City = pair[1]
@@ -425,7 +431,7 @@ static func _event(a: City, b: City, rng: RandomNumberGenerator) -> void:
 	for pair in [[a, b], [b, a]]:
 		var x: City = pair[0]
 		var y: City = pair[1]
-		if not x.human and x.liege == "" and t != "pact" and t != "alliance" and t != "vassal" and float(x.tension.get(y.town_name, 0.0)) >= 1.0 and strength(x) > strength(y) and rng.randf() < 0.12 * ambition(x):
+		if not x.human and x.liege == "" and t != "pact" and t != "alliance" and t != "vassal" and float(x.tension.get(y.town_name, 0.0)) >= 1.0 and ready(x) and strength(x) > strength(y) and rng.randf() < 0.12 * ambition(x):
 			declare(x, y, pick_goal(x, y), "border tension")
 			return
 	var human: City = a if a.human else (b if b.human else null)
@@ -462,7 +468,7 @@ static func _event(a: City, b: City, rng: RandomNumberGenerator) -> void:
 	if r < -0.15 and t != "embargo":
 		var aggressor: City = a if rel(a, b) < rel(b, a) else b
 		var victim: City = b if aggressor == a else a
-		if r < -0.7 and not aggressor.human and mil(aggressor) > mil(victim) + 0.4 and rng.randf() < 0.4:
+		if r < -0.7 and not aggressor.human and ready(aggressor) and mil(aggressor) > mil(victim) + 0.4 and rng.randf() < 0.4:
 			declare(aggressor, victim, pick_goal(aggressor, victim), "relations collapsed")
 			return
 		match rng.randi() % 4:

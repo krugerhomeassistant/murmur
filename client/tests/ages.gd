@@ -49,21 +49,43 @@ func _init() -> void:
 		ok = false
 		print("FAIL advanced while unhappy")
 	c.mood = 0.8
-	var up := Ages.second(c)
-	if up != 1 or c.age != 1:
+	c.stock["planks"] = 0.0
+	if Ages.ready(c) or Ages.second(c) != -1 or float(Ages.missing(c).get("planks", 0.0)) < 19.9:
 		ok = false
-		print("FAIL did not advance: %d" % up)
+		print("FAIL advanced without the materials")
+	c.stock["planks"] = 20.0
+	var up := Ages.second(c)
+	if up != 1 or c.age != 1 or float(c.stock["planks"]) > 0.01:
+		ok = false
+		print("FAIL did not advance (or kept the materials): %d" % up)
 	# units follow the age
-	if Ages.unit("inf") != 2 or Ages.unit("jet") != 3 or c.age >= Ages.unit("inf"):
+	if Ages.unit("inf") != 6 or Ages.unit("jet") != 10 or c.age >= Ages.unit("inf"):
 		ok = false
 		print("FAIL unit ages")
 	# the command and the end of the ladder
+	Cmd.sandbox = false
+	if Cmd.run([c], c, "set_age", [Ages.LAST]) != null:
+		print("AGES_FAIL set_age worked outside the sandbox")
+		quit(1)
+		return
+	Cmd.sandbox = true
 	if not Cmd.run([c], c, "set_age", [Ages.LAST]) or c.age != Ages.LAST or Ages.second(c) != -1:
 		ok = false
 		print("FAIL set_age command")
-	if Cmd.run([c], c, "set_age", ["x"]):
+	var bad_arg = Cmd.run([c], c, "set_age", ["x"])
+	Cmd.sandbox = false
+	if bad_arg:
 		ok = false
 		print("FAIL set_age accepted junk")
+	# a save from before the twelve ages: each of the four ages becomes the first age of its era
+	var old := c.to_dict()
+	old.erase("av")
+	old["age"] = 2
+	var c3 := City.new(sig)
+	c3.from_dict(old)
+	if c3.age != 6:
+		ok = false
+		print("FAIL old four-age save: age %d" % c3.age)
 	# a save from before ages keeps the classic start
 	var d := c.to_dict()
 	var c2 := City.new(sig)

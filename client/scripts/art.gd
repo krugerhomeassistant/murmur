@@ -20,6 +20,8 @@ static func _tri(ci: CanvasItem, a: Vector2, b: Vector2, c: Vector2, col: Color)
 static func _win(ci: CanvasItem, x: float, y: float, w: float, h: float, night: bool) -> void:
 	_r(ci, x, y, w, h, LIT if night else GLASS)
 	_r(ci, x, y, w, 1, Color(1, 1, 1, 0.35))
+	_r(ci, x - 0.5, y + h, w + 1, 1, Color(1, 1, 1, 0.5))  # sill
+	_r(ci, x + w - 1, y + 1, 1, h - 1, Color(0, 0, 0, 0.12))  # soft inner shade
 
 
 static func _cols(ci: CanvasItem, x: float, y: float, w: float, h: float, n: int, c: Color) -> void:
@@ -53,7 +55,7 @@ static func service(ci: CanvasItem, r: Rect2, id: int, ok: bool, night: bool) ->
 
 
 static func _has(id: int) -> bool:
-	return id in [T.FIRE, T.POLICE, T.CLINIC, T.HOSPITAL, T.SCHOOL, T.LIBRARY, T.UNIVERSITY, T.PARK, T.PLAYGROUND, T.PLAZA, T.CINEMA, T.MUSEUM, T.STADIUM, T.THEME, T.CHURCH, T.BAR, T.BUS, T.TRAIN, T.WIND, T.SOLAR, T.COAL, T.WATER, T.LANDFILL, T.RECYCLE, T.MARKET, T.BANK, T.MALL, T.HOTEL, T.UNION_HALL, T.CHAMBER, T.COURT, T.PRISON, T.BASE, T.BARRACKS, T.RADAR, T.MILL, T.WAREHOUSE, T.DEPOT, T.TOWNHALL, T.SEWAGE, T.PORT, T.NAVYARD, T.FISHDOCK, T.FOUNDRY]
+	return id in [T.FIRE, T.POLICE, T.CLINIC, T.HOSPITAL, T.SCHOOL, T.LIBRARY, T.UNIVERSITY, T.PARK, T.PLAYGROUND, T.PLAZA, T.CINEMA, T.MUSEUM, T.STADIUM, T.THEME, T.CHURCH, T.BAR, T.BUS, T.TRAIN, T.WIND, T.SOLAR, T.COAL, T.WATER, T.LANDFILL, T.RECYCLE, T.MARKET, T.BANK, T.MALL, T.HOTEL, T.UNION_HALL, T.CHAMBER, T.COURT, T.PRISON, T.BASE, T.BARRACKS, T.RADAR, T.MILL, T.WAREHOUSE, T.DEPOT, T.TOWNHALL, T.SEWAGE, T.PORT, T.NAVYARD, T.FISHDOCK, T.FOUNDRY, T.WELL, T.LIGHT, T.LUMBER, T.SAWMILL, T.TOOLWORKS, T.RAILYARD, T.REFINERY, T.ARMOURY, T.HYDRO, T.RESERVOIR, T.GAS, T.NUCLEAR, T.DESAL]
 
 
 static func _draw(ci: CanvasItem, id: int, night: bool, k: Color) -> void:
@@ -441,6 +443,108 @@ static func _draw(ci: CanvasItem, id: int, night: bool, k: Color) -> void:
 			_r(ci, 20, 4, 5, 12, Color("5a4a44") * k)
 			ci.draw_circle(Vector2(22, 4 + 2.0 * sin(t * 2.0)), 3.0, Color(1.0, 0.55, 0.2, 0.7))
 			_r(ci, 10, 20, 8, 9, Color("e67e22") * k)
+		T.WELL:  # a ring of stone, a little roof and a bucket
+			ci.draw_circle(Vector2(16, 20), 8.0, Color(0, 0, 0, 0.16))
+			ci.draw_circle(Vector2(16, 18), 7.0, Color("8d8a82") * k)
+			ci.draw_circle(Vector2(16, 18), 4.5, Color("2b5f8f"))
+			ci.draw_circle(Vector2(15, 17), 1.5, Color(1, 1, 1, 0.3))
+			_r(ci, 8, 8, 2, 10, Color("5a432a") * k)
+			_r(ci, 22, 8, 2, 10, Color("5a432a") * k)
+			_tri(ci, Vector2(6, 9), Vector2(26, 9), Vector2(16, 3), Color("b8964a") * k)
+			ci.draw_line(Vector2(16, 9), Vector2(16, 15), Color("5a432a"), 1.0)
+		T.LIGHT:
+			ci.draw_circle(Vector2(16, 27), 2.5, Color(0, 0, 0, 0.16))
+			_r(ci, 15, 9, 2, 19, Color("3a3a3e") * k)
+			_r(ci, 12, 6, 8, 4, Color("3a3a3e") * k)
+			ci.draw_circle(Vector2(16, 8), 3.0, Color("ffe9a0") if night else Color("e8e0c0"))
+			if night:
+				ci.draw_circle(Vector2(16, 8), 9.0, Color(1, 0.9, 0.5, 0.18))
+		T.LUMBER:  # a camp: a log stack, a felled trunk and a hut
+			_r(ci, 4, 6, 14, 10, Color("8a6a40") * k)
+			_tri(ci, Vector2(3, 6), Vector2(19, 6), Vector2(11, 1), Color("b8964a") * k)
+			_r(ci, 9, 10, 4, 6, Color("3a2a1a") * k)
+			for l in 3:
+				for q in 2:
+					ci.draw_circle(Vector2(8 + l * 5.0 + q * 2.5, 24 - q * 4.0), 2.6, Color("a98856") * k)
+					ci.draw_circle(Vector2(8 + l * 5.0 + q * 2.5, 24 - q * 4.0), 1.0, Color("d8b878") * k)
+			_r(ci, 21, 18, 8, 3, Color("6e5230") * k)
+		T.SAWMILL:
+			_r(ci, 3, 12, 20, 15, Color("a98856") * k)
+			_tri(ci, Vector2(2, 12), Vector2(24, 12), Vector2(13, 5), Color("7a5a3a") * k)
+			_r(ci, 6, 17, 8, 10, Color("3a2a1a") * k)
+			ci.draw_circle(Vector2(27, 22), 4.0, Color("9aa0a6") * k)
+			ci.draw_circle(Vector2(27, 22), 1.2, Color("3a3a3e"))
+			_r(ci, 20, 6, 3, 8, Color("7a766c") * k)
+			_smoke(ci, 21.5, 6, 0.3)
+		T.TOOLWORKS:
+			_r(ci, 3, 12, 26, 16, Color("8d9aa5") * k)
+			_tri(ci, Vector2(2, 12), Vector2(30, 12), Vector2(16, 6), Color("5d6d7e") * k)
+			_r(ci, 6, 19, 6, 9, Color("3a3a3e") * k)
+			_win(ci, 16, 17, 4, 4, night)
+			_win(ci, 22, 17, 4, 4, night)
+			_r(ci, 23, 2, 4, 10, Color("7a766c") * k)
+			_smoke(ci, 25, 2, 0.5)
+			_r(ci, 14, 25, 8, 3, Color("4a4a50") * k)
+		T.RAILYARD:
+			_r(ci, 2, 20, 28, 2, Color("6a5a48") * k)
+			_r(ci, 2, 26, 28, 2, Color("6a5a48") * k)
+			for q in 7:
+				_r(ci, 3 + q * 4, 19, 1.5, 10, Color("8a6a40") * k)
+			_r(ci, 4, 8, 20, 10, Color("a05a3a") * k)  # engine shed
+			_tri(ci, Vector2(3, 8), Vector2(25, 8), Vector2(14, 3), Color("4e5058") * k)
+			_r(ci, 8, 11, 6, 7, Color("3a2a1a") * k)
+			_r(ci, 24, 14, 5, 4, Color("3a3a3e") * k)
+		T.REFINERY:
+			for q in 2:
+				_r(ci, 4 + q * 13, 14, 11, 13, Color("b0b8bc") * k)
+				ci.draw_circle(Vector2(9.5 + q * 13, 14), 5.5, Color("c4ccd0") * k)
+				_r(ci, 4 + q * 13, 18, 11, 1, Color(0, 0, 0, 0.18))
+			_r(ci, 11, 3, 3, 12, Color("7a766c") * k)
+			_r(ci, 20, 6, 2, 9, Color("7a766c") * k)
+			ci.draw_circle(Vector2(12.5, 3), 1.6, Color("ff9a3a") if night else Color("d86a2a"))
+			_smoke(ci, 21, 6, 0.2)
+		T.ARMOURY:
+			_r(ci, 3, 11, 26, 17, Color("7a7a6a") * k)
+			_r(ci, 3, 9, 26, 3, Color("5a5a4a") * k)
+			for q in 4:
+				_r(ci, 3 + q * 7, 7, 4, 3, Color("5a5a4a") * k)  # battlements
+			_r(ci, 12, 18, 8, 10, Color("3a3226") * k)
+			_flag(ci, 16, 2, Color("c0392b"))
+		T.HYDRO:  # a dam wall across the water with a turbine house
+			_r(ci, 2, 10, 28, 7, Color("9aa0a6") * k)
+			_r(ci, 2, 10, 28, 2, Color("b8bec2") * k)
+			_r(ci, 2, 17, 28, 11, Color("3f7fb8"))
+			_r(ci, 2, 20, 28, 1, Color(1, 1, 1, 0.25))
+			_r(ci, 11, 4, 10, 7, Color("7a8088") * k)
+			_win(ci, 14, 6, 4, 3, night)
+		T.RESERVOIR:
+			_r(ci, 3, 12, 26, 15, Color("8d8a82") * k)
+			_r(ci, 5, 14, 22, 11, Color("3a86c8"))
+			_r(ci, 5, 17, 22, 1, Color(1, 1, 1, 0.3))
+			_r(ci, 12, 5, 8, 8, Color("9aa0a6") * k)
+			_tri(ci, Vector2(11, 5), Vector2(21, 5), Vector2(16, 1), Color("5d6d7e") * k)
+		T.GAS:
+			_r(ci, 3, 14, 18, 13, Color("a0a8ac") * k)
+			_r(ci, 3, 12, 18, 3, Color("7a8088") * k)
+			_r(ci, 23, 4, 5, 23, Color("b0b8bc") * k)
+			_r(ci, 23, 4, 5, 3, Color("c0392b") * k)
+			_win(ci, 7, 18, 4, 4, night)
+			_win(ci, 13, 18, 4, 4, night)
+			_smoke(ci, 25.5, 4, 0.1)
+		T.NUCLEAR:
+			ci.draw_colored_polygon(PackedVector2Array([Vector2(3, 28), Vector2(8, 10), Vector2(18, 10), Vector2(23, 28)]), Color("c4c8cc") * k)
+			ci.draw_colored_polygon(PackedVector2Array([Vector2(13, 10), Vector2(18, 10), Vector2(23, 28), Vector2(16, 28)]), Color(0, 0, 0, 0.1))
+			_r(ci, 6, 16, 14, 1, Color(0, 0, 0, 0.15))
+			_r(ci, 22, 18, 8, 10, Color("8d9aa5") * k)
+			_r(ci, 24, 21, 4, 3, Color("7fd0e0") if night else Color("a9cfe0"))
+			_smoke(ci, 13, 9, 0.4)
+		T.DESAL:
+			_r(ci, 3, 16, 26, 11, Color("9aa0a6") * k)
+			for q in 3:
+				ci.draw_circle(Vector2(9.0 + q * 7.0, 16.0), 3.5, Color("c4ccd0") * k)
+			_r(ci, 3, 24, 26, 3, Color("3f7fb8"))
+			_r(ci, 4, 10, 2, 7, Color("7a8088") * k)
+			_r(ci, 6, 11, 18, 1, Color("7a8088") * k)
 		T.MILL:
 			_r(ci, 9, 12, 14, 17, Color("c9b98a") * k)
 			_tri(ci, Vector2(8, 12), Vector2(24, 12), Vector2(16, 5), Color("8a5a3a") * k)
@@ -481,7 +585,7 @@ static func _draw(ci: CanvasItem, id: int, night: bool, k: Color) -> void:
 
 
 ## Grown zone buildings (houses, shops, factories...). `h` varies colours per plot, `lv` is the level 1-3.
-static func building(ci: CanvasItem, r: Rect2, shape: String, body: Color, lv: int, ok: bool, night: bool, h: int) -> bool:
+static func building(ci: CanvasItem, r: Rect2, shape: String, body: Color, lv: int, ok: bool, night: bool, h: int, age := 3) -> bool:
 	if not shape in ["house", "terrace", "tower", "condo", "shop", "factory", "office", "farm", "orchard", "ranch", "green", "fishfarm"]:
 		return false
 	ci.draw_set_transform(r.position)
@@ -491,13 +595,37 @@ static func building(ci: CanvasItem, r: Rect2, shape: String, body: Color, lv: i
 	var walls := [Color("e8d9b8"), Color("d9c7a0"), Color("c9d3b8"), Color("e3c8b0"), Color("d8d8cc")]
 	var roof: Color = roofs[h % roofs.size()] * k
 	var wall: Color = walls[(h / 5) % walls.size()] * k
+	if shape in ["house", "terrace"] and age == 1:  # Medieval: pale plaster walls under thatch
+		wall = Color("e6d9b4") * k
+		roof = Color("b8964a") * k
+	elif shape in ["house", "terrace"] and age == 2:  # Industrial: brick under slate
+		wall = Color("b4624a").lerp(walls[(h / 5) % walls.size()], 0.15) * k
+		roof = Color("4e5058") * k
 	match shape:
+		"house" when age == 0:  # Ancient age: a round mud hut under a straw cone, bigger with level
+			ci.draw_rect(Rect2(1, 1, 30, 30), Color("86ab6c") * k)
+			var rad := 8.0 + 1.5 * (lv - 1)
+			ci.draw_circle(Vector2(16, 24), rad, Color(0, 0, 0, 0.16))
+			ci.draw_circle(Vector2(16, 22), rad, Color("b8946a") * k)
+			_tri(ci, Vector2(16 - rad - 3, 19), Vector2(16 + rad + 3, 19), Vector2(16, 5 - lv), Color("d8bf6a") * k)
+			_tri(ci, Vector2(16, 5 - lv), Vector2(16 + rad + 3, 19), Vector2(19, 19), Color(0, 0, 0, 0.14))
+			_r(ci, 14, 21, 4, 6, Color("4a3220") * k)
+			if night:
+				_win(ci, 9, 20, 3, 3, night)
 		"house":
 			ci.draw_rect(Rect2(1, 1, 30, 30), Color("86ab6c") * k)
+			_r(ci, 8, 26, 22, 4, Color(0, 0, 0, 0.16))
 			_r(ci, 2, 27, 28, 2, Color("c9bfa0") * k)
 			var top := 10.0 - 4.0 * (lv - 1)
 			_r(ci, 6, top + 6, 20, 21 - top - 6 + 6, wall)
+			var wh := 21.0 - top  # painted wall: light from above, soft shade at the foot and on the right
+			_r(ci, 6, top + 6 + wh * 0.5, 20, wh * 0.5, Color(0.25, 0.15, 0.05, 0.1))
+			_r(ci, 6, top + 6 + wh * 0.75, 20, wh * 0.25, Color(0.25, 0.15, 0.05, 0.1))
+			_r(ci, 22, top + 6, 4, wh, Color(0, 0, 0, 0.07))
 			_tri(ci, Vector2(4, top + 6), Vector2(28, top + 6), Vector2(16, top - 3), roof)
+			_r(ci, 5, top + 6, 22, 2, Color(0, 0, 0, 0.18))  # eave shadow on the wall
+			_tri(ci, Vector2(4, top + 6), Vector2(16, top - 3), Vector2(13, top + 6), Color(1, 1, 1, 0.1))
+			_tri(ci, Vector2(16, top - 3), Vector2(28, top + 6), Vector2(18, top + 6), Color(0, 0, 0, 0.14))
 			_r(ci, 14, 20, 5, 8, Color("5a3a22") * k)
 			_win(ci, 8, top + 9, 4, 4, night)
 			_win(ci, 21, top + 9, 4, 4, night)
@@ -521,6 +649,31 @@ static func building(ci: CanvasItem, r: Rect2, shape: String, body: Color, lv: i
 				_r(ci, fx + 3, 22, 3, 6, Color("5a3a22") * k)
 				if lv >= 2:
 					_win(ci, fx + 2, 8.5, 4.5, 2.5, night)
+		"terrace" when age == 1:  # Medieval: a row of timber-framed houses under tiles
+			ci.draw_rect(Rect2(1, 1, 30, 30), Color("86ab6c") * k)
+			for s in 3:
+				var fx := 3.0 + s * 9.0
+				var th := 15.0 + (lv if s == 1 else 0)
+				_r(ci, fx, 28 - th, 9, th, Color("e6d9b4") * k)
+				_r(ci, fx, 28 - th, 1.5, th, Color("5a432a") * k)
+				_r(ci, fx + 7.5, 28 - th, 1.5, th, Color("5a432a") * k)
+				_r(ci, fx, 28 - th + th * 0.45, 9, 1.5, Color("5a432a") * k)
+				_tri(ci, Vector2(fx - 0.5, 28 - th), Vector2(fx + 9.5, 28 - th), Vector2(fx + 4.5, 28 - th - 6), Color("a5483a") * k)
+				_win(ci, fx + 2.5, 28 - th + 3, 4, 3, night)
+				_r(ci, fx + 3, 23, 3, 5, Color("4a3422") * k)
+		"tower" when age == 1:  # Medieval: a tall stone tenement with a jettied upper floor and a tiled roof
+			ci.draw_rect(Rect2(1, 1, 30, 30), Color("a39a88") * k)
+			var fl1 := 2 + lv
+			var ht1 := 8.0 + fl1 * 4.0
+			var by1 := 29.0 - ht1
+			_r(ci, 6, by1, 20, ht1, Color("a9a496") * k)
+			_r(ci, 6, by1 + ht1 * 0.5, 20, ht1 * 0.5, Color(0.1, 0.1, 0.1, 0.1))
+			_r(ci, 4, by1 + ht1 * 0.45, 24, 2, Color("5a432a") * k)  # jetty beam
+			_tri(ci, Vector2(4, by1), Vector2(28, by1), Vector2(16, by1 - 8), Color("8a4a3a") * k)
+			for row in fl1:
+				_win(ci, 9, by1 + 3 + row * 4.0, 3, 2.5, night)
+				_win(ci, 20, by1 + 3 + row * 4.0, 3, 2.5, night)
+			_r(ci, 14, 24, 4, 5, Color("3a2a1a") * k)
 		"tower":
 			ci.draw_rect(Rect2(1, 1, 30, 30), Color("9aa08a") * k)
 			var fl := 3 + lv * 2
@@ -547,6 +700,36 @@ static func building(ci: CanvasItem, r: Rect2, shape: String, body: Color, lv: i
 			_r(ci, 6, by2 - 1, 20, 2, Color("e8edf2") * k)
 			_r(ci, 14, 25, 5, 4, Color("2c3e50") * k)
 			ci.draw_line(Vector2(9, by2 + 2), Vector2(12, by2 + ht2 - 3), Color(1, 1, 1, 0.4), 1.0)
+		"shop" when age == 0:  # Ancient: a market stall under a striped cloth, goods on the counter
+			ci.draw_rect(Rect2(1, 1, 30, 30), Color("c8b68a") * k)
+			var sc0: Color = [Color("c0392b"), Color("2e86c1"), Color("27ae60"), Color("d68910")][h % 4] * k
+			_r(ci, 4, 25, 25, 3, Color(0, 0, 0, 0.14))
+			_r(ci, 5, 17, 22, 8, Color("8a6a40") * k)  # counter
+			_r(ci, 5, 17, 22, 2, Color("a98856") * k)
+			for g in 4 + lv:
+				ci.draw_circle(Vector2(8.0 + g * 4.0, 16.0), 1.8, [Color("d8402a"), Color("e0b030"), Color("7ab040"), Color("c07a30")][(g + h) % 4] * k)
+			_r(ci, 4, 8, 2, 17, Color("5a432a") * k)  # posts
+			_r(ci, 26, 8, 2, 17, Color("5a432a") * k)
+			for s in 6:  # striped cloth
+				_r(ci, 3 + s * 4.3, 6, 4.3, 7, sc0 if s % 2 == 0 else Color("f4efe0") * k)
+			_r(ci, 3, 12, 26, 1.5, Color(0, 0, 0, 0.18))
+			if lv >= 2:
+				_r(ci, 24, 4, 5, 3, sc0.darkened(0.2))
+		"shop" when age == 1:  # Medieval: a timber-framed shop with a hanging sign
+			ci.draw_rect(Rect2(1, 1, 30, 30), Color("a39a88") * k)
+			var sc1: Color = [Color("c0392b"), Color("2e86c1"), Color("27ae60"), Color("d68910")][h % 4] * k
+			var ph1 := 13.0 + 3.0 * lv
+			_r(ci, 4, 28 - ph1, 24, ph1, Color("e6d9b4") * k)
+			_r(ci, 4, 28 - ph1 + ph1 * 0.55, 24, ph1 * 0.45, Color(0.25, 0.15, 0.05, 0.1))
+			for bx in [4.0, 15.0, 26.0]:  # dark timber frame
+				_r(ci, bx, 28 - ph1, 2, ph1, Color("5a432a") * k)
+			_r(ci, 4, 28 - ph1 + 6, 24, 2, Color("5a432a") * k)
+			_tri(ci, Vector2(2, 28 - ph1), Vector2(30, 28 - ph1), Vector2(16, 28 - ph1 - 8), Color("a5483a") * k)
+			_tri(ci, Vector2(16, 28 - ph1 - 8), Vector2(30, 28 - ph1), Vector2(19, 28 - ph1), Color(0, 0, 0, 0.14))
+			_win(ci, 6, 28 - ph1 + 9, 6, 5, night)
+			_r(ci, 18, 28 - ph1 + 9, 6, ph1 - 9, Color("4a3422") * k)
+			_r(ci, 26, 28 - ph1 + 8, 5, 1, Color("3a2a1a") * k)  # sign bracket and board
+			_r(ci, 27, 28 - ph1 + 9, 4, 4, sc1)
 		"shop":
 			ci.draw_rect(Rect2(1, 1, 30, 30), Color("a9ac9c") * k)
 			var sc: Color = [Color("c0392b"), Color("2e86c1"), Color("27ae60"), Color("d68910")][h % 4] * k
@@ -561,6 +744,29 @@ static func building(ci: CanvasItem, r: Rect2, shape: String, body: Color, lv: i
 			if lv >= 2:
 				_r(ci, 8, 28 - ph - 3, 16, 4, sc.darkened(0.2))
 				_r(ci, 9, 28 - ph - 2, 14, 1, Color(1, 1, 1, 0.5))
+		"factory" when age == 0:  # Ancient: an open workshop shed, a clay kiln and an anvil
+			ci.draw_rect(Rect2(1, 1, 30, 30), Color("a89a76") * k)
+			var fw := 11.0 + 2.0 * lv
+			_r(ci, 4, 28 - fw + 3, 24, 2, Color(0, 0, 0, 0.14))
+			_r(ci, 4, 28 - fw, 2, fw, Color("5a432a") * k)  # posts
+			_r(ci, 26, 28 - fw, 2, fw, Color("5a432a") * k)
+			_tri(ci, Vector2(2, 28 - fw), Vector2(30, 28 - fw), Vector2(16, 28 - fw - 7), Color("d8bf6a") * k)
+			_tri(ci, Vector2(16, 28 - fw - 7), Vector2(30, 28 - fw), Vector2(19, 28 - fw), Color(0, 0, 0, 0.14))
+			ci.draw_circle(Vector2(11, 23), 5.0, Color("b0714a") * k)  # kiln
+			ci.draw_circle(Vector2(11, 22), 2.4, Color("ffb050") if night else Color("3a2a20"))
+			_r(ci, 18, 23, 7, 3, Color("4a4a50") * k)  # anvil
+			_smoke(ci, 11, 17, (h % 5) * 0.2)
+		"factory" when age == 1:  # Medieval: a stone smithy with a tall chimney and a glowing forge
+			ci.draw_rect(Rect2(1, 1, 30, 30), Color("a39a88") * k)
+			var fh1 := 12.0 + 2.0 * lv
+			_r(ci, 3, 29 - fh1, 26, fh1, Color("9a958a") * k)
+			_r(ci, 3, 29 - fh1 + fh1 * 0.55, 26, fh1 * 0.45, Color(0.1, 0.1, 0.1, 0.12))
+			_tri(ci, Vector2(1, 29 - fh1), Vector2(31, 29 - fh1), Vector2(16, 29 - fh1 - 7), Color("6a5a48") * k)
+			_r(ci, 22, 29 - fh1 - 12, 4, 12, Color("7a766c") * k)
+			_smoke(ci, 24, 29 - fh1 - 12, (h % 5) * 0.2)
+			_r(ci, 6, 21, 9, 8, Color("2a2622") * k)
+			_r(ci, 8, 24, 5, 4, Color("ff9a3a") if night else Color("7a3a20"))
+			_r(ci, 18, 25, 7, 3, Color("4a4a50") * k)
 		"factory":
 			ci.draw_rect(Rect2(1, 1, 30, 30), Color("9a9684") * k)
 			var fh := 12.0 + 2.0 * lv
@@ -684,6 +890,10 @@ class IconView extends Control:
 static func ground(ci: CanvasItem, x: int, y: int, owned: bool, season: int) -> void:
 	var h := (x * 73856093 ^ y * 19349663) & 255
 	var p := Vector2(x, y) * 32.0
+	# Soft per-tile and per-patch shading so open land is not one flat colour (baked into cached chunks).
+	var patch := ((x >> 2) * 40503 ^ (y >> 2) * 9973) & 7
+	var shade := (h % 5) * 0.005 + patch * 0.01
+	ci.draw_rect(Rect2(p, Vector2(32, 32)), Color(0.1, 0.3, 0.05, shade) if patch < 4 else Color(1, 0.95, 0.6, shade * 0.7))
 	if not owned:
 		if h < 70:
 			_tree(ci, p + Vector2(8 + (h % 16), 12 + ((h / 4) % 14)), h, season)

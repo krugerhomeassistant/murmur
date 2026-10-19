@@ -2,11 +2,13 @@
 
 # Military units
 
-17 unit types. Damage classes: **soft** (infantry), **armor** (vehicles), **air**, **ship**. The `vs` multipliers scale damage against each class. Ranks (Recruit, Veteran, Elite, Legend) are earned by damage dealt (or healed): 250, 800, 2000; each rank adds +15% damage and +10% hp. The army cap is 150 per town. Speed is pixels per second (32 px = 1 tile); range in pixels. `cap` is how many of the unit each building supports. See [War and military](war.md) for the rules.
+20 unit types. Damage classes: **soft** (infantry), **armor** (vehicles), **air**, **ship**. The `vs` multipliers scale damage against each class. Ranks (Recruit, Veteran, Elite, Legend) are earned by damage dealt (or healed): 250, 800, 2000; each rank adds +15% damage and +10% hp. The army cap is 150 per town. Speed is pixels per second (32 px = 1 tile); range in pixels. `cap` is how many of the unit each building supports. See [War and military](war.md) for the rules.
 
 | Unit | Class | HP | Damage | Range | Speed | Cost | Upkeep | Train s | Defence weight |
 |---|---|---|---|---|---|---|---|---|---|
 | [Spearman](#spearman) | soft | 60 | 1.8 | 60 | 8 | 12 | 0.01 | 6 | 2 |
+| [Archer](#archer) | soft | 50 | 2 | 170 | 8 | 20 | 0.015 | 8 | 1 |
+| [Knight](#knight) | armor | 170 | 3.4 | 50 | 16 | 60 | 0.035 | 18 | 1 |
 | [Rifleman](#rifleman) | soft | 75 | 2.4 | 110 | 9 | 25 | 0.02 | 8 | 2 |
 | [Grenadier](#grenadier) | soft | 80 | 3.2 | 90 | 8 | 40 | 0.03 | 12 | 1 |
 | [Sniper](#sniper) | soft | 45 | 5.5 | 330 | 8 | 50 | 0.03 | 16 | 1 |
@@ -20,6 +22,7 @@
 | [Fighter](#fighter) | air | 120 | 6 | 220 | 55 | 200 | 0.1 | 45 | 1 |
 | [Bomber](#bomber) | air | 220 | 10 | 140 | 38 | 300 | 0.16 | 65 | 1 |
 | [Helicopter](#helicopter) | air | 160 | 7 | 190 | 30 | 240 | 0.13 | 50 | 1 |
+| [Galley](#galley) | ship | 140 | 3 | 110 | 14 | 80 | 0.04 | 20 | 1 |
 | [Patrol boat](#patrol-boat) | ship | 160 | 4 | 200 | 28 | 120 | 0.06 | 25 | 1 |
 | [Destroyer](#destroyer) | ship | 520 | 8 | 320 | 16 | 320 | 0.15 | 60 | 1 |
 | [Transport](#transport) | ship | 400 | 0 | 100 | 12 | 200 | 0.08 | 40 | 1 |
@@ -30,6 +33,20 @@ Key `spear`, class soft.
 
 - Housed by: Barracks (up to 6)
 - Damage multipliers: soft x1, armor x0.6, air x0, ship x0.1
+
+## Archer
+
+Key `archer`, class soft.
+
+- Housed by: Barracks (up to 4)
+- Damage multipliers: soft x1.1, armor x0.3, air x0, ship x0.1
+
+## Knight
+
+Key `knight`, class armor.
+
+- Housed by: Barracks (up to 2)
+- Damage multipliers: soft x1.5, armor x0.6, air x0, ship x0.1
 
 ## Rifleman
 
@@ -124,6 +141,13 @@ Key `heli`, class air.
 
 - Housed by: Military base (up to 1)
 - Damage multipliers: soft x1.4, armor x1.6, air x0.3, ship x1
+
+## Galley
+
+Key `galley`, class ship.
+
+- Housed by: Port (up to 2)
+- Damage multipliers: soft x1, armor x0.4, air x0, ship x1
 
 ## Patrol boat
 
