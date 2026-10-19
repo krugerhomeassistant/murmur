@@ -4,6 +4,9 @@ All notable changes to Murmur are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
+- Fixed: a town founded from the map now starts in the age of the town that founded it (it used to start in the Modern age even in an Ancient game).
+- Fixed: the `set_age` command is sandbox-only (any player in multiplayer could skip ages).
+- Sandbox: founding a town from the map is free (sandbox editor, G2 first part).
 - Scenario presets on the new-game screen (One town, Province, Continent) set the number of towns and how many you run.
 - Scenario setup (sandbox plan G1, first part): the new-game screen has a "Towns you run" option (just the first, 2, 4 or all; Tab switches between your towns) and scenarios can give each town its own starting age; `tests/scenario.gd` checks both.
 

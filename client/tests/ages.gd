@@ -58,10 +58,18 @@ func _init() -> void:
 		ok = false
 		print("FAIL unit ages")
 	# the command and the end of the ladder
+	Cmd.sandbox = false
+	if Cmd.run([c], c, "set_age", [Ages.LAST]) != null:
+		print("AGES_FAIL set_age worked outside the sandbox")
+		quit(1)
+		return
+	Cmd.sandbox = true
 	if not Cmd.run([c], c, "set_age", [Ages.LAST]) or c.age != Ages.LAST or Ages.second(c) != -1:
 		ok = false
 		print("FAIL set_age command")
-	if Cmd.run([c], c, "set_age", ["x"]):
+	var bad_arg = Cmd.run([c], c, "set_age", ["x"])
+	Cmd.sandbox = false
+	if bad_arg:
 		ok = false
 		print("FAIL set_age accepted junk")
 	# a save from before ages keeps the classic start
