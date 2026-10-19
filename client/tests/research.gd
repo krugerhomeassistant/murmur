@@ -38,6 +38,14 @@ func _init() -> void:
 			Research.auto(ai)
 		picks.append(ai.tree)
 	var auto_ok: bool = picks[0].size() >= 6 and picks[0] == picks[1]
-	var ok: bool = locked and first and twice and early and chain and side and applied and poor and saved and auto_ok
-	print("RESEARCH_OK" if ok else "RESEARCH_FAIL locked=%s first=%s twice=%s early=%s chain=%s side=%s applied=%s poor=%s saved=%s auto=%s" % [locked, first, twice, early, chain, side, applied, poor, saved, auto_ok])
+	var tv := TreeView.new()
+	tv.size = Vector2(1280, 720)
+	var seen := {}
+	var hit := true
+	for i in Research.BRANCHES.size() * Research.TIERS:
+		seen[tv.pos(i).round()] = true
+		hit = hit and tv._node_at(tv.pos(i)) == i and Rect2(Vector2.ZERO, tv.size).has_point(tv.pos(i))
+	var view: bool = hit and seen.size() == Research.BRANCHES.size() * Research.TIERS
+	var ok: bool = view and locked and first and twice and early and chain and side and applied and poor and saved and auto_ok
+	print("RESEARCH_OK" if ok else "RESEARCH_FAIL view=%s locked=%s first=%s twice=%s early=%s chain=%s side=%s applied=%s poor=%s saved=%s auto=%s" % [view, locked, first, twice, early, chain, side, applied, poor, saved, auto_ok])
 	quit(0 if ok else 1)

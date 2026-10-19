@@ -655,11 +655,14 @@ func _unhandled_input(e: InputEvent) -> void:
 				headline = "Auto-train troops %s." % ("on" if city.train_on else "off")
 			KEY_F3:
 				perf_on = not perf_on
+			KEY_K:
+				hud.tree_view.visible = not hud.tree_view.visible
 			KEY_F1:
 				hud.help_panel.visible = not hud.help_panel.visible
 			KEY_SPACE:
 				speed = 1.0 if speed == 0.0 else 0.0
 			KEY_Q, KEY_ESCAPE:
+				hud.tree_view.visible = false
 				tool = INSPECT
 				if found_mode:
 					found_mode = false

@@ -9,9 +9,10 @@ var perf_l: Label
 var perf_g: Control  # frame-time graph under the F3 text
 var frame_ms := PackedFloat32Array()  # last PERF_N frame times
 const PERF_N := 240
-const HELP := "KEYS  (F1 closes this)\n\nMouse: left paint or select, right or middle drag to pan, wheel to zoom\nSpace pause   Tab next town (spectating)   F follow   M map   O globe overlay\n1 road  2 houses  3 shops  4 industry  5 park  6 fire station   B bulldoze   Q or Esc inspect\nU refit the selected building for the town's age   T auto-train troops\nC send troops to the abandoned town under the mouse   Enter chat   F3 performance   F9 benchmark   R new game after game over"
+const HELP := "KEYS  (F1 closes this)\n\nMouse: left paint or select, right or middle drag to pan, wheel to zoom\nSpace pause   Tab next town (spectating)   F follow   M map   O globe overlay\n1 road  2 houses  3 shops  4 industry  5 park  6 fire station   B bulldoze   Q or Esc inspect\nK skill tree   U refit the selected building for the town's age   T auto-train troops\nC send troops to the abandoned town under the mouse   Enter chat   F3 performance   F9 benchmark   R new game after game over"
 var pintip: PanelContainer
 var help_panel: PanelContainer
+var tree_view: TreeView
 var pintip_lbl: RichTextLabel
 var lbl_coins: Label
 var lbl_pop: Label
@@ -161,6 +162,9 @@ func _ready() -> void:
     _load_ui()
     get_viewport().size_changed.connect(_clamp_all)
     _clamp_all.call_deferred()
+    tree_view = TreeView.new()
+    tree_view.m = m
+    add_child(tree_view)
     help_panel = PanelContainer.new()
     help_panel.position = Vector2(300, 80)
     help_panel.visible = false
