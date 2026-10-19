@@ -1804,8 +1804,12 @@ func _wet(p: Vector2i) -> bool:
 ## Cargo ships (ports) and warships (naval yards) patrol the river stretch beside their dock.
 func _boats() -> void:
 	var t := Time.get_ticks_msec() * 0.001
+	var crews := city.pop / 12  # a boat needs a crew from the town's own people
 	for id in [T.PORT, T.NAVYARD]:
 		for i in city.bt.get(id, []):
+			if crews <= 0:
+				return
+			crews -= 1
 			var x: int = i % City.W
 			var y: int = i / City.W
 			var w := Vector2i(-1, -1)
