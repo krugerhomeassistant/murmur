@@ -5,7 +5,7 @@ extends SceneTree
 func _init() -> void:
 	var ok := true
 	var got := {}
-	for age in [0, 1]:
+	for age in [0, 5]:
 		var t := City.new(Signals.new())
 		t.seed_start()
 		t.age = age
@@ -18,9 +18,9 @@ func _init() -> void:
 		for s in 60:
 			Military.econ(t)
 		got[age] = Military.counts(t)
-	var gate: bool = Ages.unit("archer") == 1 and Ages.unit("knight") == 1 and got[0]["archer"] == 0 and got[0]["knight"] == 0
-	var trains: bool = got[1]["archer"] > 0 and got[1]["knight"] > 0 and got[1]["inf"] == 0
+	var gate: bool = Ages.unit("archer") == 3 and Ages.unit("knight") == 5 and got[0]["archer"] == 0 and got[0]["knight"] == 0
+	var trains: bool = got[5]["archer"] > 0 and got[5]["knight"] > 0 and got[5]["inf"] == 0
 	var rock: bool = Military.KIND["archer"]["rng"] > Military.KIND["spear"]["rng"] and Military.KIND["knight"]["spd"] > Military.KIND["spear"]["spd"]
 	ok = gate and trains and rock
-	print("MEDIEVAL_OK archers=%d knights=%d" % [got[1]["archer"], got[1]["knight"]] if ok else "MEDIEVAL_FAIL gate=%s trains=%s rock=%s %s" % [gate, trains, rock, got])
+	print("MEDIEVAL_OK archers=%d knights=%d" % [got[5]["archer"], got[5]["knight"]] if ok else "MEDIEVAL_FAIL gate=%s trains=%s rock=%s %s" % [gate, trains, rock, got])
 	quit(0 if ok else 1)

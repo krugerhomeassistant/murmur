@@ -4,7 +4,7 @@ extends SceneTree
 
 func _init() -> void:
 	var got := {}
-	for age in [0, 1]:
+	for age in [0, 4]:
 		var t := City.new(Signals.new())
 		t.seed_start()
 		t.age = age
@@ -16,6 +16,6 @@ func _init() -> void:
 		for s in 60:
 			Military.econ(t)
 		got[age] = Military.counts(t)["galley"]
-	var ok: bool = Ages.unit("galley") == 1 and Military.KIND["galley"]["t"] == "ship" and got[0] == 0 and got[1] > 0
-	print("GALLEY_OK galleys=%d" % got[1] if ok else "GALLEY_FAIL %s" % got)
+	var ok: bool = Ages.unit("galley") == 4 and Military.KIND["galley"]["t"] == "ship" and got[0] == 0 and got[4] > 0
+	print("GALLEY_OK galleys=%d" % got[4] if ok else "GALLEY_FAIL %s" % got)
 	quit(0 if ok else 1)

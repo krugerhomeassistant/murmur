@@ -1232,7 +1232,7 @@ func _empire() -> void:
     body.add_child(emp_sand)
     _lbl(emp_sand, 70).text = "Sandbox"
     _btn(emp_sand, "+$1000", func() -> void: m.cmd("grant", [1000]))
-    _btn(emp_sand, "+12 troops", func() -> void: m.cmd("spawn", ["spear" if m.city.age < 2 else "inf", 12]))
+    _btn(emp_sand, "+12 troops", func() -> void: m.cmd("spawn", ["spear" if Ages.tier(m.city.age) < 2 else "inf", 12]))
     _btn(emp_sand, "Next age", func() -> void: m.cmd("set_age", [mini(m.city.age + 1, Ages.LAST)]))
     emp_pow = HFlowContainer.new()
     body.add_child(emp_pow)

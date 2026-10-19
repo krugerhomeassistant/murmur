@@ -207,7 +207,7 @@ var next_election := Civics.YEAR_DAYS + 1
 var age := Ages.LAST  # see Ages; saves from before ages count as Modern, where everything is open
 var know := 0.0  # knowledge toward the next age
 var age_up := -1  # set for one tick when the town enters an age; the UI shows a banner
-var tech: Array = [-1, -1, -1, -1]  # chosen option (0 or 1) per age, -1 = not chosen yet (Research)
+var tech: Array = [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1]  # chosen option (0 or 1) per age, -1 = not chosen yet (Research)
 var age_t := 1.0e9  # seconds since the town entered its age (grace period for the services the age expects)
 var elections_won := 0
 var rally_used := false
@@ -3468,7 +3468,7 @@ func to_dict() -> Dictionary:
 	var cs: Array = []
 	for c in citizens:
 		cs.append([c.id, c.home, c.work, c.tribe, c.nm, c.bias, c.shift, c.spd, c.commute, c.sick, snappedf(c.wealth, 0.1)])
-	var d := {"v": 1, "cit": cs, "mk": sig.mk.brief(), "vic": sig.vic.brief(), "wx": [sig.weather(), sig._weather_left]}
+	var d := {"v": 1, "av": 2, "cit": cs, "mk": sig.mk.brief(), "vic": sig.vic.brief(), "wx": [sig.weather(), sig._weather_left]}
 	for k in SAVE_KEYS:
 		d[k] = get(k)
 	d["army"] = army.map(func(u: Dictionary) -> Dictionary:
@@ -3494,10 +3494,19 @@ func from_dict(d: Dictionary) -> void:
 		if k == "cit" or k == "v" or not (k in SAVE_KEYS or k == "army"):
 			continue
 		var cur: Variant = get(k)
+		if k == "tech":
+			continue
 		if cur is Array:
 			(cur as Array).assign(d[k])
 		else:
 			set(k, d[k])
+	var old_ages: bool = int(d.get("av", 1)) < 2  # saves from before the twelve ages count four ages: each becomes the first age of its era
+	if old_ages and d.has("age"):
+		age = clampi(int(d["age"]), 0, 3) * Ages.PER_ERA
+	tech.fill(-1)
+	var saved_tech: Array = d.get("tech", [])
+	for i in mini(saved_tech.size(), tech.size()):
+		tech[i * Ages.PER_ERA if old_ages else i] = clampi(int(saved_tech[i]), -1, 1)
 	citizens.clear()
 	for a in d.get("cit", []):
 		var c := Citizen.new()

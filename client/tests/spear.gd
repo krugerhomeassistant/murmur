@@ -15,6 +15,6 @@ func _init() -> void:
 		Military.econ(t)
 	var spears := Military.counts(t)["spear"] as int
 	var rifles := Military.counts(t)["inf"] as int
-	var ok := t.unlocked(Catalog.Id.BARRACKS) and Ages.unit("spear") == 0 and Ages.unit("inf") == 2 and spears > 0 and rifles == 0
+	var ok := t.unlocked(Catalog.Id.BARRACKS) and Ages.unit("spear") == 0 and Ages.unit("inf") == 6 and spears > 0 and rifles == 0
 	print("SPEAR_OK spears=%d" % spears if ok else "SPEAR_FAIL spears=%d rifles=%d unlocked=%s" % [spears, rifles, t.unlocked(Catalog.Id.BARRACKS)])
 	quit(0 if ok else 1)

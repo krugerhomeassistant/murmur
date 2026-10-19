@@ -177,6 +177,13 @@ Everything else comes first. Visual detail (characters, units, buildings, sprite
 - [x] E5 Infrastructure (v0.4.0): rail yard with catchment, ports, power, fuel and water tiers. Deferred to E5e: moving trains on laid track, highways, airports. Design and OpenTTD-inspired mechanics (ideas only, no code): [INFRASTRUCTURE_DESIGN.md](INFRASTRUCTURE_DESIGN.md).
 - [x] E6 Military variety (v0.5.0, first form): sieges, air defence and army stance orders. Left for E6b: building hit points, capture points, group select, production queue, research, logistics. Sieges first slice done (siege guns, `tests/siege.gd`); air defence slows bombing runs (`tests/air.gd`); army stance orders (`tests/stance.gd`); next group select and a production queue.
 
+## Working supply chains (owner, 2026-10-19)
+Request: workers are paid only when they work; a building produces or works only when it has workers and its materials; a woodworking shop can run only after the lumberyard has gone out, felled trees and carried the wood to it. Today the chain is pooled: wood, planks and tools are town-wide stocks that give bonuses (`tool_mult`, `plank_mult`), wages are paid to every employed citizen, and production follows job counts, not what each building actually has in hand.
+- [ ] E4b-1 Staffed and supplied: each building has a working state per shift (staffed enough and inputs in stock); wages are paid only for shifts actually worked; an idle building produces and pays nothing and says why on hover (no workers / no wood). Aggregate first, no hauling yet.
+- [ ] E4b-2 Per-building buffers and hauling: the chain buildings (lumber camp, sawmill, toolworks, foundry, mill, farms) get input and output stocks; a carrier (cart, later truck or train) takes goods along roads from a producer to the nearest consumer with capacity and trip time; blocked roads or no consumer stops the producer when its buffer is full.
+- [ ] E4b-3 Planner and balance: the planner builds chains in order (producer before consumer), tests keep every planner town alive (`tests/ageplay.gd`, `tests/growth.gd`), benchmark equal or better (hauling is simulated as flows per producer-consumer pair, with only a few visible carts).
+Risks: the late-game money collapse (D5) must be understood first or chains will make it worse; per-building state costs memory and time, so it must stay data-oriented like the rest of the sim.
+
 ## Ages finish line (owner, 2026-10-18: "finish all of the ages before we make a release")
 The next release waits for these. Each step is one PR, headless test where there is logic, perf checked before the release.
 - [x] AF1 Medieval units: archer (long range, soft) and knight (fast, armoured), trained at barracks from the Medieval age; army drawing for both; `tests/medieval.gd`.
@@ -186,6 +193,7 @@ The next release waits for these. Each step is one PR, headless test where there
 - [x] AF5 Units and vehicles by age: carts (Ancient, Medieval), tourers (Industrial), cars (Modern), clothes by age, Medieval archers and knights and galleys drawn.
 - [x] AF6 A3 research choices: at each age a town picks one of two techs (effects in `Research`, host command, AI picks by itself, HUD prompt); `tests/research.gd`.
 - [x] AF7 Age transition feedback: banner done (`tests/banner.gd`); a palette shift was dropped, the roads, houses and shops already change look per age.
+- [x] FOUND 2026-10-19 (ageplay) and fixed: upkeep grew with pop squared, so towns above ~400 people went broke; the size multiplier now caps at 6x and the planner's affordability window is 30 minutes. Remaining: with wars on, planner towns still fight constantly (armies of 150, raids) and shrink.
 - [x] AF8a Verify: `tests/ageplay.gd` plays four planner towns from the Ancient age for 4500 s (about 3 minutes, run by hand): all reach later ages, choose research, hold no building from a later age.
 - [x] AF8b Benchmark checked (README), released as v0.8.0.
 
