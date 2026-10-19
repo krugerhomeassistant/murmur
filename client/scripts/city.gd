@@ -1951,7 +1951,7 @@ func _money(market: float) -> void:
 		["Residential tax", r_tax], ["Commercial tax", r_com], ["Industrial tax", r_ind], ["Office tax", r_off],
 		["Tourism", r_tour], ["Events", mod("income_add") * RATE], ["Military funding", grant_sum * RATE * mod("grant_mult")], ["Regional trade", trade_net], ["Savings tax", hh_tax * RATE],
 		["Roads", -e_roads], ["Maintenance", -e_maint], ["Buildings", -e_zone], ["Services", -e_svc], ["Policies", -e_pol],
-		["City staff", -e_staff], ["Crime losses", -e_crime],
+		["City staff", -e_staff], ["Crime losses", -e_crime], ["Army upkeep", -Military.upkeep(self)],
 		["Exports", tr[0]], ["Imports (food, goods)", -tr[1]], ["Loan repayments", -e_loan],
 	]
 	income = 0.0
