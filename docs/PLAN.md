@@ -237,3 +237,5 @@ Rules: keep `Military` deterministic enough for `tests/war.gd`; the host simulat
 ## Skill tree and physical links (owner, 2026-10-19; design in docs/TREE_DESIGN.md)
 - [ ] T1 to T4: per-town branching skill tree replacing the research pairs and the age gate (journey through the ages).
 - [ ] L1 to L4: no territory rectangle (claim by building), towns joined by real roads and railways they build, vehicles on those links, no "linked" flag.
+
+- [x] Dead-town capture: abandonment after 15 s without people, march, raze, 120 s claim, contested claims force war (`tests/capture.gd`).

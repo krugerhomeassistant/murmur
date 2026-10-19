@@ -666,6 +666,12 @@ func _unhandled_input(e: InputEvent) -> void:
 				toggle_map()
 			KEY_B:
 				tool = BULLDOZE
+			KEY_C:  # send half the army to the abandoned town under the mouse
+				var gp := plot_at(get_global_mouse_position())
+				for tw: City in towns:
+					if tw.gpos == gp and tw.derelict:
+						var cnt := clampi(city.army.size() / 2, 1, 30)
+						headline = ("%d troops sent to %s." % [cnt, tw.town_name]) if cmd("capture", [tw.town_name, cnt]) else "No troops to spare (or still resting from the last march)."
 			KEY_U:  # refit the inspected building for the town's age
 				if sel_cell >= 0:
 					var why := city.refit_block(sel_cell)
@@ -975,6 +981,9 @@ func _process(delta: float) -> void:
 				dacc -= 1.0
 				Diplo.second(towns, city.rng)
 				Market.link_trade(towns)
+				Capture.second(towns)
+				if int(city.clock * 10.0) % 10 == 0:
+					Capture.ai(towns)
 				sig.vic.second(towns)
 				if sig.vic.fresh:
 					sig.vic.fresh = false
@@ -1368,7 +1377,7 @@ func draw_overlay(node: CanvasItem, t: City) -> void:
 	ci.draw_rect(rim, tcol if lod == 3 else Color(1.0, 0.82, 0.4, 0.5), false, 3.0 / cam.zoom.x if lod == 3 else 3.0)
 	if lod == 3:  # world view: just the name and the rim
 		var fs := int(22.0 / cam.zoom.x)
-		var lab := "%s  pop %d" % [t.town_name, t.pop]
+		var lab := "%s  pop %d" % [t.town_name, t.pop] if not t.derelict else "%s  ABANDONED (C to send troops)" % t.town_name
 		var font0 := ThemeDB.fallback_font
 		var lp := Vector2(rim.get_center().x - font0.get_string_size(lab, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x * 0.5, rim.position.y - fs * 0.4)
 		ci.draw_string(font0, lp + Vector2(2, 2) / cam.zoom.x, lab, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Color(0, 0, 0, 0.8))

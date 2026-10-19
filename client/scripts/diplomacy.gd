@@ -343,6 +343,8 @@ static func second(towns: Array, rng: RandomNumberGenerator) -> void:
 		for j in range(i + 1, towns.size()):
 			var a: City = towns[i]
 			var b: City = towns[j]
+			if a.derelict or b.derelict:
+				continue  # an empty town has no diplomacy
 			for pair in [[a, b], [b, a]]:
 				var x: City = pair[0]
 				var y: City = pair[1]

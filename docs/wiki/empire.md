@@ -205,3 +205,10 @@ Score is population + land / 100 + units exported / 50 + culture. Culture is pop
 - **Multiplayer feedback.** On a client the Balance button waits for the host's reply (`Main._net_reply`) and shows the amount moved; on the host or offline a no-op shows "Moved $0 between your towns.".
 - **Simulation level of detail.** Reduced-rate simulation for many towns (E2) is not done. Towns share only by trade (goods, power, water, services), never by automatic money transfers: a shared-treasury auto top-up was built and removed on purpose. Manual Send and Balance remain.
 - **Refresh rate.** The window refreshes every sixth frame (`tick_n % 6` in `Hud._process`), which is about ten times a second at 60 frames per second and slower on a slow machine.
+
+## Abandoned towns and capture
+A town with no people for 15 seconds (after it once held 10 or more) is abandoned: it keeps its buildings, treaties end and it leaves the war and trade logic. Another town can take it (`scripts/capture.gd`):
+- Select the abandoned town and press C (or the `capture` command) to send half the army, up to 30 units. At least one unit stays home, and a town can send once every 40 seconds. The march takes 30 seconds per plot of distance.
+- Arrived troops raze the old town hall (30 unit-seconds of work), then must hold the town alone for 120 seconds. Planner towns do this on their own when their army is 12 or more and they are ambitious.
+- If a second town arrives, the armies fight, the claim pauses, and any alliance between the two breaks into war.
+- The winner takes the town's owner, group and side, the surviving troops garrison it, six settlers move in, and it gets half the capturer's coins (at most 200). Money is never shared otherwise.

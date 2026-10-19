@@ -26,6 +26,8 @@ var fresh := false  # set when a win has just been decided; the game reads and c
 
 ## The side a town plays for: a multiplayer owner, "human" for offline player towns, otherwise the town on its own.
 static func side(t: City) -> String:
+	if t.side_key != "":
+		return t.side_key
 	if t.owner != 0:
 		return "o%d" % t.owner
 	return "human" if t.human else t.town_name
