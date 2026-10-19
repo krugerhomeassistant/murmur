@@ -70,6 +70,11 @@ func _ready() -> void:
 	o_name.text = "Murmur"
 	o_name.max_length = 18
 	_row(v, "Your town's name", o_name, "What your town is called.")
+	var pre := _opt(v, "Scenario", ["Custom (set below)", "One town", "Province (4 towns, you run 2)", "Continent (8 towns, you run all)"], 0, "A shortcut that sets the number of towns and how many you run. Change either below afterwards if you like.")
+	pre.item_selected.connect(func(i: int) -> void:
+		if i > 0:
+			o_towns.select([0, 0, 3, 7][i])
+			o_runs.select([0, 0, 1, 3][i]))
 	o_towns = _opt(v, "Towns at the start", ["1 (just you)", "2 (you + 1 neighbour)", "3 (you + 2 neighbours)", "4 (you + 3 neighbours)", "5", "6", "7", "8 (busy region)"], 1, "Neighbour towns run themselves. You trade, ally, embargo or fight with them. You can found more later from the Towns menu.")
 	o_runs = _opt(v, "Towns you run", ["Just the first", "2 (a province)", "4", "All of them (a continent)"], 0, "How many of the starting towns are yours. The rest run themselves. Tab switches between your towns. Never more than the towns at the start.")
 	o_mood = _opt(v, "Neighbours are", ["Friendly", "Mixed (each has its own temper)", "Prickly", "Random"], 1, "How the neighbours feel about you at the start. Friendly towns offer pacts; prickly ones smuggle, raid and demand tribute.")
