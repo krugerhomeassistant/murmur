@@ -4,6 +4,7 @@ All notable changes to Murmur are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
+- Fixed the late-game money crash: upkeep grew with the square of the population (cost per building rose without limit with town size), so every town above about 400 people slowly went broke, lost mood and shrank. The size cost now stops growing at 6x (about 300 people), and the planner no longer adds recurring costs unless the treasury can carry them for thirty minutes (it was ten). At peace the four-town playthrough now ends at 630 to 790 people instead of 50 to 750 with some towns at zero.
 - Twelve ages instead of four: Stone, Bronze, Classical, Dark, Medieval, Renaissance, Industrial, Electric, Atomic, Information, Digital, Future, in four eras of three that keep the look of the old Ancient, Medieval, Industrial and Modern ages. Buildings and units unlock gradually across the ages, each age has its own research pair (twelve picks), and the setup screen lists all twelve. Old saves convert (each old age becomes the first age of its era); `tests/ages.gd` checks it.
 - Fixed: a town founded from the map now starts in the age of the town that founded it (it used to start in the Modern age even in an Ancient game).
 - Fixed: the `set_age` command is sandbox-only (any player in multiplayer could skip ages).
