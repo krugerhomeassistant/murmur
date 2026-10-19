@@ -4,6 +4,7 @@ All notable changes to Murmur are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
+- The squares around towns are gone: the world view shows only names, and the buildable edge is a faint fade and line in the town you are in.
 - War rework, first step: declaring war no longer hands both towns free Riflemen (they appeared even in the Stone age). Only units trained in a town's barracks and bases, in kinds its age allows, fight; a computer-run town starts a war only with at least three trained units.
 - Cart drivers are real jobs: farms, mines and lumber camps that deliver to a mill, foundry, refinery or sawmill need one driver per eight units of output, taken from the town's workforce and counted in its jobs (none while there is no processor to deliver to).
 - Separate ambience and cue volumes (Menu: Ambience up/down, Cues up/down), saved with the master volume.
