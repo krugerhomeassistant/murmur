@@ -23,8 +23,14 @@ func _init() -> void:
 	var small := City.new(Signals.new())
 	small.seed_start()
 	small.pop = 4
-	Military.conscript(small)
-	var levy: bool = small.army.size() == 1
+	var foe := City.new(Signals.new())
+	foe.seed_start()
+	Diplo.declare(small, foe, "land", "")
+	var levy: bool = small.army.is_empty() and foe.army.is_empty() and not Diplo.ready(small)  # war raises no free troops
+	small.army.append(Military._unit("spear"))
+	small.army.append(Military._unit("spear"))
+	small.army.append(Military._unit("spear"))
+	levy = levy and Diplo.ready(small)
 	var hs: bool = c._haulers([[1, 20.0]], []) == 0 and c._haulers([[1, 20.0]], [5]) == 3 and c._haulers([[1, 8.0]], [5]) == 1
 	var ok: bool = stop >= 0 and none and one and gone and levy and hs
 	print("UNITS_OK" if ok else "UNITS_FAIL stop=%d none=%s one=%s gone=%s levy=%s haulers=%s" % [stop, none, one, gone, levy, hs])

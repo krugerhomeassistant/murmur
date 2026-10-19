@@ -4,6 +4,7 @@ All notable changes to Murmur are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
+- War rework, first step: declaring war no longer hands both towns free Riflemen (they appeared even in the Stone age). Only units trained in a town's barracks and bases, in kinds its age allows, fight; a computer-run town starts a war only with at least three trained units.
 - Cart drivers are real jobs: farms, mines and lumber camps that deliver to a mill, foundry, refinery or sawmill need one driver per eight units of output, taken from the town's workforce and counted in its jobs (none while there is no processor to deliver to).
 - Separate ambience and cue volumes (Menu: Ambience up/down, Cues up/down), saved with the master volume.
 - Fixed a mood drag in games with many towns: the "news" signal was one value shared by every town and each town's scandals and bad news added to it, so with eight towns it sat strongly negative and pulled every town's mood down together (people stopped arriving, then left). News is now each town's own. Eight-town test runs: total people after 30 minutes went from about 600 to about 840 (3 to 7 runs each, noisy).
