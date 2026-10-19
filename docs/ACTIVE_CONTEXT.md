@@ -1,6 +1,9 @@
 # ACTIVE CONTEXT (read first)
 
-Last updated 2026-10-18.
+Last updated 2026-10-19.
+
+## 2026-10-19 (after the 8-town playtest)
+Merged since v0.8.0: hard ages (materials per age, per-building era and refit), regional weather fronts, window snapping, scrollable setup menu, last-side-standing victory, dead-town capture (`capture.gd`, key C), skill tree (`research.gd`, 36 nodes, `node` command), buses and boats need people, army upkeep in the budget, softer audio with saved volume, F1 key help. v0.9.0 is pending: needs the performance pass (stageprof, standard benchmark on the owner PC, README table) as the LAST step. Open: real hauling with drivers (E4b-2), physical road/rail links and no territory limit (needs a storage redesign: a town is a fixed W x H grid today), soldiers as part of the population, winter mood dip shared by all towns (see `tests/warrate.gd` with a Stone-age start: about 200 people per town after 30 minutes, 4 to 6 wars), per-channel audio volumes. The owner's Windows 8-town test build is `E:\Projects\Personal\game\murmur\dist\Murmur-sim8` (double-click `Play Murmur.bat`; computer use cannot launch it because File Explorer is click-only).
 
 ## Next after v0.7.0 (2026-10-18)
 Cosmetics and performance pass done on main: ground shading, house shadows, road kerbs, smaller citizens, F3 performance panel, windows start minimised, cheaper planner site scoring. Benchmark refreshed (103 fps, p99 24.0 ms, README table). Next: remaining cosmetics/art ideas (per-age looks, sprites S2), then the next minor release under the release standard. Owner still to launch-test the Windows zip.
