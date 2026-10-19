@@ -18,7 +18,7 @@ It is the Murmur simulation seen from above, with a sandbox layer on top. Everyt
 ## Phases
 
 ### G1 Scenario setup (needs ages A2)
-Progress: world seed option done (`tests/scenario.gd`); starting age and town count already existed. Also done: per-town age (`ages` option) and the number of towns you run ("Towns you run" on the new-game screen). Left: per-town size, area presets by name, world size.
+Progress: world seed option done (`tests/scenario.gd`); starting age and town count already existed. Also done: per-town age (`ages` option) and the number of towns you run ("Towns you run" on the new-game screen). Area presets (One town, Province, Continent) are done. Left: per-town starting size (needs a cheap way to pre-grow a town; fast-forwarding costs minutes at start) and world size.
 The new-game screen gains a Scenario section:
 - Starting age for the whole world (exists), and per-town age override.
 - Number of towns, their starting size (hamlet, village, town, city) and how many are player controlled.
