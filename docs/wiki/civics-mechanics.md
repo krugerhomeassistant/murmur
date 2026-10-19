@@ -376,7 +376,8 @@ Fires use a separate timer, `next_fire`: after each ignition it is set to `unifo
 | `infect` | `v` random citizens become sick for 25 to 40 s (`_sickness` handles spread) |
 | `blackout` | one random power plant is added to `offline` for 40 s |
 | `citizens` | positive: up to `v` calls to `_spawn` (only if a home has space); negative: removes random citizens |
-| `news`, `market` | `sig.bump(...)`, which adds to the signal clamped to -1..1 |
+| `news` | adds to the town's own `news`, clamped to -1..1 |
+| `market` | `sig.bump(...)`, which adds to the shared signal clamped to -1..1 |
 
 7. `recent[id] = day`, headline `msg`, and a log line `"<name>: <msg>"`.
 
@@ -388,7 +389,7 @@ Each tick every `active[i].left` falls by `dt`. When any reaches 0 the entry is 
 
 `Signals` (`signals.gd`) holds the world conditions, shared by all towns of a region (one `Signals` object created in `Main`, passed to each `City`):
 
-- `market` and `news` are floats in -1..1 which decay towards 0 by 0.02 per second (`Signals.tick`, called once per sim step). A bump of 0.7 therefore takes 35 seconds to fade. `market` feeds `econ = 1 + 0.5 * market` in `_money` (so a boom of +0.7 is +35% to incomes at its peak) and the demand formulas; `news` feeds mood (`news * 0.3`) and the rebels' satisfaction.
+- `market` is a float in -1..1 which decays towards 0 by 0.02 per second (`Signals.tick`, called once per sim step). A bump of 0.7 therefore takes 35 seconds to fade. `news` works the same way but belongs to each town (`City.news`; it used to be shared, so eight towns' scandals piled onto one value and dragged every town's mood down together). `market` feeds `econ = 1 + 0.5 * market` in `_money` (so a boom of +0.7 is +35% to incomes at its peak) and the demand formulas; `news` feeds mood (`news * 0.3`) and the rebels' satisfaction.
 - Weather is regional: `Signals.fronts` are clouds that drift downwind across the world, each with a kind, position, radius, speed and countdown; a town reads the front over its plot (`Signals.weather_at(City.world_pos())`). A weather event starts a front over its town (the same kind nearby is only prolonged); a front builds up and dies away over 8 seconds and its edge shrinks and grows with it. Weather drives `WEATHER_PENALTY` (mood), fire behaviour (rain and storm), and the soft clouds with rain or snow in `Main._front`. Seasons share one world calendar (`Signals.day_hi`, the oldest town's day), so every town is in the same season.
 
 ### Recovery offers

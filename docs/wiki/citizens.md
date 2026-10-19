@@ -198,7 +198,7 @@ Starting `mood` is 0.6. Each term:
 | Fires | `burning` is the number of buildings currently on fire; each costs 0.03, capped at 0.2. |
 | Residential tax | A rate of 10% is neutral; 0% gives +0.20, 20% gives -0.20, 30% gives -0.40. |
 | Unemployment | 100% unemployment would cost 0.30. |
-| News | `Signals.news` (-1..1), see [Economy](economy.md#market-and-news-signals). |
+| News | `City.news` (-1..1, the town's own: its scandals and good news, fading 0.02 per second). |
 | Weather | Table below. |
 | Needs | See below. |
 | Bonuses | `cov["culture"]` x 0.05, `cov["defence"]` x 0.02, `cov["gov"]` x 0.04 (max +0.11). Retail and banking have weight 0. |
