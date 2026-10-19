@@ -4,6 +4,7 @@ All notable changes to Murmur are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
+- Separate ambience and cue volumes (Menu: Ambience up/down, Cues up/down), saved with the master volume.
 - Fixed a mood drag in games with many towns: the "news" signal was one value shared by every town and each town's scandals and bad news added to it, so with eight towns it sat strongly negative and pulled every town's mood down together (people stopped arriving, then left). News is now each town's own. Eight-town test runs: total people after 30 minutes went from about 600 to about 840 (3 to 7 runs each, noisy).
 - Full-screen skill tree (key K): six arms from a hub with six nodes each, taken nodes lit, available ones outlined, hover for cost and effect, click to take (`treeview.gd`).
 - The sound volume and mute choice are remembered between runs (`user://settings.cfg`); F1 shows a help panel with the keys.

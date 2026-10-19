@@ -394,6 +394,10 @@ func _top() -> void:
     cp.add_item("Sound on / off", 6)
     cp.add_item("Volume up", 7)
     cp.add_item("Volume down", 8)
+    cp.add_item("Ambience up", 20)
+    cp.add_item("Ambience down", 21)
+    cp.add_item("Cues up", 22)
+    cp.add_item("Cues down", 23)
     cp.id_pressed.connect(func(id: int) -> void:
         if id == 10:
             guide.restart()
@@ -409,6 +413,14 @@ func _top() -> void:
         elif id == 7 or id == 8:
             m.sfx.vol = clampf(m.sfx.vol + (0.1 if id == 7 else -0.1), 0.0, 1.0)
             m.headline = "Volume %d%%" % int(m.sfx.vol * 100.0)
+            m.sfx.save_prefs()
+        elif id >= 20 and id <= 23:
+            var dv := 0.1 if id % 2 == 0 else -0.1
+            if id < 22:
+                m.sfx.amb = clampf(m.sfx.amb + dv, 0.0, 1.0)
+            else:
+                m.sfx.cues = clampf(m.sfx.cues + dv, 0.0, 1.0)
+            m.headline = "Ambience %d%%, cues %d%%" % [int(m.sfx.amb * 100.0), int(m.sfx.cues * 100.0)]
             m.sfx.save_prefs()
         else:
             m.cmd("auto_mode", [id])

@@ -226,7 +226,7 @@ Rules: keep `Military` deterministic enough for `tests/war.gd`; the host simulat
 - [ ] Planner economy: utilities lag demand (score ignores output), overbuilt jobs vs housing, annexation unbounded (all 6144 cells at pop 78), `to_dict` omits a few runtime fields.
 
 ## Audio rework (owner, 2026-10-19)
-- [ ] The generated sound is harsh (screechy noise). Rework it to sound pleasant: softer, lower filtered ambience, gentle cues, per-channel volume (ambience, cues, music) with a saved setting. It starts at zero volume until then.
+- [x] The generated sound was harsh (screechy noise): softer, lower birds, smooth cue envelopes, a gentle low-pass, separate ambience and cue volumes, all saved (`user://settings.cfg`). Owner has not listened yet; it still starts at zero volume. Music is not built.
 
 ## Hard ages and building upgrades (owner, 2026-10-19: "we advance through ages way too quickly, it needs to be HARD")
 - [x] H1 Slower, costlier age entry: knowledge thresholds about six times higher; each age costs stocked materials (planks always, tools from the second age, metal from the fifth) that the town buys and makes ahead of time once it is 70% of the way on knowledge, and keeps out of its exports (`Ages.cost`, `Ages.missing`).
