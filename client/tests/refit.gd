@@ -20,7 +20,7 @@ func _init() -> void:
 	var a := (City.OY + 5) * City.W + City.OX + 5
 	var b := (City.OY + 5) * City.W + City.OX + 7
 	var ok := true
-	Ages.set_age(c, 6)
+	c.age = 6
 	c._scan()
 	var behind := c.housing
 	c.stock["planks"] = 0.0

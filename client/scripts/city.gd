@@ -65,6 +65,7 @@ var grid := PackedInt32Array()
 var lvl := PackedByteArray()  # zone building level, 0 = empty zone
 var fit := PackedFloat32Array()  # era refit progress 0..1 (0 = not being refitted)
 var age_refit_t := 0
+var behind_n := 0  # finished buildings older than the town's era
 var refit_ver := 0  # bumped whenever a refit starts or finishes, so the scan sees it
 var fit_n := 0  # buildings being refitted right now
 var etier := PackedByteArray()  # era tier + 1 each building was built in (0 = nothing there yet): old buildings keep their era until upgraded
@@ -828,6 +829,7 @@ func _scan() -> void:
 		avenues = 0
 		blds = 0
 		housing = 0
+		behind_n = 0
 		shop_jobs = 0
 		fac_jobs = 0
 		off_jobs = 0
@@ -866,6 +868,8 @@ func _scan() -> void:
 			if t == T.EMPTY:
 				connected[i] = 0
 				continue
+			if etier[i] > 0 and int(etier[i]) - 1 < Ages.tier(age) and not is_road(t):
+				behind_n += 1
 			var ok := _road_next_to(i) >= 0
 			connected[i] = 1 if ok else 0
 			if not ok:
@@ -1600,17 +1604,19 @@ func _refits() -> void:
 
 ## The planner modernises the most outdated building it can afford, one at a time and only with spare money.
 func _auto_refit() -> void:
-	if fit_n >= crews() or coins < 300.0:
-		return
-	var best := -1
-	var gap := 0
-	for i in cells:
-		var g := Ages.tier(age) - tier_at(i)
-		if g > gap and fit[i] <= 0.0 and grid[i] != T.EMPTY and not is_road(grid[i]) and not (is_zone(grid[i]) and lvl[i] == 0) and refit_block(i) == "":
-			if coins > float(refit_cost(i)["coins"]) + 200.0:
-				best = i
-				gap = g
-	if best >= 0:
+	for _n in 3:
+		if fit_n >= crews() or coins < 300.0:
+			return
+		var best := -1
+		var gap := 0
+		for i in cells:
+			var g := Ages.tier(age) - tier_at(i)
+			if g > gap and fit[i] <= 0.0 and grid[i] != T.EMPTY and not is_road(grid[i]) and not (is_zone(grid[i]) and lvl[i] == 0) and refit_block(i) == "":
+				if coins > float(refit_cost(i)["coins"]) + 200.0:
+					best = i
+					gap = g
+		if best < 0:
+			return
 		refit(best % W, best / W)
 
 
@@ -1659,7 +1665,7 @@ func _second() -> void:
 			msg += " Choose its research in the Mayor's office."
 	if fit_n > 0:
 		_refits()
-	if auto_mode > 0 and age_refit_t % 10 == 0:
+	if auto_mode > 0 and age_refit_t % 5 == 0:
 		_auto_refit()
 	age_refit_t += 1
 	_scan()
@@ -3503,9 +3509,10 @@ func _trade(_market: float) -> Array:
 	var plank_need := sites * 0.02
 	var proj := Ages.missing(self)  # materials for the next age, bought ahead of time
 	var rsv := Ages.reserve(self)  # and held back from everyday use
-	var w_planks := maxf(0.0, plank_need - float(stock["planks"])) + float(proj.get("planks", 0.0))
+	var rf := behind_n > 0 and auto_mode > 0 and fit_n < crews()  # a planner with outdated buildings keeps materials for refits
+	var w_planks := maxf(0.0, plank_need + (12.0 if rf else 0.0) - float(stock["planks"])) + float(proj.get("planks", 0.0))
 	var w_wood := maxf(0.0, works * 0.3 + saws * 0.5 - float(stock["wood"]) - wood_in)
-	var w_tools := maxf(0.0, tool_need - float(stock["tools"])) + float(proj.get("tools", 0.0))
+	var w_tools := maxf(0.0, tool_need + (6.0 if rf else 0.0) - float(stock["tools"])) + float(proj.get("tools", 0.0))
 	var w_crops := maxf(0.0, mills * 3.0 - (float(stock["crops"]) + crops))
 	var refs := (bt.get(T.REFINERY, []) as Array).size()
 	var burn := 0.0
@@ -3540,7 +3547,7 @@ func _trade(_market: float) -> Array:
 	var m_fac := fac_jobs * emp * 0.02
 	var m_arm := armouries * 0.25 * emp * minf(foc("military"), 1.0)  # low military focus: buy arms instead of making them
 	var m_tool := works * 0.15 * emp
-	var w_metal := maxf(0.0, m_fac + m_arm + m_tool - float(stock["metal"])) + float(proj.get("metal", 0.0))
+	var w_metal := maxf(0.0, m_fac + m_arm + m_tool + (6.0 if rf and Ages.tier(age) >= 1 else 0.0) - float(stock["metal"])) + float(proj.get("metal", 0.0))
 	want["metal"] = w_metal
 	if w_metal > 0.0 and rich:
 		var gm := mk.take("metal", minf(w_metal, coins * 0.05 / (float(mk.price["metal"]) * RATE)))
