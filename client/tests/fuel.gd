@@ -27,7 +27,7 @@ func _fuel_ok(refinery: bool) -> float:
 func _supply(ok: float) -> float:
 	var c := _town()
 	c.peak = 1.0e5
-	c.age = 3
+	c.age = Ages.LAST
 	c.coins = 1.0e5
 	for y in range(2, c.H - 2):
 		for x in range(2, c.W - 3):

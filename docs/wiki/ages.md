@@ -1,6 +1,6 @@
 # Ages
 
-A town's age (Ancient, Medieval, Industrial, Modern) decides which buildings and units it may use and which services people expect. Design notes: [AGES_DESIGN.md](../AGES_DESIGN.md).
+A town's age (twelve ages in four eras: Ancient, Medieval, Industrial, Modern) decides which buildings and units it may use and which services people expect. Design notes: [AGES_DESIGN.md](../AGES_DESIGN.md).
 
 ## Advancing
 Knowledge grows every second by `pop / 50 * 0.5 * (1 + education + 0.6 * culture)`. A town enters the next age when it has the knowledge, the peak population and the treasury below and a mood of at least 0.35.

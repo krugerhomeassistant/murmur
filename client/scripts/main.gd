@@ -1391,11 +1391,11 @@ func draw_overlay(node: CanvasItem, t: City) -> void:
 				var dv := c.path[mini(c.pi, c.path.size() - 1)] - c.pos
 				var lane := Vector2(-dv.y, dv.x).normalized() * 0.19 if dv.length() > 0.01 else Vector2.ZERO  # keep to the right-hand lane so opposite traffic and followers do not stack
 				ci.draw_set_transform((c.pos + lane) * TILE, dv.angle() if dv.length() > 0.01 else 0.0)
-				if city.age < 2:  # before the Industrial age there are no cars: wooden carts
+				if Ages.tier(city.age) < 2:  # before the Industrial age there are no cars: wooden carts
 					ci.draw_texture_rect(Painter.cart(), Rect2(-5, -3, 10, 6), false)
 					ci.draw_set_transform(Vector2.ZERO, 0.0)
 					continue
-				ci.draw_texture_rect(Painter.car(CAR_COLS[c.id % CAR_COLS.size()].darkened(0.3) if city.age == 2 else CAR_COLS[c.id % CAR_COLS.size()], city.age == 2), Rect2(-6, -3.5, 12, 7), false)
+				ci.draw_texture_rect(Painter.car(CAR_COLS[c.id % CAR_COLS.size()].darkened(0.3) if Ages.tier(city.age) == 2 else CAR_COLS[c.id % CAR_COLS.size()], Ages.tier(city.age) == 2), Rect2(-6, -3.5, 12, 7), false)
 				if night:
 					ci.draw_circle(Vector2(6, -2), 1.2, Color("fff3b0"))
 					ci.draw_circle(Vector2(6, 2), 1.2, Color("fff3b0"))
@@ -1409,7 +1409,7 @@ func draw_overlay(node: CanvasItem, t: City) -> void:
 			var col := Color("f3e7cf") if c.mood > 0.6 else (Color("e0a458") if c.mood > 0.35 else Color("c0392b"))
 			if c.sick > 0.0:
 				col = Color("8fc46a")
-			ci.draw_texture_rect(Painter.person(), Rect2(p - Vector2(3, 2.5), Vector2(6, 8)), false, col * AGE_CLOTH[city.age])  # clothes drift with the age; the mood colour still shows through
+			ci.draw_texture_rect(Painter.person(), Rect2(p - Vector2(3, 2.5), Vector2(6, 8)), false, col * AGE_CLOTH[Ages.tier(city.age)])  # clothes drift with the age; the mood colour still shows through
 			if c.protesting and city.protest:
 				ci.draw_line(p, p + Vector2(0, -9), Color.WHITE, 1.0)
 				ci.draw_rect(Rect2(p + Vector2(-4, -14), Vector2(8, 5)), Color("f3e7cf"))
@@ -1503,11 +1503,11 @@ func draw_chunk(c_item: CanvasItem, t_: City, x0: int, y0: int, x1: int, y1: int
 			match String(d["kind"]):
 				"road":
 					var rc: Color = d["col"]
-					if city.age < 2:  # before the Industrial age roads are beaten earth (Ancient) or cobbles (Medieval)
-						rc = Color("a68e63") if city.age == 0 else Color("8f8776")
+					if Ages.tier(city.age) < 2:  # before the Industrial age roads are beaten earth (Ancient) or cobbles (Medieval)
+						rc = Color("a68e63") if Ages.tier(city.age) == 0 else Color("8f8776")
 					ci.draw_rect(r, rc)
-					if city.age < 2:
-						_old_road(r, x, y, rc, city.age)
+					if Ages.tier(city.age) < 2:
+						_old_road(r, x, y, rc, Ages.tier(city.age))
 					var kerb: Color = rc.lightened(0.25)  # pale kerb on every side that is not another road
 					if x == 0 or not city.is_road(city.grid[i - 1]):
 						ci.draw_rect(Rect2(r.position, Vector2(2, TILE)), kerb)
@@ -1518,7 +1518,7 @@ func draw_chunk(c_item: CanvasItem, t_: City, x0: int, y0: int, x1: int, y1: int
 					if y + 1 >= City.H or not city.is_road(city.grid[i + City.W]):
 						ci.draw_rect(Rect2(r.position + Vector2(0, TILE - 2), Vector2(TILE, 2)), kerb)
 					var c := r.get_center()
-					if city.age < 2:  # no painted lanes on earth and cobbles
+					if Ages.tier(city.age) < 2:  # no painted lanes on earth and cobbles
 						if wet:
 							Art.bridge(ci, r, x > 0 and city.is_road(city.grid[i - 1]) or x + 1 < City.W and city.is_road(city.grid[i + 1]))
 						continue
@@ -1599,9 +1599,9 @@ func _old_road(r: Rect2, x: int, y: int, rc: Color, age: int) -> void:
 
 
 func _building(r: Rect2, d: Dictionary, lv: int, ok: bool, night: bool, id := -1) -> void:
-	if id >= 0 and Sprites.draw(ci, r, id, lv, city.age, ok):
+	if id >= 0 and Sprites.draw(ci, r, id, lv, Ages.tier(city.age), ok):
 		return
-	if Art.building(ci, r, String(d.get("shape", "")), d["col"], lv, ok, night, int(r.position.x / 32.0) * 7 + int(r.position.y / 32.0) * 13, city.age):
+	if Art.building(ci, r, String(d.get("shape", "")), d["col"], lv, ok, night, int(r.position.x / 32.0) * 7 + int(r.position.y / 32.0) * 13, Ages.tier(city.age)):
 		if not ok:
 			ci.draw_string(ThemeDB.fallback_font, r.position + Vector2(12, 20), "!", HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color(1, 0.3, 0.2))
 		return
@@ -1678,7 +1678,7 @@ func _zone(r: Rect2, t: int, i: int) -> void:
 
 
 func _service(r: Rect2, d: Dictionary, ok: bool, night: bool, id := -1) -> void:
-	if id >= 0 and (Sprites.draw(ci, r, id, 1, city.age, ok) or Art.service(ci, r, id, ok, night)):
+	if id >= 0 and (Sprites.draw(ci, r, id, 1, Ages.tier(city.age), ok) or Art.service(ci, r, id, ok, night)):
 		if not ok:
 			ci.draw_line(r.position + Vector2(4, 4), r.end - Vector2(4, 4), Color("b03a2e"), 2.0)
 		return

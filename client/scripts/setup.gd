@@ -81,7 +81,7 @@ func _ready() -> void:
 	o_diff = _opt(v, "Difficulty", ["Relaxed ($600, calmer world)", "Normal ($300)", "Hard ($150, more disasters)"], 1, "Starting money and how often world events strike.")
 	o_land = _opt(v, "Starting land", ["Small (40x24)", "Medium (48x32)", "Large (64x40)"], 1, "How much of the map you own at the start. You can annex more at any time.")
 	o_river = _opt(v, "Rivers", ["Natural (rivers, lakes, coast)", "None (flat land)", "Custom: I paint it (world editor)"], 0, "The world has its own rivers, lakes and coast, continuous across neighbouring towns. Zones can't go on water; roads over it become bridges (4x cost). Custom starts paused with the paint-water tool so you can draw your own rivers and lakes first.")
-	o_age = _opt(v, "Starting age", ["Ancient (the default)", "Medieval", "Industrial", "Modern (everything open, the classic start)"], 0, "The age every town starts in. Each age opens new buildings and units; towns reach the next age by themselves as knowledge and population grow (schools, libraries and culture speed it up).")
+	o_age = _opt(v, "Starting age", ["Stone (the default)", "Bronze", "Classical", "Dark", "Medieval", "Renaissance", "Industrial", "Electric", "Atomic", "Information", "Digital", "Future (everything open, the classic start)"], 0, "The age every town starts in. There are twelve ages in four eras (Ancient, Medieval, Industrial, Modern); each opens new buildings and units, and towns reach the next age by themselves as knowledge and population grow (schools, libraries and culture speed it up).")
 	o_seed = LineEdit.new()
 	o_seed.placeholder_text = "random"
 	o_seed.max_length = 9
