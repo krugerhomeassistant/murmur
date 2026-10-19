@@ -1862,11 +1862,13 @@ func _win(key: String, title: String, pos: Vector2, body_min: Vector2) -> VBoxCo
         if e is InputEventMouseMotion and (e.button_mask & MOUSE_BUTTON_MASK_LEFT) != 0:
             p.position += e.relative
             _clamp(p)
+            _snap(p)
         elif e is InputEventMouseButton and e.button_index == MOUSE_BUTTON_LEFT:
             if e.pressed:
                 p.move_to_front()
                 tk_front()
             else:
+                _separate(p)
                 _save_ui())
     return body
 
@@ -1955,6 +1957,7 @@ func _set_open(key: String, on: bool) -> void:
         if on:
             (wins[key] as PanelContainer).move_to_front()
             _clamp.call_deferred(wins[key])
+            _separate.call_deferred(wins[key])
     _save_ui()
 
 
@@ -1968,6 +1971,77 @@ func _clamp_all() -> void:
     for k in wins:
         if not pop_wins.has(k):
             _clamp(wins[k])
+            _separate(wins[k])
+
+
+func _rect(p: Control) -> Rect2:
+    return Rect2(p.position, p.get_combined_minimum_size().max(Vector2(120, 28)))
+
+
+## The other docked windows a panel must not cover (the hover card shows and hides itself, so it is left out).
+func _others(p: Control) -> Array:
+    var out: Array = []
+    for k in wins:
+        var q: PanelContainer = wins[k]
+        if q != p and k != "detail" and q.visible and not pop_wins.has(k):
+            out.append(_rect(q))
+    return out
+
+
+## While dragging, stick to the edges of other windows (any side, any orientation) and of the screen.
+func _snap(p: Control) -> void:
+    var r := _rect(p)
+    var vs := get_viewport_rect().size
+    var best := Vector2(12, 12)  # snap distance in pixels, per axis
+    var d := Vector2.ZERO
+    for o in _others(p):
+        var o_r: Rect2 = o
+        if r.position.y < o_r.end.y + 12.0 and r.end.y > o_r.position.y - 12.0:  # side by side: align edges next to each other
+            for dx in [o_r.end.x - r.position.x, o_r.position.x - r.end.x, o_r.position.x - r.position.x, o_r.end.x - r.end.x]:
+                if absf(dx) < best.x:
+                    best.x = absf(dx)
+                    d.x = dx
+        if r.position.x < o_r.end.x + 12.0 and r.end.x > o_r.position.x - 12.0:  # stacked: same
+            for dy in [o_r.end.y - r.position.y, o_r.position.y - r.end.y, o_r.position.y - r.position.y, o_r.end.y - r.end.y]:
+                if absf(dy) < best.y:
+                    best.y = absf(dy)
+                    d.y = dy
+    for dx in [-r.position.x, vs.x - r.end.x]:
+        if absf(dx) < best.x:
+            best.x = absf(dx)
+            d.x = dx
+    for dy in [-r.position.y, vs.y - r.end.y]:
+        if absf(dy) < best.y:
+            best.y = absf(dy)
+            d.y = dy
+    p.position += d
+
+
+## Windows never overlap: a panel that covers another moves to the nearest free spot beside it (left, right, above or below).
+func _separate(p: Control) -> void:
+    var vs := get_viewport_rect().size
+    for _i in 8:
+        var r := _rect(p)
+        var hit := false
+        for o in _others(p):
+            var o_r: Rect2 = o
+            if not r.intersects(o_r):
+                continue
+            hit = true
+            var best := p.position
+            var bd := INF
+            for c in [Vector2(o_r.end.x, r.position.y), Vector2(o_r.position.x - r.size.x, r.position.y), Vector2(r.position.x, o_r.end.y), Vector2(r.position.x, o_r.position.y - r.size.y)]:
+                var cc: Vector2 = c
+                var inside := cc.x >= 0.0 and cc.y >= 0.0 and cc.x + r.size.x <= vs.x and cc.y + r.size.y <= vs.y
+                var cost := cc.distance_to(r.position) + (0.0 if inside else 100000.0)
+                if cost < bd:
+                    bd = cost
+                    best = cc
+            p.position = best
+            break
+        if not hit:
+            break
+    _clamp(p)
 
 
 func _reset_wins() -> void:
