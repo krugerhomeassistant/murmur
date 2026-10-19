@@ -12,7 +12,7 @@ const NAMES := ["Stone", "Bronze", "Classical", "Dark", "Medieval", "Renaissance
 const ERA := ["Ancient", "Medieval", "Industrial", "Modern"]
 const PER_ERA := 3
 const LAST := 11
-const KNOW := [0.0, 150.0, 350.0, 600.0, 1000.0, 1600.0, 2400.0, 3500.0, 5000.0, 7000.0, 9500.0, 13000.0]  # knowledge needed to enter each age
+const KNOW := [0.0, 1800.0, 4200.0, 7200.0, 12000.0, 19200.0, 28800.0, 42000.0, 60000.0, 84000.0, 114000.0, 156000.0]  # knowledge needed to enter each age
 const PEAK := [0, 10, 22, 40, 65, 90, 120, 160, 200, 250, 300, 360]  # peak population needed to enter each age
 const GRACE_STEP := 400.0  # seconds per step of the grace period after entering an age: a newly expected service is missed 25% more every step
 const COINS := [0.0, 100.0, 220.0, 400.0, 650.0, 900.0, 1200.0, 1600.0, 2000.0, 2500.0, 3500.0, 5000.0]  # treasury needed to enter each age: the new age expects services that cost money
@@ -81,9 +81,37 @@ static func rate(c: City) -> float:
 	return float(c.pop) / 50.0 * BASE_RATE * (1.0 + float(c.cov.get("edu", 0.0)) + 0.6 * float(c.cov.get("culture", 0.0))) * c.mod("know_mult")
 
 
+## Materials a town must hold in stock to enter an age (spent on entering): a whole town changing over is a big building project.
+## Planks always, tools from the second age, metal once there are foundries (Medieval era).
+static func cost(age: int) -> Dictionary:
+	return {"planks": 20.0 * age, "tools": 10.0 * maxf(age - 1, 0.0), "metal": 8.0 * maxf(age - 4, 0.0)}
+
+
+## What the town still lacks of the materials for its next age, once it is most of the way there on knowledge (so it buys and makes them ahead of time).
+static func missing(c: City) -> Dictionary:
+	var out := {}
+	if c.age >= LAST or c.know < 0.7 * float(KNOW[c.age + 1]):
+		return out
+	var cs := cost(c.age + 1)
+	for k in cs:
+		var lack: float = float(cs[k]) - float(c.stock.get(k, 0.0))
+		if lack > 0.0:
+			out[k] = lack
+	return out
+
+
+## The materials held back from everyday use (tools wearing out, building sites, factories) while the town saves for its next age.
+static func reserve(c: City) -> Dictionary:
+	if c.age >= LAST or c.know < 0.7 * float(KNOW[c.age + 1]):
+		return {}
+	return cost(c.age + 1)
+
+
 ## True when the town may enter the next age now.
 static func ready(c: City) -> bool:
-	return c.age < LAST and c.know >= float(KNOW[c.age + 1]) and c.peak >= float(PEAK[c.age + 1]) and c.coins >= float(COINS[c.age + 1]) and c.mood >= HOLD_MOOD
+	if c.age >= LAST or c.know < float(KNOW[c.age + 1]) or c.peak < float(PEAK[c.age + 1]) or c.coins < float(COINS[c.age + 1]) or c.mood < HOLD_MOOD:
+		return false
+	return missing(c).is_empty()
 
 
 ## One second of research. Returns the new age when the town advanced, else -1.
@@ -94,6 +122,9 @@ static func second(c: City) -> int:
 		return -1
 	c.know += rate(c)
 	if ready(c):
+		var cs := cost(c.age + 1)
+		for k in cs:
+			c.stock[k] = maxf(float(c.stock.get(k, 0.0)) - float(cs[k]), 0.0)
 		c.age += 1
 		if EXPECTS.values().has(c.age):  # only an age that opens a need starts a new grace period
 			c.age_t = 0.0

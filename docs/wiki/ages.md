@@ -3,13 +3,21 @@
 A town's age (twelve ages in four eras: Ancient, Medieval, Industrial, Modern) decides which buildings and units it may use and which services people expect. Design notes: [AGES_DESIGN.md](../AGES_DESIGN.md).
 
 ## Advancing
-Knowledge grows every second by `pop / 50 * 0.5 * (1 + education + 0.6 * culture)`. A town enters the next age when it has the knowledge, the peak population and the treasury below and a mood of at least 0.35.
+Knowledge grows every second by `pop / 50 * 0.5 * (1 + education + 0.6 * culture)`. A town enters the next age when it has the knowledge, the peak population and the treasury below and a mood of at least 0.35, and it holds the materials in the last three columns in stock (spent on entering). Once it is 70% of the way on knowledge it buys and makes them ahead of time and holds them back from everyday use (`Ages.cost`, `Ages.missing`, `Ages.reserve`). Per-building upgrades are planned (docs/PLAN.md, H2 to H4).
 
-| Age | Knowledge | Peak population | Coins |
-|---|---|---|---|
-| Medieval | 600 | 40 | 400 |
-| Industrial | 2400 | 120 | 1200 |
-| Modern | 7000 | 250 | 2500 |
+| Age | Knowledge | Peak population | Coins | Planks | Tools | Metal |
+|---|---|---|---|---|---|---|
+| Bronze | 1800 | 10 | 100 | 20 | 0 | 0 |
+| Classical | 4200 | 22 | 220 | 40 | 10 | 0 |
+| Dark | 7200 | 40 | 400 | 60 | 20 | 0 |
+| Medieval | 12000 | 65 | 650 | 80 | 30 | 0 |
+| Renaissance | 19200 | 90 | 900 | 100 | 40 | 8 |
+| Industrial | 28800 | 120 | 1200 | 120 | 50 | 16 |
+| Electric | 42000 | 160 | 1600 | 140 | 60 | 24 |
+| Atomic | 60000 | 200 | 2000 | 160 | 70 | 32 |
+| Information | 84000 | 250 | 2500 | 180 | 80 | 40 |
+| Digital | 114000 | 300 | 3500 | 200 | 90 | 48 |
+| Future | 156000 | 360 | 5000 | 220 | 100 | 56 |
 
 ## Expectations
 Fire, police and education count as met until Medieval; power, water, sewage, waste, transit and health until Industrial. When an age opens a need, the forgiveness fades by 25% every 400 s; the clock holds while mood is under 0.35. The planner counts such a need as at least half unmet and builds ahead.

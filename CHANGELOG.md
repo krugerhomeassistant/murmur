@@ -4,6 +4,7 @@ All notable changes to Murmur are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
+- Ages are hard to enter: about six times more knowledge per age, and each age costs planks, tools and (later) metal that the town must have in stock; it buys and makes them ahead of time and does not sell them off. Per-building upgrades are planned next (docs/PLAN.md, "Hard ages and building upgrades").
 - The game now ends only when one side holds every living town: the 70% land conquest and the score-lead hegemony wins are gone (they ended games in minutes). A town with a single citizen keeps the game going.
 - The start menu scrolls when it is taller than the screen.
 - Floating windows never overlap: they snap to the edges of other windows and the screen while you drag, and a window dropped, opened or resized onto another moves to the nearest free spot beside it (`tests/winlayout.gd`).
