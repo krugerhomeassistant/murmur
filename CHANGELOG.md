@@ -16,6 +16,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 ## [0.8.0] - 2026-10-18
 
 ### Added
+- Hauling, first slice: lumber camps deliver wood to sawmills and toolworks only as fast as their carts can shuttle, so a camp far from a mill delivers less (12 tiles or closer is full speed).
 - Medieval terraces (a row of timber-framed houses) and tenements (stone, jettied upper floor, tiled roof).
 - Units and vehicles by age (ages finish line AF5): Industrial-age cars are boxy open tourers in dark colours with brass lamps (Modern cars keep the sleek painted look), and people's clothes shift with the age (earth tones, dyed wool, grey cloth, bright) while the mood colour still shows.
 - Full-ages playthrough test `tests/ageplay.gd` (manual, about 3 minutes).
