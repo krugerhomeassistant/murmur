@@ -845,6 +845,8 @@ func _insp_text() -> String:
             s += "\nResidents %d / %d" % [c.home_load[i], int(d.get("home", 0)) * c.lvl[i]]
         if c.work_load.has(i):
             s += "\nWorkers %d / %d" % [c.work_load[i], int(d.get("jobs", 0)) * maxi(c.lvl[i], 1)]
+        if c.work_status(t) != "":
+            s += "\n" + c.work_status(t)
         if c.burn[i] > 0.0:
             s += "\n[color=#e07a5f]ON FIRE[/color]"
         return s
